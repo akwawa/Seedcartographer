@@ -54,6 +54,11 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # TEMP debug: list the vulnerabilities behind the failing quality gate
+      - if: github.event_name == 'pull_request'
+        run: |
+          sleep 30
+          curl -s -u "${{ secrets.SONAR_TOKEN }}:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&pullRequest=${{ github.event.pull_request.number }}&types=VULNERABILITY&ps=50"             | python3 -c "import json,sys; d=json.load(sys.stdin); [print(i['rule'], i['severity'], i['component'], i.get('line'), '-', i['message']) for i in d.get('issues',[])] or print('no vulnerabilities'); print('total:', d.get('total'))"
 
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
