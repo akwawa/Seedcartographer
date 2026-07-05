@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seedcartographer — Minecraft biome &amp; structure finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark"></span>Seedcartographer</div>
+  <div class="world">
+    <label class="lbl">Seed
+      <input id="seed" class="mono" spellcheck="false" autocomplete="off">
+    </label>
+    <label class="chk"><input type="checkbox" id="large"> Large Biomes</label>
+    <span class="ver" title="Generation version">Java 1.21</span>
+    <button id="loadBtn" class="btn">Load seed</button>
+  </div>
+  <button id="shareBtn" class="btn ghost">Share link</button>
+</header>
+
+<main>
+  <aside class="panel">
+    <section class="card">
+      <h2>Find a place</h2>
+      <p class="lede">Set the conditions, then search the area you're looking at. Results are spots in <em>this</em> seed.</p>
+
+      <div class="field">
+        <label>Main biome</label>
+        <select id="biomeA"></select>
+      </div>
+
+      <div class="field">
+        <label>Adjacent biome <span class="opt">optional</span></label>
+        <select id="biomeB"></select>
+        <div class="sub"><span>within</span><input id="adjDist" class="num" type="number" min="0" step="16" value="400"><span>blocks</span></div>
+      </div>
+
+      <div class="field">
+        <label>Nearby structure <span class="opt">optional</span></label>
+        <select id="structType"></select>
+        <div class="sub"><span>at least</span><input id="minStruct" class="num sm" type="number" min="0" step="1" value="2"><span>within</span><input id="structRadius" class="num" type="number" min="0" step="50" value="800"><span>blocks</span></div>
+      </div>
+
+      <div class="field two">
+        <div><label>Search radius</label><input id="range" class="num" type="number" min="500" step="500" value="5000"></div>
+        <div><label>Resolution <span class="opt">step</span></label><input id="step" class="num" type="number" min="16" step="8" value="16"></div>
+      </div>
+
+      <button id="searchBtn" class="btn primary">Search this area</button>
+      <div id="searchInfo" class="info"></div>
+    </section>
+
+    <section class="card">
+      <h3>Results</h3>
+      <div id="results" class="results"><p class="muted small">No search yet. Pick conditions and hit search.</p></div>
+    </section>
+
+    <section class="card">
+      <h3>Show on map</h3>
+      <div id="structLayers" class="layers"></div>
+    </section>
+  </aside>
+
+  <div class="mapwrap">
+    <canvas id="map"></canvas>
+    <div id="hud" class="hud"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
+    <div id="popup" class="popup"></div>
+    <div class="maphelp mono">drag to pan · scroll to zoom · click a pin</div>
+  </div>
+</main>
+
+<script src="./app.js"></script>
+</body>
+</html>
