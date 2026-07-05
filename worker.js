@@ -12,6 +12,9 @@ const SCALE_Y = 15;      // ~y60 at 1:4 vertical scaling
 // reusable scratch buffers (grown on demand)
 let areaPtr = 0, areaCap = 0;
 let listPtr = 0, listCap = 0;
+// the search grid lives in its own buffer: tile renders may interleave with
+// the sliced search job and reuse areaPtr, which would clobber the grid
+let searchPtr = 0, searchCap = 0;
 
 createMcFinder().then((mod) => {
   M = mod;
@@ -39,6 +42,13 @@ function ensureList(pairs) {
     listCap = pairs;
   }
 }
+function ensureSearchArea(cells) {
+  if (cells > searchCap) {
+    if (searchPtr) M._free(searchPtr);
+    searchPtr = M._malloc(cells * 4);
+    searchCap = cells;
+  }
+}
 
 let curSeedStr = null, curMc = null, curLarge = null;
 function applyWorld(seedStr, mc, large) {
@@ -52,6 +62,88 @@ function chooseScale(bpp) {
   const S = [4, 16, 64, 256];
   for (const s of S) if (s >= bpp) return s;
   return 256;
+}
+
+// ---- sliced, cancellable search ----
+let searchBusy = false;
+let searchCancelId = 0;
+const yieldToQueue = () => new Promise((r) => setTimeout(r, 0));
+
+async function runSearchJob(d) {
+  searchBusy = true;
+  const t0 = performance.now();
+  const ms = () => Math.round(performance.now() - t0);
+  const fail = (error) => postMessage({ type: 'search', reqId: d.reqId, error, hits: [], ms: ms() });
+  const progress = (pct) => postMessage({ type: 'searchProgress', reqId: d.reqId, pct });
+  const cancelled = () => searchCancelId === d.reqId;
+  try {
+    applyWorld(d.seed, d.mc, d.large);
+
+    // biome grid over the search box padded by the largest adjacency distance
+    const SC = 16;
+    const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
+    const pad = adjClauses.reduce((m, c) => Math.max(m, c.dist), 0);
+    const gx0 = Math.floor((d.cx - d.range - pad) / SC);
+    const gz0 = Math.floor((d.cz - d.range - pad) / SC);
+    const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
+    const rows = Math.ceil((d.cz + d.range + pad) / SC) - gz0 + 2;
+    if (cols * rows > SEARCH_MAX_CELLS) { fail('area-too-large'); return; }
+    ensureSearchArea(cols * rows);
+
+    // 1) generate the grid in row bands (0 → 80%), yielding between bands so
+    // tile renders and cancel messages are processed
+    const GEN_BAND = 512;
+    for (let j = 0; j < rows; j += GEN_BAND) {
+      if (cancelled()) { fail('cancelled'); return; }
+      const h = Math.min(GEN_BAND, rows - j);
+      if (!M._genBiomeArea(searchPtr + j * cols * 4, gx0, gz0 + j, cols, h, SC, 15)) {
+        fail('area-too-large'); return;
+      }
+      progress(Math.round(80 * (j + h) / rows));
+      await yieldToQueue();
+    }
+
+    // 2) structure positions per clause (fast)
+    const structClauses = (d.structClauses || []).map((c) => {
+      const cap = 40000;
+      ensureList(cap);
+      const n = M._listStructures(c.type,
+        d.cx - d.range - c.radius, d.cz - d.range - c.radius,
+        d.cx + d.range + c.radius, d.cz + d.range + c.radius,
+        listPtr, cap);
+      const base = listPtr >> 2;
+      const points = [];
+      for (let i = 0; i < n; i++) points.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
+      return { points, min: c.min, radius: c.radius };
+    });
+    progress(85);
+    await yieldToQueue();
+
+    // 3) scan in row slices (85 → 100%), accumulating hits across slices
+    const SCAN_BAND = 4096;
+    const params = {
+      cols, rows, gx0, gz0, SC,
+      cx: d.cx, cz: d.cz, range: d.range, step: d.step, mergeDist: d.mergeDist,
+      mainSet: new Set(d.mainBiomes),
+      adjMode: d.adjMode, adjClauses,
+      structMode: d.structMode, structClauses,
+      hits: []
+    };
+    for (let j = 0; j < rows; j += SCAN_BAND) {
+      if (cancelled()) { fail('cancelled'); return; }
+      // re-take the heap view each slice: interleaved allocations may grow memory
+      params.grid = M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cols * rows);
+      params.rowStart = j; params.rowEnd = Math.min(j + SCAN_BAND, rows) - 1;
+      const res = scanGrid(params);
+      if (!res) { fail('bad-request'); return; }
+      params.hits = res;
+      progress(Math.min(100, 85 + Math.round(15 * (params.rowEnd + 1) / rows)));
+      await yieldToQueue();
+    }
+    postMessage({ type: 'search', reqId: d.reqId, hits: params.hits, ms: ms() });
+  } finally {
+    searchBusy = false;
+  }
 }
 
 onmessage = (e) => {
@@ -114,48 +206,17 @@ onmessage = (e) => {
     return;
   }
 
+  if (d.type === 'cancelSearch') {
+    searchCancelId = d.reqId;
+    return;
+  }
+
   if (d.type === 'search') {
-    applyWorld(d.seed, d.mc, d.large);
-    const t0 = performance.now();
-    const fail = (error) => postMessage({ type: 'search', reqId: d.reqId, error, hits: [], ms: Math.round(performance.now() - t0) });
-
-    // biome grid over the search box padded by the largest adjacency distance
-    const SC = 16;
-    const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
-    const pad = adjClauses.reduce((m, c) => Math.max(m, c.dist), 0);
-    const gx0 = Math.floor((d.cx - d.range - pad) / SC);
-    const gz0 = Math.floor((d.cz - d.range - pad) / SC);
-    const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
-    const rows = Math.ceil((d.cz + d.range + pad) / SC) - gz0 + 2;
-    if (cols * rows > SEARCH_MAX_CELLS) { fail('area-too-large'); return; }
-    ensureArea(cols * rows);
-    if (!M._genBiomeArea(areaPtr, gx0, gz0, cols, rows, SC, 15)) { fail('area-too-large'); return; }
-
-    // structure positions per clause, over the box padded by that clause's radius
-    const structClauses = (d.structClauses || []).map((c) => {
-      const cap = 40000;
-      ensureList(cap);
-      const n = M._listStructures(c.type,
-        d.cx - d.range - c.radius, d.cz - d.range - c.radius,
-        d.cx + d.range + c.radius, d.cz + d.range + c.radius,
-        listPtr, cap);
-      const base = listPtr >> 2;
-      const points = [];
-      for (let i = 0; i < n; i++) points.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
-      return { points, min: c.min, radius: c.radius };
-    });
-
-    // take the grid view only after all allocations (memory growth detaches views)
-    const grid = M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
-    const hits = scanGrid({
-      grid, cols, rows, gx0, gz0, SC,
-      cx: d.cx, cz: d.cz, range: d.range, step: d.step, mergeDist: d.mergeDist,
-      mainSet: new Set(d.mainBiomes),
-      adjMode: d.adjMode, adjClauses,
-      structMode: d.structMode, structClauses
-    });
-    if (!hits) { fail('bad-request'); return; }
-    postMessage({ type: 'search', reqId: d.reqId, hits, ms: Math.round(performance.now() - t0) });
+    if (searchBusy) {
+      postMessage({ type: 'search', reqId: d.reqId, error: 'busy', hits: [], ms: 0 });
+      return;
+    }
+    runSearchJob(d); // async: runs in slices so tiles/cancel stay responsive
     return;
   }
 

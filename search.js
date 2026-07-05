@@ -20,6 +20,12 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?}]
 //                                      (negate: the biome must be ABSENT within dist)
 //   structMode, structClauses        — 'and'|'or', [{points:[[x,z]], min, radius}]
+//   rowStart, rowEnd (optional)      — restrict the scan to grid rows
+//                                      [rowStart, rowEnd]; combined with the
+//                                      `hits` accumulator this lets a caller
+//                                      scan in slices (progress / cancel)
+//   hits (optional)                  — accumulator from previous slices, used
+//                                      for duplicate-merging across slices
 function scanGrid(p) {
   const { grid, cols, rows, gx0, gz0, SC, cx, cz, range, mergeDist } = p;
   const mainSet = p.mainSet;
@@ -51,8 +57,14 @@ function scanGrid(p) {
   if (bi0 < 0) bi0 = 0; if (bj0 < 0) bj0 = 0;
   if (bi1 > cols - 1) bi1 = cols - 1; if (bj1 > rows - 1) bj1 = rows - 1;
 
-  const hits = [];
+  // optional row-slice restriction; iteration still starts at bj0 so the
+  // stride alignment is identical to a full scan
+  const rowStart = p.rowStart ?? bj0, rowEnd = p.rowEnd ?? bj1;
+
+  const hits = p.hits || [];
+  if (hits.length >= SEARCH_MAX_HITS) return hits;
   for (let cj = bj0; cj <= bj1; cj += stride) {
+    if (cj < rowStart || cj > rowEnd) continue;
     for (let ci = bi0; ci <= bi1; ci += stride) {
       if (!mainSet.has(grid[cj * cols + ci])) continue;
       const wx = gx0 * SC + ci * SC;

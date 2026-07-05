@@ -102,6 +102,20 @@ test('structure clauses: min count, AND/OR, and total count in hits', () => {
   assert.equal(or[0].count, 2);
 });
 
+test('sliced row-band scan gives the same result as a full scan', () => {
+  // scattered main-biome cells with some neighbours to merge
+  const cells = [];
+  for (let k = 0; k < 40; k++) cells.push({ i: (k * 7) % 32, j: (k * 11) % 32, id: 1 });
+  const grid = makeGrid(32, 32, 0, cells);
+  const base = makeParams(grid, 32, 32, { mergeDist: 3 * SC });
+  const full = scanGrid(base);
+  let acc = [];
+  for (let j = 0; j < 32; j += 5) {
+    acc = scanGrid(Object.assign({}, base, { rowStart: j, rowEnd: Math.min(j + 4, 31), hits: acc }));
+  }
+  assert.deepEqual(acc, full);
+});
+
 test('nearby hits are merged by mergeDist', () => {
   // two matching cells 1 cell apart
   const grid = makeGrid(8, 8, 0, [{ i: 3, j: 3, id: 1 }, { i: 4, j: 3, id: 1 }]);
