@@ -3,9 +3,9 @@
   --line:#2a3543; --line-soft:#202a37;
   --text:#e7edf3; --muted:#8694a5; --faint:#5c6a7c;
   --lapis:#3f72e6; --lapis-hi:#5b88f5; --amber:#f2a73b; --grass:#6fae4f;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --mono:'JetBrains Mono',ui-monospace,sfmono-regular,menlo,monospace;
   --disp:'Space Grotesk',system-ui,sans-serif;
-  --body:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --body:system-ui,-apple-system,segoe ui,roboto,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -38,7 +38,7 @@ input,select{
 }
 input:focus,select:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(63,114,230,.18)}
 .mono{font-family:var(--mono)}
-input[type=checkbox]{accent-color:var(--lapis);width:15px;height:15px;padding:0}
+input[type="checkbox"]{accent-color:var(--lapis);width:15px;height:15px;padding:0}
 
 /* ---------- buttons ---------- */
 .btn{

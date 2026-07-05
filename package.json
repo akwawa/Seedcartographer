@@ -9,12 +9,15 @@
     "serve": "python3 -m http.server 8000",
     "lint": "eslint .",
     "e2e": "playwright test",
-    "coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info"
+    "coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info",
+    "lint:css": "stylelint styles.css fonts/fonts.css"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "eslint": "^10.6.0",
-    "globals": "^17.7.0"
+    "globals": "^17.7.0",
+    "stylelint": "^17.14.0",
+    "stylelint-config-standard": "^40.0.0"
   }
 }
