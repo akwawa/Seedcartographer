@@ -263,25 +263,91 @@ function clickAt(e) {
   hidePopup();
 }
 
+// ---------- criteria rows ----------
+const MAX_CRIT_ROWS = 8;
+let biomesSorted = [];
+
+function critSelect(entries, initial) {
+  const sel = document.createElement('select');
+  for (const [value, label, i18nKey] of entries) {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label;
+    if (i18nKey) o.dataset.i18n = i18nKey;   // retranslated by applyI18n
+    sel.appendChild(o);
+  }
+  if (initial !== undefined) sel.value = String(initial);
+  if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+  return sel;
+}
+function biomeSelect(initial) {
+  return critSelect(biomesSorted.map((b) => [b.id, b.name]), initial);
+}
+function structSelect(initial) {
+  return critSelect(structToggles.map((tg) => [tg.type, t(tg.labelKey), tg.labelKey]), initial);
+}
+function numInput(value, min, step, cls) {
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.min = min; inp.step = step; inp.value = value;
+  inp.className = 'num' + (cls ? ' ' + cls : '');
+  return inp;
+}
+function subLbl(key) {
+  const s = document.createElement('span');
+  s.className = 'sub-lbl'; s.dataset.i18n = key; s.textContent = t(key);
+  return s;
+}
+function addRow(container, parts) {
+  if (container.children.length >= MAX_CRIT_ROWS) return;
+  const row = document.createElement('div'); row.className = 'row';
+  parts.forEach((el) => row.appendChild(el));
+  const rm = document.createElement('button');
+  rm.className = 'rm'; rm.textContent = '×';
+  rm.dataset.i18nTitle = 'remove'; rm.title = t('remove');
+  rm.onclick = () => row.remove();
+  row.appendChild(rm);
+  container.appendChild(row);
+}
+function addMainBiomeRow(biome) {
+  addRow($('#mainBiomes'), [biomeSelect(biome)]);
+}
+function addAdjRow(biome, dist) {
+  addRow($('#adjClauses'), [biomeSelect(biome), subLbl('within'), numInput(dist ?? 400, 0, 16), subLbl('blocks')]);
+}
+function addStructRow(type, min, radius) {
+  addRow($('#structClauses'), [structSelect(type), subLbl('atLeast'), numInput(min ?? 1, 0, 1, 'sm'), subLbl('within'), numInput(radius ?? 800, 0, 50), subLbl('blocks')]);
+}
+function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
+
 // ---------- search ----------
 function runSearch() {
-  const biomeA = parseInt($('#biomeA').value, 10);
-  if (!Number.isFinite(biomeA)) {
+  const mainBiomes = rowsOf('#mainBiomes')
+    .map((r) => parseInt(r.querySelector('select').value, 10))
+    .filter(Number.isFinite);
+  if (!mainBiomes.length) {
     searchInfo.textContent = t('pickBiome');
     searchInfo.className = 'info err';
     return;
   }
-  const biomeB = $('#biomeB').value === '' ? -1 : parseInt($('#biomeB').value, 10);
-  const adjDist = parseInt($('#adjDist').value, 10) || 0;
-  const structType = $('#structType').value === '' ? -1 : parseInt($('#structType').value, 10);
-  const minStruct = parseInt($('#minStruct').value, 10) || 0;
-  const structRadius = parseInt($('#structRadius').value, 10) || 0;
+  const adjClauses = rowsOf('#adjClauses').map((r) => ({
+    biomes: [parseInt(r.querySelector('select').value, 10)],
+    dist: parseInt(r.querySelector('input').value, 10) || 0
+  })).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
+  const structClauses = rowsOf('#structClauses').map((r) => {
+    const ins = r.querySelectorAll('input');
+    return {
+      type: parseInt(r.querySelector('select').value, 10),
+      min: parseInt(ins[0].value, 10) || 0,
+      radius: parseInt(ins[1].value, 10) || 0
+    };
+  }).filter((c) => Number.isFinite(c.type) && c.min > 0 && c.radius > 0);
   const range = parseInt($('#range').value, 10) || 4000;
   const step = parseInt($('#step').value, 10) || 48;
   searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
   send({
     type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large,
-    biomeA, biomeB, adjDist, structType, minStruct, structRadius,
+    mainBiomes,
+    adjMode: $('#adjMode').value, adjClauses,
+    structMode: $('#structMode').value, structClauses,
     cx: Math.round(view.cx), cz: Math.round(view.cz), range, step, mergeDist: Math.max(256, step * 6)
   });
 }
@@ -356,16 +422,7 @@ function hidePopup() {
 
 // ---------- biome list / dropdowns ----------
 function onBiomeList(list) {
-  const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  const opt = (value, label) => {
-    const o = document.createElement('option');
-    o.value = value; o.textContent = label;
-    return o;
-  };
-  const selA = $('#biomeA'), selB = $('#biomeB');
-  selA.textContent = ''; selB.textContent = '';
-  selB.appendChild(opt('', t('none')));
-  for (const b of sorted) { selA.appendChild(opt(b.id, b.name)); selB.appendChild(opt(b.id, b.name)); }
+  biomesSorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
   // structures: stable engine index -> i18n label key
   const structDefs = [
     [0, 'structVillage'], [1, 'structOutpost'], [2, 'structDesertPyramid'], [3, 'structJungleTemple'],
@@ -382,18 +439,9 @@ function resolveStructConsts(defs) {
     if (e.data.type !== 'structConsts') return;
     worker.removeEventListener('message', chan);
     const vals = e.data.values;
-    const sel = $('#structType');
-    sel.textContent = '';
-    const none = document.createElement('option');
-    none.value = ''; none.textContent = t('none');
-    sel.appendChild(none);
     structToggles = [];
     defs.forEach((d, idx) => {
-      const ev = vals[idx];
-      const o = document.createElement('option');
-      o.value = ev; o.textContent = t(d[1]);
-      sel.appendChild(o);
-      structToggles.push({ type: ev, labelKey: d[1], on: false, color: structColors[idx % structColors.length], points: null });
+      structToggles.push({ type: vals[idx], labelKey: d[1], on: false, color: structColors[idx % structColors.length], points: null });
     });
     buildStructToggleUI();
     applyHashCriteria();
@@ -410,23 +458,12 @@ function buildStructToggleUI() {
     input.type = 'checkbox'; input.id = id; input.checked = tg.on;
     const dot = document.createElement('span');
     dot.className = 'dot'; dot.style.background = tg.color;
-    row.append(input, dot, t(tg.labelKey));
+    const lbl = document.createElement('span');
+    lbl.dataset.i18n = tg.labelKey; lbl.textContent = t(tg.labelKey);
+    row.append(input, dot, lbl);
     input.onchange = (e) => { tg.on = e.target.checked; if (tg.on) requestStructures(); else { tg.points = null; draw(); } };
     box.appendChild(row);
   });
-}
-
-// Re-translate the strings that live in dynamically built widgets.
-function refreshDynamicI18n() {
-  const noneB = $('#biomeB').querySelector('option[value=""]');
-  if (noneB) noneB.textContent = t('none');
-  const st = $('#structType');
-  if (st.options.length) {
-    st.options[0].textContent = t('none');
-    structToggles.forEach((tg, i) => { if (st.options[i + 1]) st.options[i + 1].textContent = t(tg.labelKey); });
-    buildStructToggleUI();
-  }
-  hidePopup();
 }
 
 // ---------- URL hash sharing ----------
@@ -435,8 +472,21 @@ function syncHash() {
     s: world.seed, m: world.mc, l: world.large ? 1 : 0,
     x: Math.round(view.cx), z: Math.round(view.cz), b: +view.bpp.toFixed(2),
     c: {
-      a: $('#biomeA').value, ba: $('#biomeB').value, ad: $('#adjDist').value,
-      st: $('#structType').value, mn: $('#minStruct').value, sr: $('#structRadius').value,
+      mb: rowsOf('#mainBiomes').map((r) => parseInt(r.querySelector('select').value, 10)),
+      am: $('#adjMode').value,
+      ac: rowsOf('#adjClauses').map((r) => ({
+        b: parseInt(r.querySelector('select').value, 10),
+        d: parseInt(r.querySelector('input').value, 10) || 0
+      })),
+      sm: $('#structMode').value,
+      sc: rowsOf('#structClauses').map((r) => {
+        const ins = r.querySelectorAll('input');
+        return {
+          t: parseInt(r.querySelector('select').value, 10),
+          mn: parseInt(ins[0].value, 10) || 0,
+          r: parseInt(ins[1].value, 10) || 0
+        };
+      }),
       rg: $('#range').value, sp: $('#step').value
     }
   };
@@ -447,25 +497,44 @@ function readHash() {
 }
 let hashState = null;
 function applyHashCriteria() {
-  // called once dropdowns exist; applies criteria from hash or sensible demo defaults
-  const c = hashState && hashState.c;
-  // Hash values are attacker-controlled (share links): only accept integers,
-  // which is all the dropdowns ever contain, before using them in a selector.
-  const set = (sel, v) => {
-    if (v === undefined || v === null) return;
-    v = String(v);
-    if (!/^-?\d+$/.test(v)) return;
-    if ($(sel).querySelector(`option[value="${v}"]`)) $(sel).value = v;
-  };
+  // called once biome/structure lists exist; builds the criteria rows from
+  // the hash, or falls back to sensible demo defaults
+  let c = hashState && hashState.c;
+  // legacy single-criteria share links (c.a = main biome id)
+  if (c && c.a !== undefined) {
+    c = {
+      mb: [c.a], am: 'and',
+      ac: c.ba ? [{ b: c.ba, d: c.ad }] : [],
+      sm: 'and',
+      sc: c.st ? [{ t: c.st, mn: c.mn, r: c.sr }] : [],
+      rg: c.rg, sp: c.sp
+    };
+  }
+  // Hash values are attacker-controlled (share links): coerce everything to
+  // integers and cap list sizes before building any DOM from them.
+  const int = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
+  const rows = (v) => (Array.isArray(v) ? v : []).slice(0, MAX_CRIT_ROWS);
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
   if (c) {
-    set('#biomeA', c.a); set('#biomeB', c.ba); $('#adjDist').value = c.ad;
-    set('#structType', c.st); $('#minStruct').value = c.mn; $('#structRadius').value = c.sr;
-    $('#range').value = c.rg; $('#step').value = c.sp;
-  } else {
+    rows(c.mb).forEach((b) => { b = int(b); if (b !== null) addMainBiomeRow(b); });
+    $('#adjMode').value = c.am === 'or' ? 'or' : 'and';
+    rows(c.ac).forEach((r) => {
+      const b = int(r && r.b), d = int(r && r.d);
+      if (b !== null && d !== null && d >= 0) addAdjRow(b, d);
+    });
+    $('#structMode').value = c.sm === 'or' ? 'or' : 'and';
+    rows(c.sc).forEach((r) => {
+      const ty = int(r && r.t), mn = int(r && r.mn), rr = int(r && r.r);
+      if (ty !== null && mn !== null && rr !== null && mn >= 0 && rr >= 0) addStructRow(ty, mn, rr);
+    });
+    const rg = int(c.rg), sp = int(c.sp);
+    if (rg !== null) $('#range').value = rg;
+    if (sp !== null) $('#step').value = sp;
+  }
+  if (!rowsOf('#mainBiomes').length) {
     // demo: cherry grove + warm ocean + >=2 villages (matches built-in seed 141)
-    set('#biomeA', 185); set('#biomeB', 44); $('#adjDist').value = 400;
-    set('#structType', String(structToggles[0].type)); $('#minStruct').value = 2; $('#structRadius').value = 800;
-    $('#range').value = 5000; $('#step').value = 16;
+    addMainBiomeRow(185); addAdjRow(44, 400); addStructRow(structToggles[0].type, 2, 800);
+    if (!c) { $('#range').value = 5000; $('#step').value = 16; }
   }
 }
 
@@ -485,6 +554,9 @@ function init() {
     curReset(); requestRender(0); syncHash();
   };
   $('#searchBtn').onclick = runSearch;
+  $('#addMainBiome').onclick = () => addMainBiomeRow();
+  $('#addAdj').onclick = () => addAdjRow();
+  $('#addStruct').onclick = () => addStructRow();
   $('#shareBtn').onclick = () => {
     syncHash();
     copyText(location.href)
@@ -499,7 +571,8 @@ function init() {
     langSel.appendChild(o);
   }
   langSel.value = currentLang;
-  langSel.onchange = () => { setLang(langSel.value); refreshDynamicI18n(); };
+  // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
+  langSel.onchange = () => { setLang(langSel.value); hidePopup(); };
   applyI18n();
   resize();
 }

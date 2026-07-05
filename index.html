@@ -31,20 +31,25 @@
       <p class="lede" data-i18n="lede">Set the conditions, then search the area you're looking at. Results are spots in this seed.</p>
 
       <div class="field">
-        <label data-i18n="mainBiome">Main biome</label>
-        <select id="biomeA"></select>
+        <label data-i18n="mainBiomeAny">Main biome (any of)</label>
+        <div id="mainBiomes" class="crit"></div>
+        <button id="addMainBiome" class="btn tiny" data-i18n="addBiome">+ Add biome</button>
       </div>
 
       <div class="field">
-        <label><span data-i18n="adjacentBiome">Adjacent biome</span> <span class="opt" data-i18n="optional">optional</span></label>
-        <select id="biomeB"></select>
-        <div class="sub"><span data-i18n="within">within</span><input id="adjDist" class="num" type="number" min="0" step="16" value="400"><span data-i18n="blocks">blocks</span></div>
+        <label><span data-i18n="adjacentBiomes">Adjacent biomes</span> <span class="opt" data-i18n="optional">optional</span>
+          <select id="adjMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
+        </label>
+        <div id="adjClauses" class="crit"></div>
+        <button id="addAdj" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
       </div>
 
       <div class="field">
-        <label><span data-i18n="nearbyStructure">Nearby structure</span> <span class="opt" data-i18n="optional">optional</span></label>
-        <select id="structType"></select>
-        <div class="sub"><span data-i18n="atLeast">at least</span><input id="minStruct" class="num sm" type="number" min="0" step="1" value="2"><span data-i18n="within">within</span><input id="structRadius" class="num" type="number" min="0" step="50" value="800"><span data-i18n="blocks">blocks</span></div>
+        <label><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span>
+          <select id="structMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
+        </label>
+        <div id="structClauses" class="crit"></div>
+        <button id="addStruct" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
       </div>
 
       <div class="field two">

@@ -26,8 +26,11 @@ Puis ouvre http://localhost:8000 dans ton navigateur.
 1. Saisis une **seed** en haut (numérique ou texte) et clique sur **Load seed**.
    La seed `141` est chargée par défaut — c'est un exemple où un *cherry grove*
    est collé à un *warm ocean* avec plusieurs villages autour (vers -384, 0).
-2. Règle les **critères** dans le panneau de gauche : biome principal, biome
-   adjacent + distance, structure + nombre minimum + rayon.
+2. Règle les **critères** dans le panneau de gauche. Chaque section accepte
+   plusieurs lignes (boutons « + Ajouter » / « × ») : biomes principaux
+   (l'un d'eux), biomes adjacents + distance et structures (nombre minimum +
+   rayon) — ces deux dernières sections se combinent en « tous » (ET) ou
+   « au moins un » (OU).
 3. Choisis le **rayon de recherche** (taille de la zone balayée autour du centre
    de la carte) et la **résolution** (pas d'échantillonnage en blocs).
 4. Clique sur **Search this area**. Les résultats apparaissent comme épingles sur
@@ -69,6 +72,7 @@ sélectionner.
 | `app.js` | Carte (pan/zoom, rendu, épingles), UI, partage de lien |
 | `worker.js` | Web Worker : possède l'instance WASM (tuiles + recherche) |
 | `seed.js` | Conversion seed → entier 64 bits (partagé worker/tests) |
+| `search.js` | Balayage multi-critères de la grille de biomes (partagé worker/tests) |
 | `i18n.js` | Traductions de l'interface (FR, EN, ES, DE) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
 | `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |
