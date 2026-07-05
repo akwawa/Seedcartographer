@@ -44,7 +44,7 @@ worker.onmessage = (e) => {
   if (d.type === 'tile') {
     if (d.reqId !== renderReq) return;            // stale
     if (!d.ok) {
-      searchInfo.textContent = 'Map generation failed for this view. Try zooming or reloading the seed.';
+      searchInfo.textContent = t('tileFailed');
       searchInfo.className = 'info err';
       return;
     }
@@ -70,7 +70,7 @@ worker.onmessage = (e) => {
 
 // Unrecoverable worker/WASM failure: tell the user instead of hanging silently.
 function showFatal(message) {
-  searchInfo.textContent = message + ' Reload the page to retry.';
+  searchInfo.textContent = message + ' ' + t('reloadRetry');
   searchInfo.className = 'info err';
   $('#searchBtn').disabled = true;
   $('#loadBtn').disabled = true;
@@ -267,7 +267,7 @@ function clickAt(e) {
 function runSearch() {
   const biomeA = parseInt($('#biomeA').value, 10);
   if (!Number.isFinite(biomeA)) {
-    searchInfo.textContent = 'Pick a main biome first.';
+    searchInfo.textContent = t('pickBiome');
     searchInfo.className = 'info err';
     return;
   }
@@ -278,7 +278,7 @@ function runSearch() {
   const structRadius = parseInt($('#structRadius').value, 10) || 0;
   const range = parseInt($('#range').value, 10) || 4000;
   const step = parseInt($('#step').value, 10) || 48;
-  searchInfo.textContent = 'Searching…'; searchInfo.className = 'info busy';
+  searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
   send({
     type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large,
     biomeA, biomeB, adjDist, structType, minStruct, structRadius,
@@ -290,16 +290,16 @@ function onSearchResult(d) {
   hidePopup();
   resultsEl.innerHTML = '';
   if (d.error) {
-    searchInfo.textContent = 'Search failed: area too large for this radius/criteria. Reduce the search radius.';
+    searchInfo.textContent = t('searchFailedArea');
     searchInfo.className = 'info err';
     draw(); return;
   }
   if (!pins.length) {
-    searchInfo.textContent = `No match within ${$('#range').value} blocks (${d.ms} ms). Widen the area or relax a criterion.`;
+    searchInfo.textContent = t('noMatch', { r: $('#range').value, ms: d.ms });
     searchInfo.className = 'info empty';
     draw(); return;
   }
-  searchInfo.textContent = `${pins.length} location${pins.length > 1 ? 's' : ''} found · ${d.ms} ms`;
+  searchInfo.textContent = pins.length > 1 ? t('foundMany', { n: pins.length, ms: d.ms }) : t('foundOne', { ms: d.ms });
   searchInfo.className = 'info ok';
   pins.forEach((p, i) => {
     const li = document.createElement('button');
@@ -309,7 +309,7 @@ function onSearchResult(d) {
     li.appendChild(rx);
     if (p.count) {
       const rc = document.createElement('span');
-      rc.className = 'rc'; rc.textContent = `${p.count} nearby`;
+      rc.className = 'rc'; rc.textContent = t('nearby', { n: p.count });
       li.appendChild(rc);
     }
     li.onclick = () => selectPin(i);
@@ -331,16 +331,16 @@ function showPopup(p) {
   const xEl = document.createElement('div');
   xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
   const btn = document.createElement('button');
-  btn.className = 'pop-tp'; btn.textContent = 'Copy /tp';
+  btn.className = 'pop-tp'; btn.textContent = t('copyTp');
   btn.onclick = () => {
     copyText(`/tp @s ${p.x} ~ ${p.z}`)
-      .then(() => { btn.textContent = 'Copied'; })
-      .catch(() => { btn.textContent = 'Copy failed'; });
-    setTimeout(() => { btn.textContent = 'Copy /tp'; }, 1200);
+      .then(() => { btn.textContent = t('copied'); })
+      .catch(() => { btn.textContent = t('copyFailed'); });
+    setTimeout(() => { btn.textContent = t('copyTp'); }, 1200);
   };
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×';
-  close.title = 'Close';
+  close.title = t('close');
   close.onclick = hidePopup;
   pop.append(close, xEl, btn);
   pop.style.display = 'block';
@@ -364,14 +364,14 @@ function onBiomeList(list) {
   };
   const selA = $('#biomeA'), selB = $('#biomeB');
   selA.textContent = ''; selB.textContent = '';
-  selB.appendChild(opt('', '— none —'));
+  selB.appendChild(opt('', t('none')));
   for (const b of sorted) { selA.appendChild(opt(b.id, b.name)); selB.appendChild(opt(b.id, b.name)); }
-  // structures
+  // structures: stable engine index -> i18n label key
   const structDefs = [
-    [0, 'Village'], [1, 'Pillager outpost'], [2, 'Desert pyramid'], [3, 'Jungle temple'],
-    [4, 'Witch hut'], [5, 'Igloo'], [6, 'Ocean ruin'], [7, 'Shipwreck'], [8, 'Ocean monument'],
-    [9, 'Woodland mansion'], [10, 'Ruined portal'], [11, 'Ancient city'], [12, 'Buried treasure'],
-    [13, 'Trail ruins'], [14, 'Trial chamber']
+    [0, 'structVillage'], [1, 'structOutpost'], [2, 'structDesertPyramid'], [3, 'structJungleTemple'],
+    [4, 'structWitchHut'], [5, 'structIgloo'], [6, 'structOceanRuin'], [7, 'structShipwreck'],
+    [8, 'structMonument'], [9, 'structMansion'], [10, 'structRuinedPortal'], [11, 'structAncientCity'],
+    [12, 'structBuriedTreasure'], [13, 'structTrailRuins'], [14, 'structTrialChamber']
   ];
   resolveStructConsts(structDefs);
 }
@@ -385,15 +385,15 @@ function resolveStructConsts(defs) {
     const sel = $('#structType');
     sel.textContent = '';
     const none = document.createElement('option');
-    none.value = ''; none.textContent = '— none —';
+    none.value = ''; none.textContent = t('none');
     sel.appendChild(none);
     structToggles = [];
     defs.forEach((d, idx) => {
       const ev = vals[idx];
       const o = document.createElement('option');
-      o.value = ev; o.textContent = d[1];
+      o.value = ev; o.textContent = t(d[1]);
       sel.appendChild(o);
-      structToggles.push({ type: ev, label: d[1], on: false, color: structColors[idx % structColors.length], points: null });
+      structToggles.push({ type: ev, labelKey: d[1], on: false, color: structColors[idx % structColors.length], points: null });
     });
     buildStructToggleUI();
     applyHashCriteria();
@@ -403,17 +403,30 @@ function resolveStructConsts(defs) {
 }
 function buildStructToggleUI() {
   const box = $('#structLayers'); box.innerHTML = '';
-  structToggles.forEach((t, i) => {
+  structToggles.forEach((tg, i) => {
     const id = 'sl' + i;
     const row = document.createElement('label'); row.className = 'layer';
     const input = document.createElement('input');
-    input.type = 'checkbox'; input.id = id;
+    input.type = 'checkbox'; input.id = id; input.checked = tg.on;
     const dot = document.createElement('span');
-    dot.className = 'dot'; dot.style.background = t.color;
-    row.append(input, dot, t.label);
-    input.onchange = (e) => { t.on = e.target.checked; if (t.on) requestStructures(); else { t.points = null; draw(); } };
+    dot.className = 'dot'; dot.style.background = tg.color;
+    row.append(input, dot, t(tg.labelKey));
+    input.onchange = (e) => { tg.on = e.target.checked; if (tg.on) requestStructures(); else { tg.points = null; draw(); } };
     box.appendChild(row);
   });
+}
+
+// Re-translate the strings that live in dynamically built widgets.
+function refreshDynamicI18n() {
+  const noneB = $('#biomeB').querySelector('option[value=""]');
+  if (noneB) noneB.textContent = t('none');
+  const st = $('#structType');
+  if (st.options.length) {
+    st.options[0].textContent = t('none');
+    structToggles.forEach((tg, i) => { if (st.options[i + 1]) st.options[i + 1].textContent = t(tg.labelKey); });
+    buildStructToggleUI();
+  }
+  hidePopup();
 }
 
 // ---------- URL hash sharing ----------
@@ -475,11 +488,20 @@ function init() {
   $('#shareBtn').onclick = () => {
     syncHash();
     copyText(location.href)
-      .then(() => { $('#shareBtn').textContent = 'Link copied'; })
-      .catch(() => { $('#shareBtn').textContent = 'Copy failed'; });
-    setTimeout(() => $('#shareBtn').textContent = 'Share link', 1300);
+      .then(() => { $('#shareBtn').textContent = t('linkCopied'); })
+      .catch(() => { $('#shareBtn').textContent = t('copyFailed'); });
+    setTimeout(() => $('#shareBtn').textContent = t('shareLink'), 1300);
   };
+  const langSel = $('#langSel');
+  for (const [code, name] of I18N_LANGS) {
+    const o = document.createElement('option');
+    o.value = code; o.textContent = name;
+    langSel.appendChild(o);
+  }
+  langSel.value = currentLang;
+  langSel.onchange = () => { setLang(langSel.value); refreshDynamicI18n(); };
+  applyI18n();
   resize();
 }
-function curReset() { tile = null; structToggles.forEach((t) => t.points = null); hidePopup(); }
+function curReset() { tile = null; structToggles.forEach((tg) => tg.points = null); hidePopup(); }
 init();

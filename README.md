@@ -41,6 +41,11 @@ sélectionner.
 
 ## Bon à savoir
 
+- **Interface multilingue.** L'interface est disponible en français, anglais,
+  espagnol et allemand : la langue du navigateur est détectée automatiquement et
+  le sélecteur en haut à droite permet d'en changer (choix mémorisé). Les noms
+  de biomes restent ceux du moteur cubiomes (identifiants techniques).
+
 - **Résolution de détection : 16 blocs.** Les biomes sont échantillonnés tous les
   16 blocs (compromis vitesse/précision). Les cherry groves et océans sont bien
   plus grands que ça, donc la détection reste fiable ; une coordonnée trouvée peut
@@ -64,6 +69,7 @@ sélectionner.
 | `app.js` | Carte (pan/zoom, rendu, épingles), UI, partage de lien |
 | `worker.js` | Web Worker : possède l'instance WASM (tuiles + recherche) |
 | `seed.js` | Conversion seed → entier 64 bits (partagé worker/tests) |
+| `i18n.js` | Traductions de l'interface (FR, EN, ES, DE) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
 | `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |
 | `fonts/` | Polices auto-hébergées (OFL 1.1) |

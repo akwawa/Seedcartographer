@@ -1,0 +1,254 @@
+// i18n.js — UI translations. Loaded before app.js; also required by the tests.
+// Biome names come from the cubiomes engine and are intentionally not translated.
+'use strict';
+
+const I18N = {
+  en: {
+    seed: 'Seed',
+    largeBiomes: 'Large Biomes',
+    loadSeed: 'Load seed',
+    shareLink: 'Share link',
+    linkCopied: 'Link copied',
+    copyFailed: 'Copy failed',
+    findPlace: 'Find a place',
+    lede: "Set the conditions, then search the area you're looking at. Results are spots in this seed.",
+    mainBiome: 'Main biome',
+    adjacentBiome: 'Adjacent biome',
+    optional: 'optional',
+    within: 'within',
+    blocks: 'blocks',
+    nearbyStructure: 'Nearby structure',
+    atLeast: 'at least',
+    searchRadius: 'Search radius',
+    resolution: 'Resolution',
+    step: 'step',
+    searchBtn: 'Search this area',
+    results: 'Results',
+    noSearchYet: 'No search yet. Pick conditions and hit search.',
+    showOnMap: 'Show on map',
+    maphelp: 'drag to pan · scroll to zoom · click a pin',
+    searching: 'Searching…',
+    foundOne: '1 location found · {ms} ms',
+    foundMany: '{n} locations found · {ms} ms',
+    noMatch: 'No match within {r} blocks ({ms} ms). Widen the area or relax a criterion.',
+    searchFailedArea: 'Search failed: area too large for this radius/criteria. Reduce the search radius.',
+    pickBiome: 'Pick a main biome first.',
+    tileFailed: 'Map generation failed for this view. Try zooming or reloading the seed.',
+    reloadRetry: 'Reload the page to retry.',
+    copyTp: 'Copy /tp',
+    copied: 'Copied',
+    nearby: '{n} nearby',
+    none: '— none —',
+    close: 'Close',
+    structVillage: 'Village',
+    structOutpost: 'Pillager outpost',
+    structDesertPyramid: 'Desert pyramid',
+    structJungleTemple: 'Jungle temple',
+    structWitchHut: 'Witch hut',
+    structIgloo: 'Igloo',
+    structOceanRuin: 'Ocean ruin',
+    structShipwreck: 'Shipwreck',
+    structMonument: 'Ocean monument',
+    structMansion: 'Woodland mansion',
+    structRuinedPortal: 'Ruined portal',
+    structAncientCity: 'Ancient city',
+    structBuriedTreasure: 'Buried treasure',
+    structTrailRuins: 'Trail ruins',
+    structTrialChamber: 'Trial chamber'
+  },
+  fr: {
+    seed: 'Seed',
+    largeBiomes: 'Larges biomes',
+    loadSeed: 'Charger la seed',
+    shareLink: 'Partager le lien',
+    linkCopied: 'Lien copié',
+    copyFailed: 'Échec de la copie',
+    findPlace: 'Trouver un lieu',
+    lede: 'Règle les conditions, puis lance la recherche sur la zone affichée. Les résultats sont des lieux de cette seed.',
+    mainBiome: 'Biome principal',
+    adjacentBiome: 'Biome adjacent',
+    optional: 'optionnel',
+    within: 'à moins de',
+    blocks: 'blocs',
+    nearbyStructure: 'Structure à proximité',
+    atLeast: 'au moins',
+    searchRadius: 'Rayon de recherche',
+    resolution: 'Résolution',
+    step: 'pas',
+    searchBtn: 'Chercher dans cette zone',
+    results: 'Résultats',
+    noSearchYet: 'Aucune recherche. Choisis des conditions et lance la recherche.',
+    showOnMap: 'Afficher sur la carte',
+    maphelp: 'glisser pour se déplacer · molette pour zoomer · cliquer une épingle',
+    searching: 'Recherche…',
+    foundOne: '1 lieu trouvé · {ms} ms',
+    foundMany: '{n} lieux trouvés · {ms} ms',
+    noMatch: 'Rien à moins de {r} blocs ({ms} ms). Élargis la zone ou assouplis un critère.',
+    searchFailedArea: 'Échec de la recherche : zone trop grande pour ce rayon/ces critères. Réduis le rayon de recherche.',
+    pickBiome: "Choisis d'abord un biome principal.",
+    tileFailed: 'Échec de génération de la carte pour cette vue. Essaie de zoomer ou de recharger la seed.',
+    reloadRetry: 'Recharge la page pour réessayer.',
+    copyTp: 'Copier /tp',
+    copied: 'Copié',
+    nearby: '{n} à proximité',
+    none: '— aucun —',
+    close: 'Fermer',
+    structVillage: 'Village',
+    structOutpost: 'Avant-poste de pillards',
+    structDesertPyramid: 'Pyramide du désert',
+    structJungleTemple: 'Temple de la jungle',
+    structWitchHut: 'Cabane de sorcière',
+    structIgloo: 'Igloo',
+    structOceanRuin: 'Ruine océanique',
+    structShipwreck: 'Épave',
+    structMonument: 'Monument océanique',
+    structMansion: 'Manoir forestier',
+    structRuinedPortal: 'Portail en ruine',
+    structAncientCity: 'Cité ancienne',
+    structBuriedTreasure: 'Trésor enfoui',
+    structTrailRuins: 'Vestiges de sentier',
+    structTrialChamber: "Salle d'épreuves"
+  },
+  es: {
+    seed: 'Semilla',
+    largeBiomes: 'Biomas grandes',
+    loadSeed: 'Cargar semilla',
+    shareLink: 'Compartir enlace',
+    linkCopied: 'Enlace copiado',
+    copyFailed: 'Error al copiar',
+    findPlace: 'Encontrar un lugar',
+    lede: 'Define las condiciones y busca en la zona que estás viendo. Los resultados son lugares de esta semilla.',
+    mainBiome: 'Bioma principal',
+    adjacentBiome: 'Bioma adyacente',
+    optional: 'opcional',
+    within: 'a menos de',
+    blocks: 'bloques',
+    nearbyStructure: 'Estructura cercana',
+    atLeast: 'al menos',
+    searchRadius: 'Radio de búsqueda',
+    resolution: 'Resolución',
+    step: 'paso',
+    searchBtn: 'Buscar en esta zona',
+    results: 'Resultados',
+    noSearchYet: 'Sin búsquedas. Elige condiciones y pulsa buscar.',
+    showOnMap: 'Mostrar en el mapa',
+    maphelp: 'arrastra para mover · rueda para zoom · pulsa un marcador',
+    searching: 'Buscando…',
+    foundOne: '1 lugar encontrado · {ms} ms',
+    foundMany: '{n} lugares encontrados · {ms} ms',
+    noMatch: 'Nada a menos de {r} bloques ({ms} ms). Amplía la zona o relaja un criterio.',
+    searchFailedArea: 'Búsqueda fallida: zona demasiado grande para este radio/criterios. Reduce el radio de búsqueda.',
+    pickBiome: 'Elige primero un bioma principal.',
+    tileFailed: 'Falló la generación del mapa para esta vista. Prueba a hacer zoom o recargar la semilla.',
+    reloadRetry: 'Recarga la página para reintentar.',
+    copyTp: 'Copiar /tp',
+    copied: 'Copiado',
+    nearby: '{n} cerca',
+    none: '— ninguno —',
+    close: 'Cerrar',
+    structVillage: 'Aldea',
+    structOutpost: 'Puesto de saqueadores',
+    structDesertPyramid: 'Pirámide del desierto',
+    structJungleTemple: 'Templo de la jungla',
+    structWitchHut: 'Cabaña de bruja',
+    structIgloo: 'Iglú',
+    structOceanRuin: 'Ruina oceánica',
+    structShipwreck: 'Naufragio',
+    structMonument: 'Monumento oceánico',
+    structMansion: 'Mansión del bosque',
+    structRuinedPortal: 'Portal en ruinas',
+    structAncientCity: 'Ciudad antigua',
+    structBuriedTreasure: 'Tesoro enterrado',
+    structTrailRuins: 'Ruinas de senderos',
+    structTrialChamber: 'Cámara de pruebas'
+  },
+  de: {
+    seed: 'Seed',
+    largeBiomes: 'Große Biome',
+    loadSeed: 'Seed laden',
+    shareLink: 'Link teilen',
+    linkCopied: 'Link kopiert',
+    copyFailed: 'Kopieren fehlgeschlagen',
+    findPlace: 'Einen Ort finden',
+    lede: 'Lege die Bedingungen fest und durchsuche den angezeigten Bereich. Die Ergebnisse sind Orte in diesem Seed.',
+    mainBiome: 'Hauptbiom',
+    adjacentBiome: 'Angrenzendes Biom',
+    optional: 'optional',
+    within: 'innerhalb von',
+    blocks: 'Blöcken',
+    nearbyStructure: 'Struktur in der Nähe',
+    atLeast: 'mindestens',
+    searchRadius: 'Suchradius',
+    resolution: 'Auflösung',
+    step: 'Schritt',
+    searchBtn: 'Diesen Bereich durchsuchen',
+    results: 'Ergebnisse',
+    noSearchYet: 'Noch keine Suche. Bedingungen wählen und Suche starten.',
+    showOnMap: 'Auf der Karte anzeigen',
+    maphelp: 'Ziehen zum Verschieben · Scrollen zum Zoomen · Pin anklicken',
+    searching: 'Suche…',
+    foundOne: '1 Ort gefunden · {ms} ms',
+    foundMany: '{n} Orte gefunden · {ms} ms',
+    noMatch: 'Kein Treffer innerhalb von {r} Blöcken ({ms} ms). Bereich vergrößern oder ein Kriterium lockern.',
+    searchFailedArea: 'Suche fehlgeschlagen: Bereich für diesen Radius/diese Kriterien zu groß. Suchradius verkleinern.',
+    pickBiome: 'Wähle zuerst ein Hauptbiom.',
+    tileFailed: 'Kartengenerierung für diese Ansicht fehlgeschlagen. Zoomen oder Seed neu laden.',
+    reloadRetry: 'Seite neu laden, um es erneut zu versuchen.',
+    copyTp: '/tp kopieren',
+    copied: 'Kopiert',
+    nearby: '{n} in der Nähe',
+    none: '— keine —',
+    close: 'Schließen',
+    structVillage: 'Dorf',
+    structOutpost: 'Plünderer-Außenposten',
+    structDesertPyramid: 'Wüstenpyramide',
+    structJungleTemple: 'Dschungeltempel',
+    structWitchHut: 'Hexenhütte',
+    structIgloo: 'Iglu',
+    structOceanRuin: 'Ozeanruine',
+    structShipwreck: 'Schiffswrack',
+    structMonument: 'Ozeanmonument',
+    structMansion: 'Waldanwesen',
+    structRuinedPortal: 'Portalruine',
+    structAncientCity: 'Antike Stadt',
+    structBuriedTreasure: 'Vergrabener Schatz',
+    structTrailRuins: 'Pfadruinen',
+    structTrialChamber: 'Prüfungskammer'
+  }
+};
+
+const I18N_LANGS = [['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['de', 'Deutsch']];
+
+function detectLang() {
+  try {
+    const saved = localStorage.getItem('lang');
+    if (saved && I18N[saved]) return saved;
+  } catch { /* storage may be unavailable */ }
+  const nav = ((typeof navigator !== 'undefined' && navigator.language) || 'en').slice(0, 2).toLowerCase();
+  return I18N[nav] ? nav : 'en';
+}
+
+let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
+
+// Translate a key in the current language; {placeholders} are filled from params.
+function t(key, params) {
+  let s = (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.en[key] ?? key;
+  if (params) for (const k of Object.keys(params)) s = s.replaceAll('{' + k + '}', params[k]);
+  return s;
+}
+
+// Apply translations to all elements carrying data-i18n / data-i18n-title.
+function applyI18n() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+}
+
+function setLang(lang) {
+  if (!I18N[lang]) return;
+  currentLang = lang;
+  try { localStorage.setItem('lang', lang); } catch { /* ignore */ }
+  applyI18n();
+}
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { I18N, I18N_LANGS };
