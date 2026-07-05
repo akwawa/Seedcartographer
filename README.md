@@ -60,6 +60,11 @@ sélectionner.
 
 ## Bon à savoir
 
+- **Application installable et hors-ligne (PWA).** Servie en HTTPS (ou sur
+  localhost), l'application s'installe depuis le navigateur et fonctionne
+  ensuite sans réseau : tous les fichiers (moteur WASM compris) sont mis en
+  cache par un service worker. Pour publier une mise à jour, incrémenter
+  `VERSION` dans `sw.js`.
 - **Interface multilingue.** L'interface est disponible en français, anglais,
   espagnol et allemand : la langue du navigateur est détectée automatiquement et
   le sélecteur en haut à droite permet d'en changer (choix mémorisé). Les noms

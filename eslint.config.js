@@ -51,6 +51,13 @@ module.exports = [
     languageOptions: { globals: { currentLang: 'readonly' } }
   },
   {
+    files: ['sw.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...globals.serviceworker }
+    }
+  },
+  {
     files: ['worker.js'],
     languageOptions: {
       sourceType: 'script',

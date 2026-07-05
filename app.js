@@ -630,6 +630,10 @@ function init() {
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); };
   applyI18n();
   resize();
+  // offline support (PWA); requires a secure context, harmless otherwise
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
+  }
 }
 function curReset() { tile = null; structToggles.forEach((tg) => tg.points = null); hidePopup(); }
 init();
