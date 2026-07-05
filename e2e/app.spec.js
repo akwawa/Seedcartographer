@@ -1,6 +1,12 @@
 'use strict';
 const { test, expect } = require('@playwright/test');
 
+// surface page errors in the CI log — a boot failure is invisible otherwise
+test.beforeEach(({ page }) => {
+  page.on('pageerror', (e) => console.log('[pageerror]', e.message));
+  page.on('console', (m) => { if (m.type() === 'error') console.log('[console.error]', m.text()); });
+});
+
 // The demo state (seed 141, cherry grove + warm ocean + 2 villages) loads by
 // default; the biome dropdowns are only populated once the WASM engine is up.
 async function waitForApp(page) {

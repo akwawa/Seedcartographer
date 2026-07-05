@@ -1,6 +1,11 @@
 'use strict';
 const { test, expect } = require('@playwright/test');
 
+test.beforeEach(({ page }) => {
+  page.on('pageerror', (e) => console.log('[pageerror]', e.message));
+  page.on('console', (m) => { if (m.type() === 'error') console.log('[console.error]', m.text()); });
+});
+
 test('manifest and icon are served', async ({ page }) => {
   const manifest = await page.request.get('/manifest.webmanifest');
   expect(manifest.ok()).toBeTruthy();
