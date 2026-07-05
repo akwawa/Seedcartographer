@@ -97,6 +97,8 @@ sélectionner.
 | `i18n.js` | Traductions de l'interface (FR, EN, ES, DE) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
 | `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |
+| `cubiomes/` | Bibliothèque cubiomes (submodule git épinglé) |
+| `build.sh` | Recompilation du WASM (vérifiée par le job CI `wasm`) |
 | `fonts/` | Polices auto-hébergées (OFL 1.1) |
 | `test/` | Tests unitaires (`npm test`, Node ≥ 20) |
 
