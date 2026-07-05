@@ -8,7 +8,8 @@
     "test": "node --test",
     "serve": "python3 -m http.server 8000",
     "lint": "eslint .",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
