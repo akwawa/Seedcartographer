@@ -21,6 +21,22 @@ Puis ouvre http://localhost:8000 dans ton navigateur.
 (N'importe quel serveur statique fait l'affaire : `npx serve`, l'extension
 « Live Server » de VS Code, etc.)
 
+### Avec Docker
+
+Une image est publiée sur GitHub Container Registry à chaque mise à jour de
+`main` (tag `latest`) et à chaque tag `v*` (tag de version) :
+
+```bash
+docker run --rm -p 8080:80 ghcr.io/akwawa/seedcartographer:latest
+```
+
+Puis ouvre http://localhost:8080. Pour construire l'image localement :
+
+```bash
+docker build -t seedcartographer .
+docker run --rm -p 8080:80 seedcartographer
+```
+
 ## Utilisation
 
 1. Saisis une **seed** en haut (numérique ou texte) et clique sur **Load seed**.
