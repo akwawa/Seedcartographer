@@ -42,6 +42,27 @@ test('demo search finds the seed-141 spot and shows the popup', async ({ page })
   await expect(page.locator('#popup')).toBeHidden();
 });
 
+test('a long search shows progress and can be cancelled', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.fill('#range', '60000');   // big but valid area: takes a while
+  await page.click('#searchBtn');
+  // button flips to Cancel and the progress bar appears
+  await expect(page.locator('#searchProgress')).toBeVisible();
+  await expect(page.locator('#searchBtn')).toHaveText(/Cancel/);
+  // wait for some progress, then cancel
+  await page.waitForFunction(() => parseInt(document.querySelector('#searchProgressBar').style.width, 10) > 0, { timeout: 60000 });
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveText(/cancelled/i);
+  await expect(page.locator('#searchBtn')).toHaveText(/Search this area/);
+  // a fresh normal search still works after cancelling
+  await page.fill('#range', '5000');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+});
+
 test('oversized search radius reports an error, not "no match"', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

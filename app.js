@@ -65,8 +65,24 @@ worker.onmessage = (e) => {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     return;
   }
+  if (d.type === 'searchProgress') {
+    if (d.reqId === searchReq) $('#searchProgressBar').style.width = d.pct + '%';
+    return;
+  }
   if (d.type === 'search') { onSearchResult(d); return; }
 };
+
+// toggle the search button between Search and Cancel + show the progress bar
+let searchReq = 0, searchBusy = false;
+function setSearchBusy(on) {
+  searchBusy = on;
+  const btn = $('#searchBtn');
+  btn.dataset.i18n = on ? 'cancelBtn' : 'searchBtn';
+  btn.textContent = t(btn.dataset.i18n);
+  const prog = $('#searchProgress');
+  prog.hidden = !on;
+  $('#searchProgressBar').style.width = '0%';
+}
 
 // Unrecoverable worker/WASM failure: tell the user instead of hanging silently.
 function showFatal(message) {
@@ -357,6 +373,8 @@ function runSearch() {
   const range = parseInt($('#range').value, 10) || 4000;
   const step = parseInt($('#step').value, 10) || 48;
   searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
+  searchReq = reqSeq;
+  setSearchBusy(true);
   send({
     type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large,
     mainBiomes,
@@ -366,10 +384,17 @@ function runSearch() {
   });
 }
 function onSearchResult(d) {
+  if (d.reqId !== searchReq) return;   // stale
+  setSearchBusy(false);
   pins = d.hits; selected = -1;
   hidePopup();
   resultsEl.innerHTML = '';
   $('#exportBtns').hidden = !pins.length;
+  if (d.error === 'cancelled') {
+    searchInfo.textContent = t('searchCancelled');
+    searchInfo.className = 'info empty';
+    draw(); return;
+  }
   if (d.error) {
     searchInfo.textContent = t('searchFailedArea');
     searchInfo.className = 'info err';
@@ -606,7 +631,10 @@ function init() {
     world.seed = $('#seed').value || '0'; world.large = $('#large').checked;
     curReset(); requestRender(0); syncHash();
   };
-  $('#searchBtn').onclick = runSearch;
+  $('#searchBtn').onclick = () => {
+    if (searchBusy) send({ type: 'cancelSearch', reqId: searchReq });
+    else runSearch();
+  };
   $('#exportCsv').onclick = () => exportResults('csv');
   $('#exportJson').onclick = () => exportResults('json');
   $('#addMainBiome').onclick = () => addMainBiomeRow();

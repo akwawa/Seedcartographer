@@ -4,6 +4,8 @@
 
 const I18N = {
   en: {
+    cancelBtn: 'Cancel',
+    searchCancelled: 'Search cancelled.',
     exportCsv: 'Export CSV',
     exportJson: 'Export JSON',
     present: 'present',
@@ -65,6 +67,8 @@ const I18N = {
     structTrialChamber: 'Trial chamber'
   },
   fr: {
+    cancelBtn: 'Annuler',
+    searchCancelled: 'Recherche annulée.',
     exportCsv: 'Exporter CSV',
     exportJson: 'Exporter JSON',
     present: 'présent',
@@ -126,6 +130,8 @@ const I18N = {
     structTrialChamber: "Salle d'épreuves"
   },
   es: {
+    cancelBtn: 'Cancelar',
+    searchCancelled: 'Búsqueda cancelada.',
     exportCsv: 'Exportar CSV',
     exportJson: 'Exportar JSON',
     present: 'presente',
@@ -187,6 +193,8 @@ const I18N = {
     structTrialChamber: 'Cámara de pruebas'
   },
   de: {
+    cancelBtn: 'Abbrechen',
+    searchCancelled: 'Suche abgebrochen.',
     exportCsv: 'CSV exportieren',
     exportJson: 'JSON exportieren',
     present: 'vorhanden',
