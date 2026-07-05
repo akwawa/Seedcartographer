@@ -76,6 +76,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .info.busy{color:var(--lapis-hi)}
 .info.ok{color:var(--grass)}
 .info.empty{color:var(--amber)}
+.info.err{color:#e07a7a}
 
 /* ---------- results ---------- */
 .results{display:flex;flex-direction:column;gap:6px}

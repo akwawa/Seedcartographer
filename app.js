@@ -18,7 +18,6 @@ const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
 let pins = [];                                  // [{x,z,count}]
 let selected = -1;
-let biomeIndex = new Map();                     // id -> {name,rgb}
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -32,6 +31,7 @@ worker.onerror = (e) => console.error('WORKER ERROR:', e.message, e.filename, e.
 worker.onmessageerror = (e) => console.error('WORKER MSGERROR', e);
 worker.onmessage = (e) => {
   const d = e.data;
+  if (d.type === 'fatal') { showFatal(d.message); return; }
   if (d.type === 'ready') {
     workerReady = true; MC_NEWEST = d.mcNewest; world.mc = MC_NEWEST;
     send({ type: 'biomeList' });
@@ -41,6 +41,11 @@ worker.onmessage = (e) => {
   if (d.type === 'biomeList') { onBiomeList(d.list); return; }
   if (d.type === 'tile') {
     if (d.reqId !== renderReq) return;            // stale
+    if (!d.ok) {
+      searchInfo.textContent = 'Map generation failed for this view. Try zooming or reloading the seed.';
+      searchInfo.className = 'info err';
+      return;
+    }
     const tmp = document.createElement('canvas');
     tmp.width = d.cols; tmp.height = d.rows;
     tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
@@ -60,6 +65,29 @@ worker.onmessage = (e) => {
   }
   if (d.type === 'search') { onSearchResult(d); return; }
 };
+
+// Unrecoverable worker/WASM failure: tell the user instead of hanging silently.
+function showFatal(message) {
+  searchInfo.textContent = message + ' Reload the page to retry.';
+  searchInfo.className = 'info err';
+  $('#searchBtn').disabled = true;
+  $('#loadBtn').disabled = true;
+}
+
+// Clipboard needs a secure context; fall back to execCommand over plain http.
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy') ? resolve() : reject(new Error('copy rejected')); }
+    catch (err) { reject(err); }
+    finally { ta.remove(); }
+  });
+}
 
 // ---------- coordinate transforms ----------
 function w2sx(wx) { return (wx - view.cx) / view.bpp + canvas.width / (2 * dpr); }
@@ -205,6 +233,11 @@ function clickAt(e) {
 // ---------- search ----------
 function runSearch() {
   const biomeA = parseInt($('#biomeA').value, 10);
+  if (!Number.isFinite(biomeA)) {
+    searchInfo.textContent = 'Pick a main biome first.';
+    searchInfo.className = 'info err';
+    return;
+  }
   const biomeB = $('#biomeB').value === '' ? -1 : parseInt($('#biomeB').value, 10);
   const adjDist = parseInt($('#adjDist').value, 10) || 0;
   const structType = $('#structType').value === '' ? -1 : parseInt($('#structType').value, 10);
@@ -222,6 +255,11 @@ function runSearch() {
 function onSearchResult(d) {
   pins = d.hits; selected = -1;
   resultsEl.innerHTML = '';
+  if (d.error) {
+    searchInfo.textContent = 'Search failed: area too large for this radius/criteria. Reduce the search radius.';
+    searchInfo.className = 'info err';
+    draw(); return;
+  }
   if (!pins.length) {
     searchInfo.textContent = `No match within ${$('#range').value} blocks (${d.ms} ms). Widen the area or relax a criterion.`;
     searchInfo.className = 'info empty';
@@ -232,8 +270,14 @@ function onSearchResult(d) {
   pins.forEach((p, i) => {
     const li = document.createElement('button');
     li.className = 'result'; li.dataset.i = i;
-    li.innerHTML = `<span class="rx">${p.x}, ${p.z}</span>` +
-      (p.count ? `<span class="rc">${p.count} nearby</span>` : '');
+    const rx = document.createElement('span');
+    rx.className = 'rx'; rx.textContent = `${p.x}, ${p.z}`;
+    li.appendChild(rx);
+    if (p.count) {
+      const rc = document.createElement('span');
+      rc.className = 'rc'; rc.textContent = `${p.count} nearby`;
+      li.appendChild(rc);
+    }
     li.onclick = () => selectPin(i);
     resultsEl.appendChild(li);
   });
@@ -249,23 +293,33 @@ function selectPin(i) {
 }
 function showPopup(p) {
   const pop = $('#popup');
-  pop.innerHTML = `<div class="pop-x">${p.x}, ${p.z}</div>` +
-    `<button class="pop-tp">Copy /tp</button>`;
-  pop.querySelector('.pop-tp').onclick = () => {
-    navigator.clipboard.writeText(`/tp @s ${p.x} ~ ${p.z}`);
-    pop.querySelector('.pop-tp').textContent = 'Copied';
-    setTimeout(() => { const b = pop.querySelector('.pop-tp'); if (b) b.textContent = 'Copy /tp'; }, 1200);
+  pop.textContent = '';
+  const xEl = document.createElement('div');
+  xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
+  const btn = document.createElement('button');
+  btn.className = 'pop-tp'; btn.textContent = 'Copy /tp';
+  btn.onclick = () => {
+    copyText(`/tp @s ${p.x} ~ ${p.z}`)
+      .then(() => { btn.textContent = 'Copied'; })
+      .catch(() => { btn.textContent = 'Copy failed'; });
+    setTimeout(() => { btn.textContent = 'Copy /tp'; }, 1200);
   };
+  pop.append(xEl, btn);
   pop.style.display = 'block';
 }
 
 // ---------- biome list / dropdowns ----------
 function onBiomeList(list) {
-  biomeIndex = new Map(list.map((b) => [b.id, b]));
   const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  const opt = (b) => `<option value="${b.id}">${b.name}</option>`;
-  $('#biomeA').innerHTML = sorted.map(opt).join('');
-  $('#biomeB').innerHTML = `<option value="">— none —</option>` + sorted.map(opt).join('');
+  const opt = (value, label) => {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label;
+    return o;
+  };
+  const selA = $('#biomeA'), selB = $('#biomeB');
+  selA.textContent = ''; selB.textContent = '';
+  selB.appendChild(opt('', '— none —'));
+  for (const b of sorted) { selA.appendChild(opt(b.id, b.name)); selB.appendChild(opt(b.id, b.name)); }
   // structures
   const structDefs = [
     [0, 'Village'], [1, 'Pillager outpost'], [2, 'Desert pyramid'], [3, 'Jungle temple'],
@@ -273,24 +327,26 @@ function onBiomeList(list) {
     [9, 'Woodland mansion'], [10, 'Ruined portal'], [11, 'Ancient city'], [12, 'Buried treasure'],
     [13, 'Trail ruins'], [14, 'Trial chamber']
   ];
-  // resolve enum values via worker? structConst is in worker; we mirror indices here.
-  // We asked worker for nothing; instead use a tiny round-trip-free map: request via search uses enum values.
-  // Simpler: store the UI index and convert with a fixed table requested once.
   resolveStructConsts(structDefs);
 }
-let structDefsResolved = null;
+// The UI only knows stable indices; the worker maps them to cubiomes enum
+// values (structConst in mcfinder.c) through a one-off round-trip.
 function resolveStructConsts(defs) {
-  // We need the enum values; ask the worker once through a dedicated message.
   const chan = (e) => {
     if (e.data.type !== 'structConsts') return;
     worker.removeEventListener('message', chan);
     const vals = e.data.values;
     const sel = $('#structType');
-    sel.innerHTML = `<option value="">— none —</option>`;
+    sel.textContent = '';
+    const none = document.createElement('option');
+    none.value = ''; none.textContent = '— none —';
+    sel.appendChild(none);
     structToggles = [];
     defs.forEach((d, idx) => {
       const ev = vals[idx];
-      sel.innerHTML += `<option value="${ev}">${d[1]}</option>`;
+      const o = document.createElement('option');
+      o.value = ev; o.textContent = d[1];
+      sel.appendChild(o);
       structToggles.push({ type: ev, label: d[1], on: false, color: structColors[idx % structColors.length], points: null });
     });
     buildStructToggleUI();
@@ -304,8 +360,12 @@ function buildStructToggleUI() {
   structToggles.forEach((t, i) => {
     const id = 'sl' + i;
     const row = document.createElement('label'); row.className = 'layer';
-    row.innerHTML = `<input type="checkbox" id="${id}"><span class="dot" style="background:${t.color}"></span>${t.label}`;
-    row.querySelector('input').onchange = (e) => { t.on = e.target.checked; if (t.on) requestStructures(); else { t.points = null; draw(); } };
+    const input = document.createElement('input');
+    input.type = 'checkbox'; input.id = id;
+    const dot = document.createElement('span');
+    dot.className = 'dot'; dot.style.background = t.color;
+    row.append(input, dot, t.label);
+    input.onchange = (e) => { t.on = e.target.checked; if (t.on) requestStructures(); else { t.points = null; draw(); } };
     box.appendChild(row);
   });
 }
@@ -330,7 +390,14 @@ let hashState = null;
 function applyHashCriteria() {
   // called once dropdowns exist; applies criteria from hash or sensible demo defaults
   const c = hashState && hashState.c;
-  const set = (sel, v) => { if (v !== undefined && v !== null && $(sel).querySelector(`option[value="${v}"]`)) $(sel).value = v; };
+  // Hash values are attacker-controlled (share links): only accept integers,
+  // which is all the dropdowns ever contain, before using them in a selector.
+  const set = (sel, v) => {
+    if (v === undefined || v === null) return;
+    v = String(v);
+    if (!/^-?\d+$/.test(v)) return;
+    if ($(sel).querySelector(`option[value="${v}"]`)) $(sel).value = v;
+  };
   if (c) {
     set('#biomeA', c.a); set('#biomeB', c.ba); $('#adjDist').value = c.ad;
     set('#structType', c.st); $('#minStruct').value = c.mn; $('#structRadius').value = c.sr;
@@ -358,8 +425,11 @@ function init() {
   };
   $('#searchBtn').onclick = runSearch;
   $('#shareBtn').onclick = () => {
-    syncHash(); navigator.clipboard.writeText(location.href);
-    $('#shareBtn').textContent = 'Link copied'; setTimeout(() => $('#shareBtn').textContent = 'Share link', 1300);
+    syncHash();
+    copyText(location.href)
+      .then(() => { $('#shareBtn').textContent = 'Link copied'; })
+      .catch(() => { $('#shareBtn').textContent = 'Copy failed'; });
+    setTimeout(() => $('#shareBtn').textContent = 'Share link', 1300);
   };
   resize();
 }

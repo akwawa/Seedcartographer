@@ -1,6 +1,7 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
 importScripts('./mcfinder.js');
+importScripts('./seed.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors
@@ -19,6 +20,8 @@ createMcFinder().then((mod) => {
   M._free(cp);
   ready = true;
   postMessage({ type: 'ready', mcNewest: M._c_mc_newest() });
+}).catch((err) => {
+  postMessage({ type: 'fatal', message: 'WASM module failed to load: ' + (err && err.message || err) });
 });
 
 function ensureArea(cells) {
@@ -34,15 +37,6 @@ function ensureList(pairs) {
     listPtr = M._malloc(pairs * 2 * 4);
     listCap = pairs;
   }
-}
-
-// Java String.hashCode, then sign-extended to 64 bits — matches Minecraft.
-function seedToBigInt(s) {
-  s = String(s).trim();
-  if (/^-?\d+$/.test(s)) return BigInt.asIntN(64, BigInt(s));
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return BigInt(h); // signed 32-bit -> BigInt is already sign-correct
 }
 
 let curSeedStr = null, curMc = null, curLarge = null;
@@ -89,7 +83,7 @@ onmessage = (e) => {
       }
     }
     postMessage({
-      type: 'tile', reqId: d.reqId, rgba: rgba.buffer, cols, rows, scale,
+      type: 'tile', reqId: d.reqId, ok: !!ok, rgba: rgba.buffer, cols, rows, scale,
       // world coords of the cell-grid NW corner, for placement on the map
       originX: sx0 * scale, originZ: sz0 * scale
     }, [rgba.buffer]);
@@ -126,6 +120,11 @@ onmessage = (e) => {
       d.biomeA, d.biomeB, d.adjDist,
       d.structType, d.minStruct, d.structRadius,
       d.cx, d.cz, d.range, d.step, d.mergeDist);
+    if (n < 0) {
+      // -1 = area guard tripped or the biome grid could not be generated
+      postMessage({ type: 'search', reqId: d.reqId, error: 'area-too-large', hits: [], ms: Math.round(performance.now() - t0) });
+      return;
+    }
     const base = M._hitsPtr() >> 2;
     const hits = [];
     for (let i = 0; i < n; i++)
