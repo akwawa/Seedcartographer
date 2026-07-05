@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm test
 
@@ -27,13 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npm ci --ignore-scripts
+      - run: ./node_modules/.bin/playwright install --with-deps chromium
       - run: npm run e2e
 
   # SonarQube Cloud analysis (quality gate + unit-test coverage). Requires the
@@ -42,23 +42,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0   # full history improves blame-based analysis
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run coverage
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      # TEMP debug: list the vulnerabilities behind the failing quality gate
-      - if: github.event_name == 'pull_request'
-        run: |
-          sleep 30
-          curl -s -u "${{ secrets.SONAR_TOKEN }}:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&pullRequest=${{ github.event.pull_request.number }}&types=VULNERABILITY&ps=50"             | python3 -c "import json,sys; d=json.load(sys.stdin); [print(i['rule'], i['severity'], i['component'], i.get('line'), '-', i['message']) for i in d.get('issues',[])] or print('no vulnerabilities'); print('total:', d.get('total'))"
 
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
@@ -66,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           submodules: true
       - uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021 # v14
