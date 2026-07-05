@@ -76,10 +76,19 @@ module.exports = [
     }
   },
   {
-    files: ['test/**/*.js', 'eslint.config.js'],
+    files: ['test/**/*.js', 'eslint.config.js', 'playwright.config.js'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: { ...globals.node }
+    }
+  },
+  {
+    // Playwright specs run in Node, but evaluate()/waitForFunction() callbacks
+    // execute in the browser page, where the app's globals exist
+    files: ['e2e/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { ...globals.node, ...globals.browser, syncHash: 'readonly' }
     }
   }
 ];

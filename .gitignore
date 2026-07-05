@@ -3,3 +3,5 @@ node_modules/
 .DS_Store
 # cubiomes checkout used to rebuild the WASM (see BUILDING.md)
 cubiomes/
+playwright-report/
+test-results/
