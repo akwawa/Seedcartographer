@@ -8,6 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -20,6 +21,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -29,3 +31,18 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+
+  # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
+  # the pinned cubiomes submodule with the pinned emsdk version
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.2
+      - run: ./build.sh
+      - run: git diff --exit-code mcfinder.wasm mcfinder.js
