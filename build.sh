@@ -4,7 +4,7 @@
 #   git submodule update --init
 #   ./build.sh
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 if ! command -v emcc >/dev/null; then
   echo "emcc not found — install and activate emsdk first" >&2
