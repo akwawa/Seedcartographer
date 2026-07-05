@@ -24,13 +24,14 @@ module.exports = [
         // provided by i18n.js, loaded first
         t: 'readonly', applyI18n: 'readonly', setLang: 'readonly',
         currentLang: 'readonly', I18N_LANGS: 'readonly',
-        // provided by export.js, loaded first
-        resultsToCSV: 'readonly', resultsToJSON: 'readonly'
+        // provided by export.js / biomes.js, loaded first
+        resultsToCSV: 'readonly', resultsToJSON: 'readonly',
+        biomeLabel: 'readonly'
       }
     }
   },
   {
-    files: ['i18n.js', 'export.js'],
+    files: ['i18n.js', 'export.js', 'biomes.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { ...globals.browser, module: 'readonly' }
@@ -39,6 +40,15 @@ module.exports = [
       // defines the i18n API consumed by app.js
       'no-unused-vars': 'off'
     }
+  },
+  {
+    // i18n.js <-> biomes.js reference each other's bindings at call time
+    files: ['i18n.js'],
+    languageOptions: { globals: { biomeLabel: 'readonly' } }
+  },
+  {
+    files: ['biomes.js'],
+    languageOptions: { globals: { currentLang: 'readonly' } }
   },
   {
     files: ['worker.js'],
