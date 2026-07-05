@@ -62,7 +62,7 @@ worker.onmessage = (e) => {
   }
   if (d.type === 'biome') {
     if (d.reqId !== biomeProbeReq) return;
-    hud.querySelector('.biome').textContent = d.name || '—';
+    hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     return;
   }
   if (d.type === 'search') { onSearchResult(d); return; }
@@ -280,7 +280,18 @@ function critSelect(entries, initial) {
   return sel;
 }
 function biomeSelect(initial) {
-  return critSelect(biomesSorted.map((b) => [b.id, b.name]), initial);
+  const sel = document.createElement('select');
+  const entries = biomesSorted
+    .map((b) => ({ id: b.id, name: b.name, label: biomeLabel(b.name) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  for (const e of entries) {
+    const o = document.createElement('option');
+    o.value = e.id; o.textContent = e.label; o.dataset.biome = e.name;
+    sel.appendChild(o);
+  }
+  if (initial !== undefined) sel.value = String(initial);
+  if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+  return sel;
 }
 function structSelect(initial) {
   return critSelect(structToggles.map((tg) => [tg.type, t(tg.labelKey), tg.labelKey]), initial);

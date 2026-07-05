@@ -274,6 +274,10 @@ function applyI18n() {
   document.documentElement.lang = currentLang;
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+  // biome option labels (biomes.js, loaded after this file)
+  if (typeof biomeLabel === 'function') {
+    document.querySelectorAll('[data-biome]').forEach((el) => { el.textContent = biomeLabel(el.dataset.biome); });
+  }
 }
 
 function setLang(lang) {
