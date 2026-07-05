@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+test
+cubiomes
+*.md
+LICENSE
+package.json
+mcfinder.c
+Dockerfile
+.dockerignore
+.gitignore
