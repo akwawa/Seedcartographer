@@ -23,12 +23,14 @@ module.exports = [
         ...globals.browser,
         // provided by i18n.js, loaded first
         t: 'readonly', applyI18n: 'readonly', setLang: 'readonly',
-        currentLang: 'readonly', I18N_LANGS: 'readonly'
+        currentLang: 'readonly', I18N_LANGS: 'readonly',
+        // provided by export.js, loaded first
+        resultsToCSV: 'readonly', resultsToJSON: 'readonly'
       }
     }
   },
   {
-    files: ['i18n.js'],
+    files: ['i18n.js', 'export.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { ...globals.browser, module: 'readonly' }

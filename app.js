@@ -358,6 +358,7 @@ function onSearchResult(d) {
   pins = d.hits; selected = -1;
   hidePopup();
   resultsEl.innerHTML = '';
+  $('#exportBtns').hidden = !pins.length;
   if (d.error) {
     searchInfo.textContent = t('searchFailedArea');
     searchInfo.className = 'info err';
@@ -469,30 +470,67 @@ function buildStructToggleUI() {
   });
 }
 
+// Current criteria as a plain object — used by the share hash and the exports.
+function readCriteria() {
+  return {
+    mb: rowsOf('#mainBiomes').map((r) => parseInt(r.querySelector('select').value, 10)),
+    am: $('#adjMode').value,
+    ac: rowsOf('#adjClauses').map((r) => ({
+      b: parseInt(r.querySelector('select').value, 10),
+      d: parseInt(r.querySelector('input').value, 10) || 0,
+      n: r.querySelector('select.neg').value === '1' ? 1 : 0
+    })),
+    sm: $('#structMode').value,
+    sc: rowsOf('#structClauses').map((r) => {
+      const ins = r.querySelectorAll('input');
+      return {
+        t: parseInt(r.querySelector('select').value, 10),
+        mn: parseInt(ins[0].value, 10) || 0,
+        r: parseInt(ins[1].value, 10) || 0
+      };
+    }),
+    rg: $('#range').value, sp: $('#step').value
+  };
+}
+
+// ---------- result export ----------
+function mcLabel() {
+  const v = MC_VERSIONS.find(([val]) => val === world.mc);
+  return v ? v[1] : String(world.mc);
+}
+function downloadFile(name, text, mime) {
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function exportResults(fmt) {
+  if (!pins.length) return;
+  const c = readCriteria();
+  const meta = {
+    seed: world.seed, mcLabel: mcLabel(), large: world.large,
+    criteria: {
+      mainBiomes: c.mb,
+      adjacentMode: c.am,
+      adjacent: c.ac.map((a) => ({ biome: a.b, within: a.d, absent: !!a.n })),
+      structureMode: c.sm,
+      structures: c.sc.map((s) => ({ type: s.t, atLeast: s.mn, within: s.r })),
+      searchRadius: parseInt(c.rg, 10) || 0,
+      step: parseInt(c.sp, 10) || 0
+    }
+  };
+  const base = `seedcartographer-${String(world.seed).replace(/[^\w-]+/g, '_')}`;
+  if (fmt === 'csv') downloadFile(base + '.csv', resultsToCSV(pins, meta), 'text/csv');
+  else downloadFile(base + '.json', resultsToJSON(pins, meta), 'application/json');
+}
+
 // ---------- URL hash sharing ----------
 function syncHash() {
   const state = {
     s: world.seed, m: world.mc, l: world.large ? 1 : 0,
     x: Math.round(view.cx), z: Math.round(view.cz), b: +view.bpp.toFixed(2),
-    c: {
-      mb: rowsOf('#mainBiomes').map((r) => parseInt(r.querySelector('select').value, 10)),
-      am: $('#adjMode').value,
-      ac: rowsOf('#adjClauses').map((r) => ({
-        b: parseInt(r.querySelector('select').value, 10),
-        d: parseInt(r.querySelector('input').value, 10) || 0,
-        n: r.querySelector('select.neg').value === '1' ? 1 : 0
-      })),
-      sm: $('#structMode').value,
-      sc: rowsOf('#structClauses').map((r) => {
-        const ins = r.querySelectorAll('input');
-        return {
-          t: parseInt(r.querySelector('select').value, 10),
-          mn: parseInt(ins[0].value, 10) || 0,
-          r: parseInt(ins[1].value, 10) || 0
-        };
-      }),
-      rg: $('#range').value, sp: $('#step').value
-    }
+    c: readCriteria()
   };
   history.replaceState(null, '', '#' + btoa(encodeURIComponent(JSON.stringify(state))));
 }
@@ -558,6 +596,8 @@ function init() {
     curReset(); requestRender(0); syncHash();
   };
   $('#searchBtn').onclick = runSearch;
+  $('#exportCsv').onclick = () => exportResults('csv');
+  $('#exportJson').onclick = () => exportResults('json');
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addStruct').onclick = () => addStructRow();
