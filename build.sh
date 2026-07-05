@@ -26,6 +26,7 @@ emcc mcfinder.c \
   -sEXPORT_NAME=createMcFinder \
   -sWASM_BIGINT=1 \
   -sALLOW_MEMORY_GROWTH=1 \
+  -sGROWABLE_ARRAYBUFFERS=0 \
   -sEXPORTED_RUNTIME_METHODS=UTF8ToString,HEAP32,HEAPU8 \
   -sEXPORTED_FUNCTIONS=_malloc,_free \
   -o mcfinder.js

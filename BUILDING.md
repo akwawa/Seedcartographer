@@ -32,7 +32,7 @@ source ./emsdk/emsdk_env.sh
 ./build.sh
 ```
 
-`build.sh` contient la commande `emcc` exacte (flags `MODULARIZE`,
+`build.sh` contient la commande `emcc` exacte (flags `MODULARIZE`, `GROWABLE_ARRAYBUFFERS=0` — Chrome ≥ 149 refuse `TextDecoder` sur les ArrayBuffers redimensionnables —,
 `WASM_BIGINT` — requis car la seed est passée en `uint64_t` depuis un `BigInt`
 JavaScript —, `ALLOW_MEMORY_GROWTH`, exports runtime `UTF8ToString`/`HEAP32`/
 `HEAPU8`).
