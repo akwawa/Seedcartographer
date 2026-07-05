@@ -17,7 +17,8 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   step                             — scan stride in blocks
 //   mergeDist                        — duplicate-merge distance in blocks
 //   mainSet                          — Set of accepted biome ids for the spot
-//   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist}]
+//   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?}]
+//                                      (negate: the biome must be ABSENT within dist)
 //   structMode, structClauses        — 'and'|'or', [{points:[[x,z]], min, radius}]
 function scanGrid(p) {
   const { grid, cols, rows, gx0, gz0, SC, cx, cz, range, mergeDist } = p;
@@ -31,7 +32,13 @@ function scanGrid(p) {
   // pre-compute per-clause cell radii and sub-steps (same speedup as the C scan)
   const adj = adjClauses.map((c) => {
     const cells = Math.floor(c.dist / SC);
-    return { biomes: c.biomes, dist2: c.dist * c.dist, cells, sub: cells > 20 ? Math.floor(cells / 20) : 1 };
+    return {
+      biomes: c.biomes, negate: !!c.negate,
+      dist2: c.dist * c.dist, cells,
+      // negated clauses must scan every cell: sub-stepping could miss the
+      // one occurrence that should disqualify the spot
+      sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
+    };
   });
   const structs = structClauses.map((c) => ({ points: c.points, min: c.min, r2: c.radius * c.radius }));
 
@@ -64,8 +71,9 @@ function scanGrid(p) {
               if (c.biomes.has(grid[nj * cols + ni])) { found = true; break; }
             }
           }
-          if (adjAll && !found) { pass = false; break; }
-          if (!adjAll && found) { pass = true; break; }
+          const ok = c.negate ? !found : found;
+          if (adjAll && !ok) { pass = false; break; }
+          if (!adjAll && ok) { pass = true; break; }
         }
         if (!pass) continue;
       }

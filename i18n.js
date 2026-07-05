@@ -4,6 +4,8 @@
 
 const I18N = {
   en: {
+    present: 'present',
+    absent: 'absent',
     mainBiomeAny: 'Main biome (any of)',
     adjacentBiomes: 'Adjacent biomes',
     nearbyStructures: 'Nearby structures',
@@ -61,6 +63,8 @@ const I18N = {
     structTrialChamber: 'Trial chamber'
   },
   fr: {
+    present: 'présent',
+    absent: 'absent',
     mainBiomeAny: "Biome principal (l'un de)",
     adjacentBiomes: 'Biomes adjacents',
     nearbyStructures: 'Structures à proximité',
@@ -118,6 +122,8 @@ const I18N = {
     structTrialChamber: "Salle d'épreuves"
   },
   es: {
+    present: 'presente',
+    absent: 'ausente',
     mainBiomeAny: 'Bioma principal (cualquiera de)',
     adjacentBiomes: 'Biomas adyacentes',
     nearbyStructures: 'Estructuras cercanas',
@@ -175,6 +181,8 @@ const I18N = {
     structTrialChamber: 'Cámara de pruebas'
   },
   de: {
+    present: 'vorhanden',
+    absent: 'abwesend',
     mainBiomeAny: 'Hauptbiom (eines von)',
     adjacentBiomes: 'Angrenzende Biome',
     nearbyStructures: 'Strukturen in der Nähe',

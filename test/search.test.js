@@ -58,6 +58,30 @@ test('adjacency respects the distance limit', () => {
   assert.equal(far.length, 0);
 });
 
+test('negated adjacency requires the biome to be absent', () => {
+  // main biome 1 at (4,4), unwanted biome 2 right next to it
+  const grid = makeGrid(16, 16, 0, [{ i: 4, j: 4, id: 1 }, { i: 5, j: 4, id: 2 }]);
+  const without2 = scanGrid(makeParams(grid, 16, 16, { adjClauses: [{ biomes: new Set([2]), dist: 64, negate: true }] }));
+  const without3 = scanGrid(makeParams(grid, 16, 16, { adjClauses: [{ biomes: new Set([3]), dist: 64, negate: true }] }));
+  assert.equal(without2.length, 0, 'biome 2 is nearby, spot must be rejected');
+  assert.equal(without3.length, 1, 'biome 3 is absent, spot must pass');
+});
+
+test('negated clauses combine with positive ones in AND mode', () => {
+  // main biome 1 at (4,4); biome 2 adjacent (wanted), biome 3 adjacent (unwanted)
+  const grid = makeGrid(16, 16, 0, [
+    { i: 4, j: 4, id: 1 }, { i: 5, j: 4, id: 2 }, { i: 3, j: 4, id: 3 }
+  ]);
+  const wanted = [{ biomes: new Set([2]), dist: 64 }];
+  const both = scanGrid(makeParams(grid, 16, 16, {
+    adjMode: 'and',
+    adjClauses: [...wanted, { biomes: new Set([3]), dist: 64, negate: true }]
+  }));
+  const positiveOnly = scanGrid(makeParams(grid, 16, 16, { adjMode: 'and', adjClauses: wanted }));
+  assert.equal(positiveOnly.length, 1);
+  assert.equal(both.length, 0, 'unwanted biome 3 nearby must disqualify the spot');
+});
+
 test('structure clauses: min count, AND/OR, and total count in hits', () => {
   const grid = makeGrid(8, 8, 1); // everything is the main biome
   const spot = [4 * SC, 4 * SC];
