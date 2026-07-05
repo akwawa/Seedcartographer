@@ -7,6 +7,13 @@ monde tourne dans le navigateur (cubiomes compilé en WebAssembly) — aucune do
 n'est envoyée à un serveur : les polices sont auto-hébergées et l'application ne
 fait aucune requête externe.
 
+## Démo en ligne
+
+L'application est déployée sur GitHub Pages à chaque mise à jour de `main` :
+**https://akwawa.github.io/Seedcartographer/**
+
+(Prérequis côté dépôt : Pages activé avec la source « GitHub Actions ».)
+
 ## Lancer l'application
 
 Le module WebAssembly doit être servi par un vrai serveur web (l'ouverture
