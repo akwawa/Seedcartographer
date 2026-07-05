@@ -51,8 +51,10 @@ sélectionner.
 - **Combinaisons rares.** Certaines combinaisons (ex. cherry grove + warm ocean +
   2 villages) sont géographiquement rares. Si rien n'est trouvé, élargis le rayon
   ou relâche un critère.
-- **Version de génération : Java 1.21** (limite de la bibliothèque cubiomes
-  embarquée). D'autres versions pourront être ajoutées.
+- **Version de génération sélectionnable.** Le sélecteur « Java » dans la barre
+  du haut permet de choisir la version (de 1.0 à 1.21, 1.21 par défaut) : la
+  carte, les structures et la recherche sont recalculées pour la version
+  choisie, et la version est incluse dans les liens de partage.
 
 ## Fichiers
 
