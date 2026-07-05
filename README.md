@@ -112,6 +112,11 @@ sélectionner.
 - **Tests end-to-end** : `npm run e2e` (Playwright ; `npx playwright install chromium`
   au premier lancement, ou `CHROMIUM_PATH=/chemin/vers/chromium` pour utiliser un
   navigateur déjà installé).
+- **Couverture** : `npm run coverage` génère `coverage/lcov.info` (node:test).
+- **Qualité** : chaque push/PR est analysé par
+  [SonarQube Cloud](https://sonarcloud.io/project/overview?id=akwawa_Seedcartographer)
+  (job CI `sonar`, secret `SONAR_TOKEN` requis ; l'analyse doit être en mode
+  « CI-based », pas « Automatic Analysis »).
 - Une CI GitHub Actions lance lint, tests unitaires et e2e sur chaque push et
   pull request.
 - **Recompiler le WASM** : voir [`BUILDING.md`](BUILDING.md).

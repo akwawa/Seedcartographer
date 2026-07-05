@@ -32,6 +32,25 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
 
+  # SonarQube Cloud analysis (quality gate + unit-test coverage). Requires the
+  # SONAR_TOKEN repository secret; skipped when it is not available (forks).
+  sonar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # full history improves blame-based analysis
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run coverage
+      - uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
   wasm:
