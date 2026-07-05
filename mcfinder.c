@@ -13,8 +13,6 @@ static int      MC   = MC_1_21;
 static uint64_t SEED = 0;
 
 EMSCRIPTEN_KEEPALIVE int c_mc_newest(void){ return MC_NEWEST; }
-EMSCRIPTEN_KEEPALIVE int c_warm_ocean(void){ return warm_ocean; }
-EMSCRIPTEN_KEEPALIVE int c_cherry_grove(void){ return cherry_grove; }
 
 // Stable index -> structure enum value, for building the UI structure list.
 EMSCRIPTEN_KEEPALIVE
@@ -107,26 +105,10 @@ int listStructures(int structType, int x0, int z0, int x1, int z1,
 #define MAX_HITS 1500
 static int gHits[MAX_HITS*3];
 EMSCRIPTEN_KEEPALIVE int hitsPtr(void){ return (int)(intptr_t)gHits; }
-EMSCRIPTEN_KEEPALIVE int maxHits(void){ return MAX_HITS; }
 
 #define MAX_STRUCT 40000
-static int gSX[MAX_STRUCT], gSZ[MAX_STRUCT];
+static int gStruct[MAX_STRUCT*2];   // x,z pairs, filled via listStructures
 static inline int sq(int v){ return v*v; }
-
-static int collectStructures(int t, int x0,int z0,int x1,int z1){
-    StructureConfig sc; if(!getStructureConfig(t, MC, &sc)) return 0;
-    int rb = sc.regionSize*16;
-    int r0x=(int)floorf((float)x0/rb)-1, r1x=(int)floorf((float)x1/rb)+1;
-    int r0z=(int)floorf((float)z0/rb)-1, r1z=(int)floorf((float)z1/rb)+1;
-    int n=0;
-    for(int rz=r0z; rz<=r1z; rz++) for(int rx=r0x; rx<=r1x; rx++){
-        Pos p; if(!getStructurePos(t,MC,SEED,rx,rz,&p)) continue;
-        if(p.x<x0||p.x>x1||p.z<z0||p.z>z1) continue;
-        if(!isViableStructurePos(t,&G,p.x,p.z,0)) continue;
-        if(n<MAX_STRUCT){ gSX[n]=p.x; gSZ[n]=p.z; n++; }
-    }
-    return n;
-}
 
 static int fdiv4(int a, int b){ int q=a/b; if((a%b)&&((a<0)!=(b<0))) q--; return q; }
 
@@ -152,8 +134,9 @@ int searchLocations(int biomeA,int biomeB,int adjDist,
 
     int ns=0;
     if(structType>=0)
-        ns=collectStructures(structType, cx-range-structRadius, cz-range-structRadius,
-                                          cx+range+structRadius, cz+range+structRadius);
+        ns=listStructures(structType, cx-range-structRadius, cz-range-structRadius,
+                          cx+range+structRadius, cz+range+structRadius,
+                          gStruct, MAX_STRUCT);
 
     int adjC = adjDist/SC;                 // adjacency radius in cells
     int sub  = adjC>20 ? adjC/20 : 1;      // sub-step for adjacency scan (cells)
@@ -191,7 +174,7 @@ int searchLocations(int biomeA,int biomeB,int adjDist,
             int cnt=0;
             if(structType>=0){
                 for(int i=0;i<ns;i++)
-                    if(sq(gSX[i]-wx)+sq(gSZ[i]-wz) <= sr2) cnt++;
+                    if(sq(gStruct[i*2]-wx)+sq(gStruct[i*2+1]-wz) <= sr2) cnt++;
                 if(cnt<minStruct) continue;
             }
 

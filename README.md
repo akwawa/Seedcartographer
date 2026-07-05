@@ -4,7 +4,8 @@ Cherche, dans une seed Minecraft **Java** donnée, des endroits qui réunissent
 plusieurs critères en même temps : un biome principal, collé à un biome voisin,
 avec un certain nombre de structures à proximité. Tout le calcul de génération du
 monde tourne dans le navigateur (cubiomes compilé en WebAssembly) — aucune donnée
-n'est envoyée à un serveur.
+n'est envoyée à un serveur : les polices sont auto-hébergées et l'application ne
+fait aucune requête externe.
 
 ## Lancer l'application
 
@@ -60,5 +61,22 @@ sélectionner.
 | `index.html`, `styles.css` | Interface |
 | `app.js` | Carte (pan/zoom, rendu, épingles), UI, partage de lien |
 | `worker.js` | Web Worker : possède l'instance WASM (tuiles + recherche) |
+| `seed.js` | Conversion seed → entier 64 bits (partagé worker/tests) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
-| `mcfinder.c` | Source C du wrapper (pour référence / recompilation) |
+| `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |
+| `fonts/` | Polices auto-hébergées (OFL 1.1) |
+| `test/` | Tests unitaires (`npm test`, Node ≥ 20) |
+
+## Développement
+
+- **Tests** : `npm test` (aucune dépendance à installer, utilise `node:test`).
+  Une CI GitHub Actions les lance sur chaque push et pull request.
+- **Recompiler le WASM** : voir [`BUILDING.md`](BUILDING.md).
+
+## Licence
+
+Ce projet est distribué sous licence
+**[CC BY-NC 4.0](LICENSE)** (Attribution – Pas d'utilisation commerciale) :
+toute réutilisation doit créditer l'auteur, et l'usage commercial est interdit.
+Les composants tiers (cubiomes, polices) conservent leurs licences respectives —
+voir [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

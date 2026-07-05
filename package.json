@@ -1,0 +1,11 @@
+{
+  "name": "seedcartographer",
+  "version": "1.0.0",
+  "description": "Minecraft Java seed explorer: find spots matching biome + adjacent biome + structure criteria, fully in the browser (cubiomes compiled to WebAssembly).",
+  "private": true,
+  "license": "CC-BY-NC-4.0",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 8000"
+  }
+}
