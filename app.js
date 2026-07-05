@@ -310,8 +310,10 @@ function addRow(container, parts) {
 function addMainBiomeRow(biome) {
   addRow($('#mainBiomes'), [biomeSelect(biome)]);
 }
-function addAdjRow(biome, dist) {
-  addRow($('#adjClauses'), [biomeSelect(biome), subLbl('within'), numInput(dist ?? 400, 0, 16), subLbl('blocks')]);
+function addAdjRow(biome, dist, negate) {
+  const neg = critSelect([['0', t('present'), 'present'], ['1', t('absent'), 'absent']], negate ? '1' : '0');
+  neg.className = 'neg';
+  addRow($('#adjClauses'), [biomeSelect(biome), neg, subLbl('within'), numInput(dist ?? 400, 0, 16), subLbl('blocks')]);
 }
 function addStructRow(type, min, radius) {
   addRow($('#structClauses'), [structSelect(type), subLbl('atLeast'), numInput(min ?? 1, 0, 1, 'sm'), subLbl('within'), numInput(radius ?? 800, 0, 50), subLbl('blocks')]);
@@ -330,7 +332,8 @@ function runSearch() {
   }
   const adjClauses = rowsOf('#adjClauses').map((r) => ({
     biomes: [parseInt(r.querySelector('select').value, 10)],
-    dist: parseInt(r.querySelector('input').value, 10) || 0
+    dist: parseInt(r.querySelector('input').value, 10) || 0,
+    negate: r.querySelector('select.neg').value === '1'
   })).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
   const structClauses = rowsOf('#structClauses').map((r) => {
     const ins = r.querySelectorAll('input');
@@ -476,7 +479,8 @@ function syncHash() {
       am: $('#adjMode').value,
       ac: rowsOf('#adjClauses').map((r) => ({
         b: parseInt(r.querySelector('select').value, 10),
-        d: parseInt(r.querySelector('input').value, 10) || 0
+        d: parseInt(r.querySelector('input').value, 10) || 0,
+        n: r.querySelector('select.neg').value === '1' ? 1 : 0
       })),
       sm: $('#structMode').value,
       sc: rowsOf('#structClauses').map((r) => {
@@ -520,7 +524,7 @@ function applyHashCriteria() {
     $('#adjMode').value = c.am === 'or' ? 'or' : 'and';
     rows(c.ac).forEach((r) => {
       const b = int(r && r.b), d = int(r && r.d);
-      if (b !== null && d !== null && d >= 0) addAdjRow(b, d);
+      if (b !== null && d !== null && d >= 0) addAdjRow(b, d, int(r && r.n) === 1);
     });
     $('#structMode').value = c.sm === 'or' ? 'or' : 'and';
     rows(c.sc).forEach((r) => {

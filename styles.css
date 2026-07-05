@@ -76,6 +76,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .crit{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
 .crit .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .crit .row select{flex:1 1 130px;min-width:130px}
+.crit .row select.neg{flex:0 0 auto;min-width:0;width:auto;font-size:12px}
 .crit .row .num{width:70px}
 .crit .row .num.sm{width:52px}
 .crit .row .sub-lbl{color:var(--muted);font-size:12px;white-space:nowrap}

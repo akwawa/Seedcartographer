@@ -121,7 +121,7 @@ onmessage = (e) => {
 
     // biome grid over the search box padded by the largest adjacency distance
     const SC = 16;
-    const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist }));
+    const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
     const pad = adjClauses.reduce((m, c) => Math.max(m, c.dist), 0);
     const gx0 = Math.floor((d.cx - d.range - pad) / SC);
     const gz0 = Math.floor((d.cz - d.range - pad) / SC);
