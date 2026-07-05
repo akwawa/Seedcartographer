@@ -80,6 +80,10 @@ sélectionner.
 - **Combinaisons rares.** Certaines combinaisons (ex. cherry grove + warm ocean +
   2 villages) sont géographiquement rares. Si rien n'est trouvé, élargis le rayon
   ou relâche un critère.
+- **Trois dimensions.** Le sélecteur « Dimension » de la barre du haut bascule
+  entre Overworld, Nether et End : carte, biomes, structures (forteresses,
+  bastions, portails en ruine du Nether, cités de l'End) et recherche suivent
+  la dimension choisie, qui est incluse dans les liens de partage et les exports.
 - **Version de génération sélectionnable.** Le sélecteur « Java » dans la barre
   du haut permet de choisir la version (de 1.0 à 1.21, 1.21 par défaut) : la
   carte, les structures et la recherche sont recalculées pour la version

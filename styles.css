@@ -95,6 +95,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .info.err{color:#e07a7a}
 
 .export{display:flex;gap:6px;margin-bottom:8px}
+.export[hidden]{display:none}
 
 /* ---------- results ---------- */
 .results{display:flex;flex-direction:column;gap:6px}

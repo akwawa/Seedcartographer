@@ -101,6 +101,33 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Kirschhain');
 });
 
+test('Nether dimension: biome list, map, search and share link work', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.selectOption('#dimSel', '-1');
+  // biome rows now only offer the five Nether biomes
+  await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 5);
+  // structure criteria only offer Nether structures
+  await page.click('#addStruct');
+  await expect(page.locator('#structClauses .row select option')).toHaveCount(3);
+  await page.click('#structClauses .row .rm');
+  // search for a crimson forest nearby
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'crimson_forest').value;
+  });
+  await page.fill('#range', '3000');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  // share link restores the dimension
+  const url = await page.evaluate(() => { syncHash(); return location.href; });
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#dimSel')).toHaveValue('-1');
+  await expect(p2.locator('#mainBiomes .row select option:checked')).toHaveText(/Crimson|carmin/i);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

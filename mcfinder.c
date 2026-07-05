@@ -33,15 +33,34 @@ int structConst(int idx){
         case 12: return Treasure;
         case 13: return Trail_Ruins;
         case 14: return Trial_Chambers;
+        case 15: return Fortress;        // Nether
+        case 16: return Bastion;         // Nether
+        case 17: return Ruined_Portal_N; // Nether
+        case 18: return End_City;        // End
         default: return -1;
     }
 }
 
+// Dimension a biome belongs to: DIM_NETHER (-1), DIM_OVERWORLD (0), DIM_END (1).
 EMSCRIPTEN_KEEPALIVE
-void initGen(int mc, int large, uint64_t seed){
+int biomeDimension(int id){
+    switch(id){
+        case nether_wastes: case soul_sand_valley: case crimson_forest:
+        case warped_forest: case basalt_deltas:
+            return DIM_NETHER;
+        case the_end: case small_end_islands: case end_midlands:
+        case end_highlands: case end_barrens:
+            return DIM_END;
+        default:
+            return DIM_OVERWORLD;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void initGen(int mc, int large, uint64_t seed, int dim){
     MC = mc; SEED = seed;
     setupGenerator(&G, mc, large ? LARGE_BIOMES : 0);
-    applySeed(&G, DIM_OVERWORLD, seed);
+    applySeed(&G, dim, seed);
 }
 
 EMSCRIPTEN_KEEPALIVE

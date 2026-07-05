@@ -4,6 +4,11 @@
 
 const I18N = {
   en: {
+    dimension: "Dimension",
+    structFortress: "Nether fortress",
+    structBastion: "Bastion remnant",
+    structRuinedPortalN: "Ruined portal (Nether)",
+    structEndCity: "End city",
     cancelBtn: 'Cancel',
     searchCancelled: 'Search cancelled.',
     exportCsv: 'Export CSV',
@@ -67,6 +72,11 @@ const I18N = {
     structTrialChamber: 'Trial chamber'
   },
   fr: {
+    dimension: "Dimension",
+    structFortress: "Forteresse du Nether",
+    structBastion: "Bastion en ruine",
+    structRuinedPortalN: "Portail en ruine (Nether)",
+    structEndCity: "Cité de l'End",
     cancelBtn: 'Annuler',
     searchCancelled: 'Recherche annulée.',
     exportCsv: 'Exporter CSV',
@@ -130,6 +140,11 @@ const I18N = {
     structTrialChamber: "Salle d'épreuves"
   },
   es: {
+    dimension: "Dimensión",
+    structFortress: "Fortaleza del Nether",
+    structBastion: "Bastión en ruinas",
+    structRuinedPortalN: "Portal en ruinas (Nether)",
+    structEndCity: "Ciudad del End",
     cancelBtn: 'Cancelar',
     searchCancelled: 'Búsqueda cancelada.',
     exportCsv: 'Exportar CSV',
@@ -193,6 +208,11 @@ const I18N = {
     structTrialChamber: 'Cámara de pruebas'
   },
   de: {
+    dimension: "Dimension",
+    structFortress: "Netherfestung",
+    structBastion: "Bastionsruine",
+    structRuinedPortalN: "Portalruine (Nether)",
+    structEndCity: "Endsiedlung",
     cancelBtn: 'Abbrechen',
     searchCancelled: 'Suche abgebrochen.',
     exportCsv: 'CSV exportieren',
