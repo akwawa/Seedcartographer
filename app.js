@@ -33,7 +33,9 @@ worker.onmessage = (e) => {
   const d = e.data;
   if (d.type === 'fatal') { showFatal(d.message); return; }
   if (d.type === 'ready') {
-    workerReady = true; MC_NEWEST = d.mcNewest; world.mc = MC_NEWEST;
+    workerReady = true; MC_NEWEST = d.mcNewest;
+    if (!Number.isInteger(world.mc) || world.mc < 1 || world.mc > MC_NEWEST) world.mc = MC_NEWEST;
+    buildVersionSelect();
     send({ type: 'biomeList' });
     pending.forEach(([m, t]) => worker.postMessage(m, t || [])); pending.length = 0;
     return;
@@ -87,6 +89,35 @@ function copyText(text) {
     catch (err) { reject(err); }
     finally { ta.remove(); }
   });
+}
+
+// ---------- generation version ----------
+// cubiomes MCVersion enum values (biomes.h). The engine reports MC_NEWEST at
+// startup; if it disagrees with this table (different cubiomes build), only
+// the engine's newest version is offered so labels can never lie.
+const MC_VERSIONS = [
+  [28, '1.21'], [27, '1.21.3'], [26, '1.21.1'], [25, '1.20'],
+  [24, '1.19'], [23, '1.19.2'], [22, '1.18'], [21, '1.17'],
+  [20, '1.16'], [19, '1.16.1'], [18, '1.15'], [17, '1.14'],
+  [16, '1.13'], [15, '1.12'], [14, '1.11'], [13, '1.10'],
+  [12, '1.9'], [11, '1.8'], [10, '1.7'], [9, '1.6'],
+  [8, '1.5'], [7, '1.4'], [6, '1.3'], [5, '1.2'], [4, '1.1'], [3, '1.0']
+];
+function buildVersionSelect() {
+  const sel = $('#mcver');
+  sel.textContent = '';
+  const versions = MC_VERSIONS[0][0] === MC_NEWEST ? MC_VERSIONS : [[MC_NEWEST, 'newest']];
+  for (const [v, label] of versions) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    sel.appendChild(o);
+  }
+  sel.value = String(world.mc);
+  if (sel.value === '') { world.mc = MC_NEWEST; sel.value = String(MC_NEWEST); }
+  sel.onchange = () => {
+    world.mc = parseInt(sel.value, 10);
+    curReset(); draw(); requestRender(0); syncHash();
+  };
 }
 
 // ---------- coordinate transforms ----------
@@ -414,7 +445,9 @@ function applyHashCriteria() {
 function init() {
   hashState = readHash();
   if (hashState) {
-    world.seed = hashState.s; world.mc = hashState.m; world.large = !!hashState.l;
+    world.seed = hashState.s;
+    world.mc = Number.isInteger(hashState.m) ? hashState.m : parseInt(hashState.m, 10);
+    world.large = !!hashState.l;
     view.cx = hashState.x; view.cz = hashState.z; view.bpp = hashState.b;
   }
   $('#seed').value = world.seed;
