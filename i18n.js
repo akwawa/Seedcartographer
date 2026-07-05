@@ -4,6 +4,8 @@
 
 const I18N = {
   en: {
+    exportCsv: 'Export CSV',
+    exportJson: 'Export JSON',
     present: 'present',
     absent: 'absent',
     mainBiomeAny: 'Main biome (any of)',
@@ -63,6 +65,8 @@ const I18N = {
     structTrialChamber: 'Trial chamber'
   },
   fr: {
+    exportCsv: 'Exporter CSV',
+    exportJson: 'Exporter JSON',
     present: 'présent',
     absent: 'absent',
     mainBiomeAny: "Biome principal (l'un de)",
@@ -122,6 +126,8 @@ const I18N = {
     structTrialChamber: "Salle d'épreuves"
   },
   es: {
+    exportCsv: 'Exportar CSV',
+    exportJson: 'Exportar JSON',
     present: 'presente',
     absent: 'ausente',
     mainBiomeAny: 'Bioma principal (cualquiera de)',
@@ -181,6 +187,8 @@ const I18N = {
     structTrialChamber: 'Cámara de pruebas'
   },
   de: {
+    exportCsv: 'CSV exportieren',
+    exportJson: 'JSON exportieren',
     present: 'vorhanden',
     absent: 'abwesend',
     mainBiomeAny: 'Hauptbiom (eines von)',

@@ -91,6 +91,8 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .info.empty{color:var(--amber)}
 .info.err{color:#e07a7a}
 
+.export{display:flex;gap:6px;margin-bottom:8px}
+
 /* ---------- results ---------- */
 .results{display:flex;flex-direction:column;gap:6px}
 .result{display:flex;justify-content:space-between;align-items:center;gap:8px;
