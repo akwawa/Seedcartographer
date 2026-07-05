@@ -50,11 +50,12 @@ function ensureSearchArea(cells) {
   }
 }
 
-let curSeedStr = null, curMc = null, curLarge = null;
-function applyWorld(seedStr, mc, large) {
-  if (seedStr === curSeedStr && mc === curMc && large === curLarge) return;
-  M._initGen(mc, large ? 1 : 0, seedToBigInt(seedStr));
-  curSeedStr = seedStr; curMc = mc; curLarge = large;
+let curSeedStr = null, curMc = null, curLarge = null, curDim = null;
+function applyWorld(seedStr, mc, large, dim) {
+  dim = dim || 0;
+  if (seedStr === curSeedStr && mc === curMc && large === curLarge && dim === curDim) return;
+  M._initGen(mc, large ? 1 : 0, seedToBigInt(seedStr), dim);
+  curSeedStr = seedStr; curMc = mc; curLarge = large; curDim = dim;
 }
 
 // pick the smallest cubiomes scale >= bpp so the cell grid stays ~viewport-sized
@@ -77,7 +78,7 @@ async function runSearchJob(d) {
   const progress = (pct) => postMessage({ type: 'searchProgress', reqId: d.reqId, pct });
   const cancelled = () => searchCancelId === d.reqId;
   try {
-    applyWorld(d.seed, d.mc, d.large);
+    applyWorld(d.seed, d.mc, d.large, d.dim);
 
     // biome grid over the search box padded by the largest adjacency distance
     const SC = 16;
@@ -151,7 +152,7 @@ onmessage = (e) => {
   const d = e.data;
 
   if (d.type === 'render') {
-    applyWorld(d.seed, d.mc, d.large);
+    applyWorld(d.seed, d.mc, d.large, d.dim);
     const scale = chooseScale(d.bpp);
     // world block bounds of the viewport
     const halfW = d.w * d.bpp / 2, halfH = d.h * d.bpp / 2;
@@ -184,7 +185,7 @@ onmessage = (e) => {
   }
 
   if (d.type === 'structures') {
-    applyWorld(d.seed, d.mc, d.large);
+    applyWorld(d.seed, d.mc, d.large, d.dim);
     const cap = 4000;
     ensureList(cap);
     const out = [];
@@ -200,7 +201,7 @@ onmessage = (e) => {
   }
 
   if (d.type === 'biome') {
-    applyWorld(d.seed, d.mc, d.large);
+    applyWorld(d.seed, d.mc, d.large, d.dim);
     const id = M._biomeAtBlock(d.x, d.z, 60);
     postMessage({ type: 'biome', reqId: d.reqId, id, name: M.UTF8ToString(M._biomeName(id)) });
     return;
@@ -231,7 +232,7 @@ onmessage = (e) => {
     for (let id = 0; id <= 255; id++) {
       const name = M.UTF8ToString(M._biomeName(id));
       if (!name) continue;
-      list.push({ id, name, rgb: [colors[id * 3], colors[id * 3 + 1], colors[id * 3 + 2]] });
+      list.push({ id, name, dim: M._biomeDimension(id), rgb: [colors[id * 3], colors[id * 3 + 1], colors[id * 3 + 2]] });
     }
     postMessage({ type: 'biomeList', list });
     return;

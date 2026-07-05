@@ -21,6 +21,7 @@ function resultsToJSON(hits, meta) {
   return JSON.stringify({
     seed: meta.seed,
     mcVersion: meta.mcLabel,
+    dimension: meta.dimension || 'Overworld',
     largeBiomes: !!meta.large,
     criteria: meta.criteria,
     results: hits.map((h) => ({ x: h.x, z: h.z, nearbyStructures: h.count }))

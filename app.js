@@ -13,7 +13,8 @@ const canvas = $('#map'), ctx = canvas.getContext('2d');
 const hud = $('#hud'), resultsEl = $('#results'), searchInfo = $('#searchInfo');
 
 // ---------- state ----------
-const world = { seed: '141', mc: MC_NEWEST, large: false };
+const world = { seed: '141', mc: MC_NEWEST, large: false, dim: 0 };
+const DIMENSIONS = [[0, 'Overworld'], [-1, 'Nether'], [1, 'End']];
 const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
 let pins = [];                                  // [{x,z,count}]
@@ -136,6 +137,29 @@ function buildVersionSelect() {
   };
 }
 
+// ---------- dimension ----------
+function buildDimSelect() {
+  const sel = $('#dimSel');
+  for (const [v, label] of DIMENSIONS) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    sel.appendChild(o);
+  }
+  sel.value = String(world.dim);
+  sel.onchange = () => setDimension(parseInt(sel.value, 10));
+}
+function setDimension(dim) {
+  world.dim = dim;
+  // criteria and layers reference biomes/structures of the old dimension: rebuild
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  addMainBiomeRow();
+  structToggles.forEach((tg) => { tg.on = false; tg.points = null; });
+  buildStructToggleUI();
+  hidePopup();
+  pins = []; resultsEl.innerHTML = ''; $('#exportBtns').hidden = true;
+  curReset(); draw(); requestRender(0); syncHash();
+}
+
 // ---------- coordinate transforms ----------
 function w2sx(wx) { return (wx - view.cx) / view.bpp + canvas.width / (2 * dpr); }
 function w2sy(wz) { return (wz - view.cz) / view.bpp + canvas.height / (2 * dpr); }
@@ -209,7 +233,7 @@ function requestRender(delay = 90) {
   renderTimer = setTimeout(() => {
     renderReq = reqSeq++;
     send({
-      type: 'render', reqId: renderReq, seed: world.seed, mc: world.mc, large: world.large,
+      type: 'render', reqId: renderReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
       cx: view.cx, cz: view.cz, bpp: view.bpp,
       w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
     });
@@ -222,7 +246,7 @@ function requestStructures() {
   const W = canvas.width / dpr, H = canvas.height / dpr;
   const m = 200 * view.bpp; // small margin
   send({
-    type: 'structures', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large,
+    type: 'structures', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
     types: active.map((t) => t.type),
     x0: Math.floor(s2wx(0) - m), z0: Math.floor(s2wz(0) - m),
     x1: Math.ceil(s2wx(W) + m), z1: Math.ceil(s2wz(H) + m)
@@ -253,7 +277,7 @@ canvas.addEventListener('pointerup', (e) => {
 let probeTimer = null;
 function probeBiome(mx, my) {
   biomeProbeReq = reqSeq++;
-  send({ type: 'biome', reqId: biomeProbeReq, seed: world.seed, mc: world.mc, large: world.large, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) });
+  send({ type: 'biome', reqId: biomeProbeReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) });
 }
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -295,9 +319,12 @@ function critSelect(entries, initial) {
   if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   return sel;
 }
+function biomesOfDim() {
+  return biomesSorted.filter((b) => (b.dim || 0) === world.dim);
+}
 function biomeSelect(initial) {
   const sel = document.createElement('select');
-  const entries = biomesSorted
+  const entries = biomesOfDim()
     .map((b) => ({ id: b.id, name: b.name, label: biomeLabel(b.name) }))
     .sort((a, b) => a.label.localeCompare(b.label));
   for (const e of entries) {
@@ -309,8 +336,11 @@ function biomeSelect(initial) {
   if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   return sel;
 }
+function structsOfDim() {
+  return structToggles.filter((tg) => (tg.dim || 0) === world.dim);
+}
 function structSelect(initial) {
-  return critSelect(structToggles.map((tg) => [tg.type, t(tg.labelKey), tg.labelKey]), initial);
+  return critSelect(structsOfDim().map((tg) => [tg.type, t(tg.labelKey), tg.labelKey]), initial);
 }
 function numInput(value, min, step, cls) {
   const inp = document.createElement('input');
@@ -376,7 +406,7 @@ function runSearch() {
   searchReq = reqSeq;
   setSearchBusy(true);
   send({
-    type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large,
+    type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
     structMode: $('#structMode').value, structClauses,
@@ -463,12 +493,14 @@ function hidePopup() {
 // ---------- biome list / dropdowns ----------
 function onBiomeList(list) {
   biomesSorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  // structures: stable engine index -> i18n label key
+  // structures: stable engine index -> i18n label key + dimension
   const structDefs = [
-    [0, 'structVillage'], [1, 'structOutpost'], [2, 'structDesertPyramid'], [3, 'structJungleTemple'],
-    [4, 'structWitchHut'], [5, 'structIgloo'], [6, 'structOceanRuin'], [7, 'structShipwreck'],
-    [8, 'structMonument'], [9, 'structMansion'], [10, 'structRuinedPortal'], [11, 'structAncientCity'],
-    [12, 'structBuriedTreasure'], [13, 'structTrailRuins'], [14, 'structTrialChamber']
+    [0, 'structVillage', 0], [1, 'structOutpost', 0], [2, 'structDesertPyramid', 0], [3, 'structJungleTemple', 0],
+    [4, 'structWitchHut', 0], [5, 'structIgloo', 0], [6, 'structOceanRuin', 0], [7, 'structShipwreck', 0],
+    [8, 'structMonument', 0], [9, 'structMansion', 0], [10, 'structRuinedPortal', 0], [11, 'structAncientCity', 0],
+    [12, 'structBuriedTreasure', 0], [13, 'structTrailRuins', 0], [14, 'structTrialChamber', 0],
+    [15, 'structFortress', -1], [16, 'structBastion', -1], [17, 'structRuinedPortalN', -1],
+    [18, 'structEndCity', 1]
   ];
   resolveStructConsts(structDefs);
 }
@@ -481,7 +513,7 @@ function resolveStructConsts(defs) {
     const vals = e.data.values;
     structToggles = [];
     defs.forEach((d, idx) => {
-      structToggles.push({ type: vals[idx], labelKey: d[1], on: false, color: structColors[idx % structColors.length], points: null });
+      structToggles.push({ type: vals[idx], labelKey: d[1], dim: d[2], on: false, color: structColors[idx % structColors.length], points: null });
     });
     buildStructToggleUI();
     applyHashCriteria();
@@ -491,7 +523,7 @@ function resolveStructConsts(defs) {
 }
 function buildStructToggleUI() {
   const box = $('#structLayers'); box.innerHTML = '';
-  structToggles.forEach((tg, i) => {
+  structsOfDim().forEach((tg, i) => {
     const id = 'sl' + i;
     const row = document.createElement('label'); row.className = 'layer';
     const input = document.createElement('input');
@@ -546,6 +578,7 @@ function exportResults(fmt) {
   const c = readCriteria();
   const meta = {
     seed: world.seed, mcLabel: mcLabel(), large: world.large,
+    dimension: (DIMENSIONS.find(([v]) => v === world.dim) || [0, 'Overworld'])[1],
     criteria: {
       mainBiomes: c.mb,
       adjacentMode: c.am,
@@ -564,7 +597,7 @@ function exportResults(fmt) {
 // ---------- URL hash sharing ----------
 function syncHash() {
   const state = {
-    s: world.seed, m: world.mc, l: world.large ? 1 : 0,
+    s: world.seed, m: world.mc, l: world.large ? 1 : 0, d: world.dim,
     x: Math.round(view.cx), z: Math.round(view.cz), b: +view.bpp.toFixed(2),
     c: readCriteria()
   };
@@ -623,6 +656,8 @@ function init() {
     world.seed = hashState.s;
     world.mc = Number.isInteger(hashState.m) ? hashState.m : parseInt(hashState.m, 10);
     world.large = !!hashState.l;
+    const d = parseInt(hashState.d, 10);
+    world.dim = (d === -1 || d === 1) ? d : 0;
     view.cx = hashState.x; view.cz = hashState.z; view.bpp = hashState.b;
   }
   $('#seed').value = world.seed;
@@ -656,6 +691,7 @@ function init() {
   langSel.value = currentLang;
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); };
+  buildDimSelect();
   applyI18n();
   resize();
   // offline support (PWA); requires a secure context, harmless otherwise
