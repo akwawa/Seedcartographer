@@ -97,8 +97,12 @@ sélectionner.
 
 ## Développement
 
-- **Tests** : `npm test` (aucune dépendance à installer, utilise `node:test`).
-  Une CI GitHub Actions les lance sur chaque push et pull request.
+- **Tests unitaires** : `npm test` (utilise `node:test`).
+- **Tests end-to-end** : `npm run e2e` (Playwright ; `npx playwright install chromium`
+  au premier lancement, ou `CHROMIUM_PATH=/chemin/vers/chromium` pour utiliser un
+  navigateur déjà installé).
+- Une CI GitHub Actions lance lint, tests unitaires et e2e sur chaque push et
+  pull request.
 - **Recompiler le WASM** : voir [`BUILDING.md`](BUILDING.md).
 
 ## Licence
