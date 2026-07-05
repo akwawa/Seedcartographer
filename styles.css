@@ -108,8 +108,11 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .maphelp{position:absolute;right:14px;bottom:14px;color:var(--faint);font-size:11px;
   background:rgba(12,16,22,.7);border:1px solid var(--line-soft);padding:5px 10px;border-radius:7px}
 .popup{position:absolute;left:50%;top:50%;transform:translate(-50%,-150%);display:none;
-  background:rgba(20,26,34,.96);border:1px solid var(--amber);border-radius:9px;padding:9px 11px;
+  background:rgba(20,26,34,.96);border:1px solid var(--amber);border-radius:9px;padding:9px 22px 9px 11px;
   text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.popup .pop-close{position:absolute;top:1px;right:1px;background:none;border:none;color:var(--muted);
+  cursor:pointer;font-size:14px;line-height:1;padding:3px 6px}
+.popup .pop-close:hover{color:var(--text)}
 .popup .pop-x{font-family:var(--mono);font-size:13px;margin-bottom:7px}
 .popup .pop-tp{background:var(--amber);border:none;color:#1a1206;font-weight:700;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px}
 

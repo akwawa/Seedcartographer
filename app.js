@@ -259,6 +259,8 @@ function clickAt(e) {
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
   }
+  // clicked empty map: deselect and dismiss the popup
+  hidePopup();
 }
 
 // ---------- search ----------
@@ -285,6 +287,7 @@ function runSearch() {
 }
 function onSearchResult(d) {
   pins = d.hits; selected = -1;
+  hidePopup();
   resultsEl.innerHTML = '';
   if (d.error) {
     searchInfo.textContent = 'Search failed: area too large for this radius/criteria. Reduce the search radius.';
@@ -335,8 +338,20 @@ function showPopup(p) {
       .catch(() => { btn.textContent = 'Copy failed'; });
     setTimeout(() => { btn.textContent = 'Copy /tp'; }, 1200);
   };
-  pop.append(xEl, btn);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×';
+  close.title = 'Close';
+  close.onclick = hidePopup;
+  pop.append(close, xEl, btn);
   pop.style.display = 'block';
+}
+function hidePopup() {
+  if (selected !== -1) {
+    selected = -1;
+    [...resultsEl.children].forEach((c) => c.classList.remove('sel'));
+    draw();
+  }
+  $('#popup').style.display = 'none';
 }
 
 // ---------- biome list / dropdowns ----------
@@ -466,5 +481,5 @@ function init() {
   };
   resize();
 }
-function curReset() { tile = null; structToggles.forEach((t) => t.points = null); }
+function curReset() { tile = null; structToggles.forEach((t) => t.points = null); hidePopup(); }
 init();
