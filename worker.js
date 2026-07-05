@@ -2,6 +2,7 @@
 // structure listing, biome probing and the combined location search.
 importScripts('./mcfinder.js');
 importScripts('./seed.js');
+importScripts('./search.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors
@@ -116,19 +117,44 @@ onmessage = (e) => {
   if (d.type === 'search') {
     applyWorld(d.seed, d.mc, d.large);
     const t0 = performance.now();
-    const n = M._searchLocations(
-      d.biomeA, d.biomeB, d.adjDist,
-      d.structType, d.minStruct, d.structRadius,
-      d.cx, d.cz, d.range, d.step, d.mergeDist);
-    if (n < 0) {
-      // -1 = area guard tripped or the biome grid could not be generated
-      postMessage({ type: 'search', reqId: d.reqId, error: 'area-too-large', hits: [], ms: Math.round(performance.now() - t0) });
-      return;
-    }
-    const base = M._hitsPtr() >> 2;
-    const hits = [];
-    for (let i = 0; i < n; i++)
-      hits.push({ x: M.HEAP32[base + i * 3], z: M.HEAP32[base + i * 3 + 1], count: M.HEAP32[base + i * 3 + 2] });
+    const fail = (error) => postMessage({ type: 'search', reqId: d.reqId, error, hits: [], ms: Math.round(performance.now() - t0) });
+
+    // biome grid over the search box padded by the largest adjacency distance
+    const SC = 16;
+    const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist }));
+    const pad = adjClauses.reduce((m, c) => Math.max(m, c.dist), 0);
+    const gx0 = Math.floor((d.cx - d.range - pad) / SC);
+    const gz0 = Math.floor((d.cz - d.range - pad) / SC);
+    const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
+    const rows = Math.ceil((d.cz + d.range + pad) / SC) - gz0 + 2;
+    if (cols * rows > SEARCH_MAX_CELLS) { fail('area-too-large'); return; }
+    ensureArea(cols * rows);
+    if (!M._genBiomeArea(areaPtr, gx0, gz0, cols, rows, SC, 15)) { fail('area-too-large'); return; }
+
+    // structure positions per clause, over the box padded by that clause's radius
+    const structClauses = (d.structClauses || []).map((c) => {
+      const cap = 40000;
+      ensureList(cap);
+      const n = M._listStructures(c.type,
+        d.cx - d.range - c.radius, d.cz - d.range - c.radius,
+        d.cx + d.range + c.radius, d.cz + d.range + c.radius,
+        listPtr, cap);
+      const base = listPtr >> 2;
+      const points = [];
+      for (let i = 0; i < n; i++) points.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
+      return { points, min: c.min, radius: c.radius };
+    });
+
+    // take the grid view only after all allocations (memory growth detaches views)
+    const grid = M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
+    const hits = scanGrid({
+      grid, cols, rows, gx0, gz0, SC,
+      cx: d.cx, cz: d.cz, range: d.range, step: d.step, mergeDist: d.mergeDist,
+      mainSet: new Set(d.mainBiomes),
+      adjMode: d.adjMode, adjClauses,
+      structMode: d.structMode, structClauses
+    });
+    if (!hits) { fail('bad-request'); return; }
     postMessage({ type: 'search', reqId: d.reqId, hits, ms: Math.round(performance.now() - t0) });
     return;
   }
