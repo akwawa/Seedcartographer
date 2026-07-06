@@ -472,6 +472,11 @@ function onSearchResult(d) {
   }
   searchInfo.textContent = pins.length > 1 ? t('foundMany', { n: pins.length, ms: d.ms }) : t('foundOne', { ms: d.ms });
   searchInfo.className = 'info ok';
+  renderResultsList();
+  selectPin(0);
+}
+function renderResultsList() {
+  resultsEl.innerHTML = '';
   pins.forEach((p, i) => {
     const li = document.createElement('button');
     li.className = 'result'; li.dataset.i = i;
@@ -486,7 +491,27 @@ function onSearchResult(d) {
     li.onclick = () => selectPin(i);
     resultsEl.appendChild(li);
   });
-  selectPin(0);
+}
+// load pins from a CSV file (the mirror of the CSV export)
+function importLocationsCSV(file) {
+  file.text().then((text) => {
+    const { hits } = parseLocationsCSV(text);
+    if (!hits.length) {
+      searchInfo.textContent = t('importEmpty');
+      searchInfo.className = 'info err';
+      return;
+    }
+    pins = hits; selected = -1;
+    hidePopup();
+    renderResultsList();
+    $('#exportBtns').hidden = false;
+    searchInfo.textContent = t('imported', { n: hits.length });
+    searchInfo.className = 'info ok';
+    selectPin(0);
+  }).catch(() => {
+    searchInfo.textContent = t('importEmpty');
+    searchInfo.className = 'info err';
+  });
 }
 function selectPin(i) {
   selected = i;
@@ -867,6 +892,12 @@ function init() {
     else runSearch();
   };
   $('#pngBtn').onclick = exportMapPNG;
+  const importInput = $('#importFile');
+  $('#importCsv').onclick = () => importInput.click();
+  importInput.onchange = () => {
+    if (importInput.files[0]) importLocationsCSV(importInput.files[0]);
+    importInput.value = '';   // allow re-importing the same file
+  };
   $('#exportCsv').onclick = () => exportResults('csv');
   $('#exportJson').onclick = () => exportResults('json');
   buildPresetSelect();

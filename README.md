@@ -62,10 +62,13 @@ docker run --rm -p 8080:80 seedcartographer
 4. Clique sur **Search this area**. Les résultats apparaissent comme épingles sur
    la carte et dans la liste ; clique une épingle pour copier la commande `/tp`.
 5. **Show on map** affiche les structures (villages, etc.) dans la vue courante.
-6. **Export PNG** télécharge une capture de la vue courante de la carte
+6. **Import CSV** (panneau Résultats) recharge un fichier exporté (colonnes
+   `x,z,…`) et affiche les lieux comme épingles — la boucle inverse de
+   l'export CSV.
+7. **Export PNG** télécharge une capture de la vue courante de la carte
    (tuiles, couches, épingles) avec un cartouche seed / version / dimension /
    centre.
-7. **Share link** copie une URL qui encode la seed, la vue et les critères :
+8. **Share link** copie une URL qui encode la seed, la vue et les critères :
    ouverte ailleurs, elle rejoue exactement la même recherche.
 
 Glisse pour te déplacer, molette pour zoomer, clique une épingle pour la
