@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # GitHub Actions pinned by commit SHA: Dependabot bumps the SHA and keeps
+  # the version comment in sync
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  # npm devDependencies (eslint, playwright, stylelint…)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-dev:
+        patterns: ['*']
+
+  # cubiomes submodule. NOTE: a submodule bump changes the engine sources, so
+  # mcfinder.wasm/js must be rebuilt (./build.sh) on the update branch — the
+  # `wasm` CI job fails on purpose until the rebuilt artifacts are committed.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: weekly
