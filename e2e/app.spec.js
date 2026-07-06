@@ -151,6 +151,21 @@ test('slime chunks: map layer plus search criterion (Overworld only)', async ({ 
   await expect(page.locator('#structLayers .layer', { hasText: 'Slime chunks' })).toHaveCount(0);
 });
 
+test('a preset loads its criteria and search succeeds', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.selectOption('#presetSel', 'village-outpost');
+  await expect(page.locator('#mainBiomes .row')).toHaveCount(5);
+  await expect(page.locator('#adjClauses .row')).toHaveCount(0);
+  await expect(page.locator('#structClauses .row')).toHaveCount(2);
+  await expect(page.locator('#range')).toHaveValue('5000');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  // the picker resets when the dimension changes (criteria no longer match)
+  await page.selectOption('#dimSel', '-1');
+  await expect(page.locator('#presetSel')).toHaveValue('');
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

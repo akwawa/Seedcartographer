@@ -3,7 +3,7 @@
 // precached asset changes so clients pick up the new files.
 'use strict';
 
-const VERSION = 'seedcartographer-v5';
+const VERSION = 'seedcartographer-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const ASSETS = [
   './biomes.js',
   './coords.js',
   './slime.js',
+  './presets.js',
   './export.js',
   './mcfinder.js',
   './mcfinder.wasm',

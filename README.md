@@ -49,7 +49,10 @@ docker run --rm -p 8080:80 seedcartographer
 1. Saisis une **seed** en haut (numérique ou texte) et clique sur **Load seed**.
    La seed `141` est chargée par défaut — c'est un exemple où un *cherry grove*
    est collé à un *warm ocean* avec plusieurs villages autour (vers -384, 0).
-2. Règle les **critères** dans le panneau de gauche. Chaque section accepte
+2. Le sélecteur **Presets** charge en un clic un jeu de critères prêt à
+   l'emploi (bosquet de cerisiers en bord d'océan, village + avant-poste,
+   champs de champignons, spot de ferme à slimes) — modifiable ensuite.
+   Règle les **critères** dans le panneau de gauche. Chaque section accepte
    plusieurs lignes (boutons « + Ajouter » / « × ») : biomes principaux
    (l'un d'eux), biomes adjacents + distance et structures (nombre minimum +
    rayon) — ces deux dernières sections se combinent en « tous » (ET) ou
@@ -111,6 +114,7 @@ sélectionner.
 | `seed.js` | Conversion seed → entier 64 bits (partagé worker/tests) |
 | `search.js` | Balayage multi-critères de la grille de biomes (partagé worker/tests) |
 | `slime.js` | Calcul des chunks à slimes (RNG Java, partagé worker/tests) |
+| `presets.js` | Presets de critères de recherche (partagé app/tests) |
 | `i18n.js` | Traductions de l'interface (FR, EN, ES, DE) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
 | `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |
