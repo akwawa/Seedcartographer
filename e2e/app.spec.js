@@ -217,6 +217,25 @@ test('legend lists visible biomes and hovering an entry dims the map', async ({ 
   await expect(page.locator('#legend summary')).toHaveText('Légende');
 });
 
+test('Export PNG downloads a snapshot of the current view', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // wait for a rendered tile so the snapshot has content
+  await page.waitForFunction(() => document.querySelectorAll('#legendList .lg').length > 0);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('#pngBtn')
+  ]);
+  expect(download.suggestedFilename()).toBe('seedcartographer-141-map.png');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const c of stream) chunks.push(c);
+  const buf = Buffer.concat(chunks);
+  // PNG magic bytes and a non-trivial payload
+  expect(buf.subarray(0, 4).toString('hex')).toBe('89504e47');
+  expect(buf.length).toBeGreaterThan(1000);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

@@ -12,6 +12,9 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Export PNG de la vue de carte (tuiles, couches, épingles) avec cartouche
+  seed / version / dimension / coordonnées du centre, téléchargé localement
+  ([#47](https://github.com/akwawa/Seedcartographer/issues/47)).
 - Légende repliable des biomes visibles sur la carte (couleur + nom localisé),
   avec surbrillance croisée : le survol de la carte marque l'entrée
   correspondante, le survol d'une entrée atténue les autres biomes sur la
