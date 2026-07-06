@@ -87,6 +87,11 @@ sélectionner.
 - **Combinaisons rares.** Certaines combinaisons (ex. cherry grove + warm ocean +
   2 villages) sont géographiquement rares. Si rien n'est trouvé, élargis le rayon
   ou relâche un critère.
+- **Chunks à slimes.** La couche « Chunks à slimes » (Overworld) les affiche en
+  vert sur la carte — calculés directement depuis la seed (RNG Java), sans le
+  moteur cubiomes ; la couche n'apparaît qu'à un zoom raisonnable. La section
+  « structures proches » propose aussi le critère « au moins N chunks à slimes
+  dans un rayon R ».
 - **Trois dimensions.** Le sélecteur « Dimension » de la barre du haut bascule
   entre Overworld, Nether et End : carte, biomes, structures (forteresses,
   bastions, portails en ruine du Nether, cités de l'End) et recherche suivent
@@ -105,6 +110,7 @@ sélectionner.
 | `worker.js` | Web Worker : possède l'instance WASM (tuiles + recherche) |
 | `seed.js` | Conversion seed → entier 64 bits (partagé worker/tests) |
 | `search.js` | Balayage multi-critères de la grille de biomes (partagé worker/tests) |
+| `slime.js` | Calcul des chunks à slimes (RNG Java, partagé worker/tests) |
 | `i18n.js` | Traductions de l'interface (FR, EN, ES, DE) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
 | `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |

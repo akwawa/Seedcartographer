@@ -129,6 +129,28 @@ test('Nether dimension: biome list, map, search and share link work', async ({ p
   await expect(p2.locator('#mainBiomes .row select option:checked')).toHaveText(/Crimson|carmin/i);
 });
 
+test('slime chunks: map layer plus search criterion (Overworld only)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria + "at least 1 slime chunk within 200 blocks" still matches
+  await page.$eval('#structClauses .row select', (s) => {
+    s.value = [...s.options].find((o) => o.textContent === 'Slime chunks').value;
+  });
+  const nums = page.locator('#structClauses .row input');
+  await nums.nth(0).fill('1');
+  await nums.nth(1).fill('200');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  // the layer toggle is offered in the Overworld…
+  const slimeLayer = page.locator('#structLayers .layer', { hasText: 'Slime chunks' });
+  await expect(slimeLayer).toHaveCount(1);
+  await slimeLayer.locator('input').check();
+  // …and disappears in the Nether (slime chunks are Overworld-only)
+  await page.selectOption('#dimSel', '-1');
+  await expect(page.locator('#structLayers .layer', { hasText: 'Slime chunks' })).toHaveCount(0);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,
