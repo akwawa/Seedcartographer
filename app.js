@@ -53,6 +53,8 @@ worker.onmessage = (e) => {
     tmp.width = d.cols; tmp.height = d.rows;
     tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
     tile = { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
+    // highlight re-renders keep the legend DOM intact (hover must survive)
+    if (d.highlight == null) buildLegend(d.present || []);
     draw();
     return;
   }
@@ -64,6 +66,7 @@ worker.onmessage = (e) => {
   if (d.type === 'biome') {
     if (d.reqId !== biomeProbeReq) return;
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
+    markLegend(d.id);
     return;
   }
   if (d.type === 'searchProgress') {
@@ -265,6 +268,7 @@ function requestRender(delay = 90) {
     renderReq = reqSeq++;
     send({
       type: 'render', reqId: renderReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+      highlight: highlightBiome,
       cx: view.cx, cz: view.cz, bpp: view.bpp,
       w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
     });
@@ -598,6 +602,38 @@ function hidePopup() {
   $('#popup').style.display = 'none';
 }
 
+// ---------- biome legend ----------
+let highlightBiome = null;      // biome id dimming the rest of the map tile
+let legendPresent = [];         // biome ids of the last full (non-highlight) tile
+function setHighlight(id) {
+  if (highlightBiome === id) return;
+  highlightBiome = id;
+  requestRender(0);
+}
+function buildLegend(present) {
+  legendPresent = present;
+  const box = $('#legendList');
+  box.textContent = '';
+  for (const e of legendEntries(present, biomesSorted, biomeLabel)) {
+    const row = document.createElement('div');
+    row.className = 'lg'; row.dataset.id = e.id;
+    const dot = document.createElement('span');
+    dot.className = 'dot'; dot.style.background = `rgb(${e.rgb[0]},${e.rgb[1]},${e.rgb[2]})`;
+    const lbl = document.createElement('span');
+    lbl.textContent = e.label;
+    row.append(dot, lbl);
+    row.onmouseenter = () => setHighlight(e.id);
+    row.onmouseleave = () => setHighlight(null);
+    box.appendChild(row);
+  }
+}
+// map hover marks the biome under the cursor in the legend
+function markLegend(id) {
+  document.querySelectorAll('#legendList .lg').forEach((el) => {
+    el.classList.toggle('hot', +el.dataset.id === id);
+  });
+}
+
 // ---------- biome list / dropdowns ----------
 function onBiomeList(list) {
   biomesSorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
@@ -828,7 +864,7 @@ function init() {
   }
   langSel.value = currentLang;
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
-  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); };
+  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   buildDimSelect();
   buildFavList();
   applyI18n();

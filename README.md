@@ -90,6 +90,10 @@ sélectionner.
 - **Combinaisons rares.** Certaines combinaisons (ex. cherry grove + warm ocean +
   2 villages) sont géographiquement rares. Si rien n'est trouvé, élargis le rayon
   ou relâche un critère.
+- **Légende des biomes.** Le panneau « Légende » (repliable, en haut à droite
+  de la carte) liste les biomes visibles avec leur couleur ; survoler la carte
+  marque l'entrée correspondante, survoler une entrée met le biome en
+  surbrillance sur la carte.
 - **Favoris.** Le bouton ☆ du pop-up épingle un lieu (par seed, version et
   dimension) avec une note libre ; les favoris apparaissent dans le panneau et
   comme losanges dorés sur la carte, et sont conservés dans le navigateur

@@ -186,20 +186,25 @@ onmessage = (e) => {
     ensureArea(cols * rows);
     const ok = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, SCALE_Y);
     const rgba = new Uint8ClampedArray(cols * rows * 4);
+    const present = new Set();
+    // hovering a legend entry re-renders with `highlight`: other biomes dim
+    const hl = Number.isInteger(d.highlight) ? d.highlight : null;
     if (ok) {
       const base = areaPtr >> 2;
       for (let i = 0; i < cols * rows; i++) {
         let id = M.HEAP32[base + i];
         if (id < 0 || id > 255) id = 0;
+        present.add(id);
         const c = id * 3;
-        rgba[i * 4] = colors[c];
-        rgba[i * 4 + 1] = colors[c + 1];
-        rgba[i * 4 + 2] = colors[c + 2];
+        const dim = hl !== null && id !== hl ? 0.3 : 1;
+        rgba[i * 4] = colors[c] * dim;
+        rgba[i * 4 + 1] = colors[c + 1] * dim;
+        rgba[i * 4 + 2] = colors[c + 2] * dim;
         rgba[i * 4 + 3] = 255;
       }
     }
     postMessage({
-      type: 'tile', reqId: d.reqId, ok: !!ok, rgba: rgba.buffer, cols, rows, scale,
+      type: 'tile', reqId: d.reqId, ok: !!ok, rgba: rgba.buffer, cols, rows, scale, present: [...present], highlight: hl,
       // world coords of the cell-grid NW corner, for placement on the map
       originX: sx0 * scale, originZ: sz0 * scale
     }, [rgba.buffer]);

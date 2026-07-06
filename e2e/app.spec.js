@@ -193,6 +193,30 @@ test('favorites: pin from the popup, note persists across reload, remove', async
   await expect(page.locator('#favList .fav')).toHaveCount(0);
 });
 
+test('legend lists visible biomes and hovering an entry dims the map', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // wait for a rendered tile, then open the legend
+  await page.waitForFunction(() => document.querySelectorAll('#legendList .lg').length > 0);
+  await page.click('#legend summary');
+  const entries = page.locator('#legendList .lg');
+  const n = await entries.count();
+  expect(n).toBeGreaterThan(1);
+  // snapshot the canvas, hover a legend entry: the highlight re-render changes pixels
+  const before = await page.evaluate(() => {
+    const c = document.querySelector('#map');
+    return c.getContext('2d').getImageData(0, 0, c.width, 1).data.join(',');
+  });
+  await entries.first().hover();
+  await page.waitForFunction((prev) => {
+    const c = document.querySelector('#map');
+    return c.getContext('2d').getImageData(0, 0, c.width, 1).data.join(',') !== prev;
+  }, before, { timeout: 15000 });
+  // language switch retranslates the legend labels in place
+  await page.selectOption('#langSel', 'fr');
+  await expect(page.locator('#legend summary')).toHaveText('Légende');
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

@@ -32,7 +32,9 @@ module.exports = [
         PRESETS: 'readonly', presetCriteria: 'readonly',
         // provided by favorites.js, loaded first
         parseFavorites: 'readonly', addFavorite: 'readonly', findFavorite: 'readonly',
-        removeFavorite: 'readonly', updateFavoriteNote: 'readonly', favoritesFor: 'readonly'
+        removeFavorite: 'readonly', updateFavoriteNote: 'readonly', favoritesFor: 'readonly',
+        // provided by legend.js, loaded first
+        legendEntries: 'readonly'
       }
     }
   },
@@ -80,7 +82,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'presets.js', 'favorites.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'presets.js', 'favorites.js', 'legend.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
