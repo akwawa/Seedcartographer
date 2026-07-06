@@ -90,11 +90,9 @@ worker.onmessage = (e) => {
     draw();
     return;
   }
-  if (d.type === 'biome') {
-    if (d.reqId !== biomeProbeReq) return;
+  if (d.type === 'biome' && d.reqId === biomeProbeReq) {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     markLegend(d.id);
-    return;
   }
 };
 
