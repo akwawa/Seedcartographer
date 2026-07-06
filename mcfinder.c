@@ -110,11 +110,11 @@ int listStrongholds(int *out, int maxN){
     StrongholdIter sh;
     initFirstStronghold(&sh, MC, SEED);
     int n = 0;
-    while(n < maxN){
-        int more = nextStronghold(&sh, &G);
-        if(more < 0) break;
+    int more = 1;
+    while(n < maxN && more > 0){
+        more = nextStronghold(&sh, &G);
+        if(more < 0) return n;
         out[n*2] = sh.pos.x; out[n*2+1] = sh.pos.z; n++;
-        if(more == 0) break;
     }
     return n;
 }

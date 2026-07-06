@@ -685,12 +685,13 @@ function resolveStructConsts(defs) {
     defs.forEach((d, idx) => {
       structToggles.push({ type: vals[idx], labelKey: d[1], dim: d[2], on: false, color: structColors[idx % structColors.length], points: null });
     });
-    // slime chunks are computed in JS from the seed (slime.js), not by the
-    // engine; the synthetic type is routed to slime.js by the worker
-    structToggles.push({ type: SLIME_STRUCT_TYPE, labelKey: 'structSlimeChunks', dim: 0, slime: true, on: false, color: '#6fce4e', points: null });
-    // spawn point and strongholds: engine calls of their own (markers.js)
-    structToggles.push({ type: SPAWN_STRUCT_TYPE, labelKey: 'structSpawn', dim: 0, on: false, color: '#ff6b6b', points: null });
-    structToggles.push({ type: STRONGHOLD_STRUCT_TYPE, labelKey: 'structStronghold', dim: 0, on: false, color: '#c0b3ff', points: null });
+    // synthetic types the worker routes to dedicated code paths: slime chunks
+    // (pure JS, slime.js), spawn point and strongholds (engine calls, markers.js)
+    structToggles.push(
+      { type: SLIME_STRUCT_TYPE, labelKey: 'structSlimeChunks', dim: 0, slime: true, on: false, color: '#6fce4e', points: null },
+      { type: SPAWN_STRUCT_TYPE, labelKey: 'structSpawn', dim: 0, on: false, color: '#ff6b6b', points: null },
+      { type: STRONGHOLD_STRUCT_TYPE, labelKey: 'structStronghold', dim: 0, on: false, color: '#c0b3ff', points: null }
+    );
     buildStructToggleUI();
     applyHashCriteria();
   };
