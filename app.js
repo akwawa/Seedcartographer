@@ -461,6 +461,15 @@ function selectPin(i) {
   [...resultsEl.children].forEach((c) => c.classList.toggle('sel', +c.dataset.i === i));
   draw(); requestRender(0); syncHash(); showPopup(p);
 }
+// copy `text` on click, flashing a Copied / Copy failed feedback on the button
+function wireCopyButton(btn, text, idleLabel) {
+  btn.onclick = () => {
+    copyText(text)
+      .then(() => { btn.textContent = t('copied'); })
+      .catch(() => { btn.textContent = t('copyFailed'); });
+    setTimeout(() => { btn.textContent = idleLabel(); }, 1200);
+  };
+}
 function showPopup(p) {
   const pop = $('#popup');
   pop.textContent = '';
@@ -468,17 +477,23 @@ function showPopup(p) {
   xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
   const btn = document.createElement('button');
   btn.className = 'pop-tp'; btn.textContent = t('copyTp');
-  btn.onclick = () => {
-    copyText(`/tp @s ${p.x} ~ ${p.z}`)
-      .then(() => { btn.textContent = t('copied'); })
-      .catch(() => { btn.textContent = t('copyFailed'); });
-    setTimeout(() => { btn.textContent = t('copyTp'); }, 1200);
-  };
+  wireCopyButton(btn, `/tp @s ${p.x} ~ ${p.z}`, () => t('copyTp'));
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×';
   close.title = t('close');
   close.onclick = hidePopup;
   pop.append(close, xEl, btn);
+  // equivalent coordinates in the linked dimension (÷8 / ×8); none for the End
+  const conv = convertCoords(world.dim, p.x, p.z);
+  if (conv) {
+    const label = `${conv.label} ≈ ${conv.x}, ${conv.z}`;
+    const row = document.createElement('button');
+    row.className = 'pop-conv';
+    row.textContent = label;
+    row.title = t('copyConverted');
+    wireCopyButton(row, `${conv.x} ~ ${conv.z}`, () => label);
+    pop.append(row);
+  }
   pop.style.display = 'block';
 }
 function hidePopup() {

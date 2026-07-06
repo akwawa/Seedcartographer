@@ -42,6 +42,7 @@ test('demo search finds the seed-141 spot and shows the popup', async ({ page })
   await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
   await expect(page.locator('#results .result').first()).toBeVisible();
   await expect(page.locator('#popup')).toBeVisible();
+  await expect(page.locator('.pop-conv')).toHaveText(/Nether ≈ -?\d+, -?\d+/);
   await expect(page.locator('#exportBtns')).toBeVisible();
   // popup closes with the × button
   await page.click('.pop-close');
