@@ -11,6 +11,14 @@ au moment du tag de release, la section est renommée en version datée.
 
 ## [Non publié]
 
+### Corrigé
+- Démo GitHub Pages et image Docker réparées : les modules récents
+  (`coords.js`, `slime.js`, `presets.js`, `favorites.js`, `legend.js`,
+  `theme.js`, et côté Docker aussi `biomes.js`, `export.js`, `sw.js`,
+  manifest, icône) manquaient dans les listes de déploiement ; un test de
+  non-régression aligne désormais ces listes sur `sw.js`
+  ([#79](https://github.com/akwawa/Seedcartographer/issues/79)).
+
 ### Ajouté
 - Thème clair : bascule ☀/☾ dans la barre du haut, détection
   `prefers-color-scheme`, choix mémorisé (`localStorage`), couleur de

@@ -27,7 +27,8 @@ jobs:
       - run: |
           mkdir _site
           cp index.html styles.css app.js worker.js seed.js search.js i18n.js \
-             biomes.js export.js mcfinder.js mcfinder.wasm \
+             biomes.js coords.js slime.js presets.js favorites.js legend.js \
+             theme.js export.js mcfinder.js mcfinder.wasm \
              manifest.webmanifest icon.svg sw.js _site/
           cp -r fonts _site/
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
