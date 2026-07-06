@@ -41,25 +41,28 @@ function favoritesFor(list, world) {
   return list.filter((f) => sameWorld(f, world));
 }
 
+// normalize one stored entry; null when it is not a well-formed favorite
+function normalizeFavorite(f) {
+  if (!f || typeof f !== 'object') return null;
+  const { id, seed, mc, large, dim, x, z, note } = f;
+  if (!Number.isInteger(id) || !Number.isInteger(mc) || !Number.isInteger(x) || !Number.isInteger(z)) return null;
+  if (![0, -1, 1].includes(dim)) return null;
+  if (typeof seed !== 'string' && typeof seed !== 'number') return null;
+  return { id, seed: String(seed), mc, large: !!large, dim, x, z, note: typeof note === 'string' ? note : '' };
+}
+
 // Parse a stored JSON payload defensively: localStorage contents are outside
-// the app's control, so only well-formed entries survive.
+// the app's control, so only well-formed entries survive (first id wins).
 function parseFavorites(json) {
   let raw;
   try { raw = JSON.parse(json); } catch { return []; }
   if (!Array.isArray(raw)) return [];
-  const out = [];
-  const ids = new Set();
+  const byId = new Map();
   for (const f of raw.slice(0, FAV_MAX)) {
-    if (!f || typeof f !== 'object') continue;
-    const { id, seed, mc, large, dim, x, z, note } = f;
-    if (!Number.isInteger(id) || ids.has(id)) continue;
-    if (!Number.isInteger(mc) || !Number.isInteger(x) || !Number.isInteger(z)) continue;
-    if (![0, -1, 1].includes(dim)) continue;
-    if (typeof seed !== 'string' && typeof seed !== 'number') continue;
-    ids.add(id);
-    out.push({ id, seed: String(seed), mc, large: !!large, dim, x, z, note: typeof note === 'string' ? note : '' });
+    const fav = normalizeFavorite(f);
+    if (fav && !byId.has(fav.id)) byId.set(fav.id, fav);
   }
-  return out;
+  return [...byId.values()];
 }
 
 if (typeof module !== 'undefined' && module.exports) {
