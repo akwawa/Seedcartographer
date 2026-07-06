@@ -890,7 +890,7 @@ function applyTheme(theme, persist) {
 function initTheme() {
   let stored = null;
   try { stored = localStorage.getItem('theme'); } catch { /* ignore */ }
-  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
   applyTheme(resolveTheme(stored, prefersLight), false);
   $('#themeBtn').onclick = () => applyTheme(otherTheme(curTheme), true);
 }
