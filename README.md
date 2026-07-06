@@ -127,6 +127,9 @@ sélectionner.
   « CI-based », pas « Automatic Analysis »).
 - Une CI GitHub Actions lance lint, tests unitaires et e2e sur chaque push et
   pull request.
+- **Dépendances** : Dependabot ouvre chaque semaine des MR groupées (actions,
+  npm, submodule cubiomes) ; une mise à jour du submodule exige de recompiler
+  le WASM sur la branche de mise à jour (le job CI `wasm` échoue sinon).
 - **Recompiler le WASM** : voir [`BUILDING.md`](BUILDING.md).
 
 ## Historique des versions

@@ -12,6 +12,9 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Mises à jour automatiques des dépendances avec Dependabot : actions GitHub
+  (SHA épinglés), devDependencies npm et submodule cubiomes, regroupées chaque
+  semaine ([#52](https://github.com/akwawa/Seedcartographer/issues/52)).
 - Pop-up de lieu : coordonnées équivalentes Nether ⇄ Overworld (÷8 / ×8) avec
   copie en un clic ([#46](https://github.com/akwawa/Seedcartographer/issues/46)).
 - `CHANGELOG.md` au format Keep a Changelog, avec la règle de mise à jour par
