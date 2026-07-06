@@ -17,6 +17,7 @@ const ASSETS = [
   './biomes.js',
   './coords.js',
   './slime.js',
+  './markers.js',
   './presets.js',
   './favorites.js',
   './legend.js',

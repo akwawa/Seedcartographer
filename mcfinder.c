@@ -96,6 +96,29 @@ int genBiomeArea(int *out, int x, int z, int sx, int sz, int scale, int y){
     return err ? 0 : 1;
 }
 
+// World spawn point (requires an Overworld generator). Writes x,z into `out`.
+EMSCRIPTEN_KEEPALIVE
+void getSpawnPos(int *out /* [2] */){
+    Pos p = getSpawn(&G);
+    out[0] = p.x; out[1] = p.z;
+}
+
+// Accurate (biome-checked) stronghold positions, nearest first. Writes x,z
+// pairs into `out` (up to maxN pairs). Returns the number written.
+EMSCRIPTEN_KEEPALIVE
+int listStrongholds(int *out, int maxN){
+    StrongholdIter sh;
+    initFirstStronghold(&sh, MC, SEED);
+    int n = 0;
+    while(n < maxN){
+        int more = nextStronghold(&sh, &G);
+        if(more < 0) break;
+        out[n*2] = sh.pos.x; out[n*2+1] = sh.pos.z; n++;
+        if(more == 0) break;
+    }
+    return n;
+}
+
 // List viable structures of `structType` inside the block box. Writes x,z
 // pairs into `out` (up to maxN pairs). Returns the number written.
 EMSCRIPTEN_KEEPALIVE

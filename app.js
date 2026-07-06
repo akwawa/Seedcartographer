@@ -688,6 +688,9 @@ function resolveStructConsts(defs) {
     // slime chunks are computed in JS from the seed (slime.js), not by the
     // engine; the synthetic type is routed to slime.js by the worker
     structToggles.push({ type: SLIME_STRUCT_TYPE, labelKey: 'structSlimeChunks', dim: 0, slime: true, on: false, color: '#6fce4e', points: null });
+    // spawn point and strongholds: engine calls of their own (markers.js)
+    structToggles.push({ type: SPAWN_STRUCT_TYPE, labelKey: 'structSpawn', dim: 0, on: false, color: '#ff6b6b', points: null });
+    structToggles.push({ type: STRONGHOLD_STRUCT_TYPE, labelKey: 'structStronghold', dim: 0, on: false, color: '#c0b3ff', points: null });
     buildStructToggleUI();
     applyHashCriteria();
   };

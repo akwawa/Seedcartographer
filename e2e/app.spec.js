@@ -282,6 +282,29 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
   await expect(page.locator('#helpDlg')).toBeHidden();
 });
 
+test('spawn and strongholds: layers plus distance-to-spawn criterion', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // both layers offered in the Overworld only
+  for (const label of ['World spawn', 'Stronghold']) {
+    await expect(page.locator('#structLayers .layer', { hasText: label })).toHaveCount(1);
+  }
+  await page.locator('#structLayers .layer', { hasText: 'World spawn' }).locator('input').check();
+  await page.locator('#structLayers .layer', { hasText: 'Stronghold' }).locator('input').check();
+  // demo criteria + "within 5000 blocks of the world spawn" still matches seed 141
+  await page.$eval('#structClauses .row select', (s) => {
+    s.value = [...s.options].find((o) => o.textContent === 'World spawn').value;
+  });
+  const nums = page.locator('#structClauses .row input');
+  await nums.nth(0).fill('1');
+  await nums.nth(1).fill('5000');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  await page.selectOption('#dimSel', '-1');
+  await expect(page.locator('#structLayers .layer', { hasText: 'World spawn' })).toHaveCount(0);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,
