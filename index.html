@@ -82,7 +82,8 @@
       </div>
       <div class="export">
         <button id="importCsv" class="btn tiny" data-i18n="importCsv">Import CSV</button>
-        <input id="importFile" type="file" accept=".csv,text/csv" hidden>
+        <label for="importFile" hidden data-i18n="importCsv">Import CSV</label>
+        <input id="importFile" type="file" accept=".csv,text/csv" title="Import CSV" hidden>
       </div>
       <div id="results" class="results"><p class="muted small" data-i18n="noSearchYet">No search yet. Pick conditions and hit search.</p></div>
     </section>
