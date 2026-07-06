@@ -187,7 +187,7 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const W = canvas.width / dpr, H = canvas.height / dpr;
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0c1016'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = mapBg; ctx.fillRect(0, 0, W, H);
 
   if (tile) {
     const px = w2sx(tile.originX), py = w2sy(tile.originZ);
@@ -212,7 +212,8 @@ function draw() {
   });
 
   // center crosshair
-  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
+  ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(W / 2 - 7, H / 2); ctx.lineTo(W / 2 + 7, H / 2);
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
@@ -756,9 +757,9 @@ function exportMapPNG() {
   out.width = canvas.width; out.height = canvas.height + band;
   const o = out.getContext('2d');
   o.drawImage(canvas, 0, 0);
-  o.fillStyle = '#0c1016';
+  o.fillStyle = mapBg;
   o.fillRect(0, canvas.height, out.width, band);
-  o.fillStyle = '#dfe7f1';
+  o.fillStyle = mapText;
   o.font = `${Math.round(12 * dpr)}px monospace`;
   const lines = mapCartoucheLines({
     seed: world.seed, mcLabel: mcLabel(), large: world.large,
@@ -870,6 +871,30 @@ function buildPresetSelect() {
   };
 }
 
+// ---------- theme ----------
+let curTheme = 'dark';
+let mapBg = '#0c1016', mapText = '#dfe7f1';   // canvas colors, refreshed per theme
+function applyTheme(theme, persist) {
+  curTheme = theme;
+  document.documentElement.dataset.theme = theme;
+  if (persist) { try { localStorage.setItem('theme', theme); } catch { /* ignore */ } }
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', THEME_COLORS[theme]);
+  const cs = getComputedStyle(document.documentElement);
+  mapBg = cs.getPropertyValue('--map-bg').trim() || mapBg;
+  mapText = cs.getPropertyValue('--text').trim() || mapText;
+  const btn = $('#themeBtn');
+  btn.textContent = theme === 'dark' ? '☀' : '☾';
+  btn.title = t('themeToggle');
+  draw();
+}
+function initTheme() {
+  let stored = null;
+  try { stored = localStorage.getItem('theme'); } catch { /* ignore */ }
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(resolveTheme(stored, prefersLight), false);
+  $('#themeBtn').onclick = () => applyTheme(otherTheme(curTheme), true);
+}
+
 // ---------- init ----------
 function init() {
   hashState = readHash();
@@ -922,6 +947,7 @@ function init() {
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   buildDimSelect();
   buildFavList();
+  initTheme();
   applyI18n();
   resize();
   // offline support (PWA); requires a secure context, harmless otherwise

@@ -34,8 +34,9 @@ module.exports = [
         // provided by favorites.js, loaded first
         parseFavorites: 'readonly', addFavorite: 'readonly', findFavorite: 'readonly',
         removeFavorite: 'readonly', updateFavoriteNote: 'readonly', favoritesFor: 'readonly',
-        // provided by legend.js, loaded first
-        legendEntries: 'readonly'
+        // provided by legend.js / theme.js, loaded first
+        legendEntries: 'readonly',
+        THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
       }
     }
   },
@@ -83,7 +84,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'presets.js', 'favorites.js', 'legend.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

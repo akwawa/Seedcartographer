@@ -12,6 +12,10 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Thème clair : bascule ☀/☾ dans la barre du haut, détection
+  `prefers-color-scheme`, choix mémorisé (`localStorage`), couleur de
+  l'interface navigateur (`theme-color`) ajustée dynamiquement
+  ([#49](https://github.com/akwawa/Seedcartographer/issues/49)).
 - Import CSV de lieux (format de l'export existant, `x,z,…`) : les lieux
   s'affichent comme épingles sur la carte et dans la liste ; lignes invalides
   ignorées, en-tête optionnel
