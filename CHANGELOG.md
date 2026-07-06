@@ -12,6 +12,10 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Favoris : épingler un lieu depuis le pop-up (☆), note libre, liste par
+  seed/version/dimension, losanges dorés permanents sur la carte, persistance
+  `localStorage` — aucune donnée ne quitte le navigateur
+  ([#44](https://github.com/akwawa/Seedcartographer/issues/44)).
 - Presets de critères de recherche chargeables en un clic (bosquet de
   cerisiers en bord d'océan, village + avant-poste, champs de champignons,
   spot de ferme à slimes), libellés traduits
