@@ -90,6 +90,10 @@ sélectionner.
 - **Combinaisons rares.** Certaines combinaisons (ex. cherry grove + warm ocean +
   2 villages) sont géographiquement rares. Si rien n'est trouvé, élargis le rayon
   ou relâche un critère.
+- **Favoris.** Le bouton ☆ du pop-up épingle un lieu (par seed, version et
+  dimension) avec une note libre ; les favoris apparaissent dans le panneau et
+  comme losanges dorés sur la carte, et sont conservés dans le navigateur
+  (`localStorage`) — rien ne quitte la machine.
 - **Chunks à slimes.** La couche « Chunks à slimes » (Overworld) les affiche en
   vert sur la carte — calculés directement depuis la seed (RNG Java), sans le
   moteur cubiomes ; la couche n'apparaît qu'à un zoom raisonnable. La section

@@ -200,6 +200,8 @@ function draw() {
     else drawStructMarkers(t, W, H);
   }
 
+  drawFavMarkers(W, H);
+
   // result pins
   pins.forEach((p, i) => {
     const sx = w2sx(p.x), sy = w2sy(p.z);
@@ -229,6 +231,18 @@ function drawSlimeLayer(points, W, H) {
     const sx = w2sx(x), sy = w2sy(z);
     if (sx < -size || sy < -size || sx > W || sy > H) continue;
     ctx.beginPath(); ctx.rect(sx, sy, size, size); ctx.fill(); ctx.stroke();
+  }
+}
+
+// favorites of the current world render as gold diamonds, always visible
+function drawFavMarkers(W, H) {
+  ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = 'rgba(40,28,4,.75)'; ctx.lineWidth = 1.2;
+  for (const f of favoritesFor(favorites, world)) {
+    const sx = w2sx(f.x), sy = w2sy(f.z);
+    if (sx < -8 || sy < -8 || sx > W + 8 || sy > H + 8) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - 6); ctx.lineTo(sx + 5, sy); ctx.lineTo(sx, sy + 6); ctx.lineTo(sx - 5, sy);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
   }
 }
 
@@ -499,7 +513,7 @@ function showPopup(p) {
   close.className = 'pop-close'; close.textContent = '×';
   close.title = t('close');
   close.onclick = hidePopup;
-  pop.append(close, xEl, btn);
+  pop.append(close, xEl, btn, favStarButton(p));
   // equivalent coordinates in the linked dimension (÷8 / ×8); none for the End
   const conv = convertCoords(world.dim, p.x, p.z);
   if (conv) {
@@ -513,6 +527,68 @@ function showPopup(p) {
   }
   pop.style.display = 'block';
 }
+// ---------- favorites ----------
+let favorites = parseFavorites((() => {
+  try { return localStorage.getItem('favorites'); } catch { return null; }
+})());
+function setFavorites(list) {
+  favorites = list;
+  try { localStorage.setItem('favorites', JSON.stringify(favorites)); } catch { /* ignore */ }
+  buildFavList();
+  draw();
+}
+function favSpot(p) {
+  return { seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, x: p.x, z: p.z };
+}
+function favStarButton(p) {
+  const btn = document.createElement('button');
+  btn.className = 'pop-fav';
+  const paint = () => {
+    const cur = findFavorite(favorites, world, p);
+    btn.textContent = cur ? '★' : '☆';
+    btn.title = t(cur ? 'favRemove' : 'favAdd');
+  };
+  paint();
+  btn.onclick = () => {
+    const cur = findFavorite(favorites, world, p);
+    setFavorites(cur ? removeFavorite(favorites, cur.id) : addFavorite(favorites, favSpot(p)));
+    paint();
+  };
+  return btn;
+}
+function buildFavList() {
+  const box = $('#favList');
+  box.textContent = '';
+  const favs = favoritesFor(favorites, world);
+  if (!favs.length) {
+    const p = document.createElement('p');
+    p.className = 'muted small'; p.dataset.i18n = 'favEmpty'; p.textContent = t('favEmpty');
+    box.appendChild(p);
+    return;
+  }
+  favs.forEach((f) => box.appendChild(favRow(f)));
+}
+function favRow(f) {
+  const row = document.createElement('div');
+  row.className = 'fav';
+  const go = document.createElement('button');
+  go.className = 'fav-go mono'; go.textContent = `${f.x}, ${f.z}`;
+  go.onclick = () => {
+    view.cx = f.x; view.cz = f.z;
+    if (view.bpp > 4) view.bpp = 3;
+    draw(); requestRender(0); syncHash();
+  };
+  const note = document.createElement('input');
+  note.className = 'fav-note'; note.value = f.note;
+  note.placeholder = t('favNote'); note.maxLength = 120;
+  note.onchange = () => setFavorites(updateFavoriteNote(favorites, f.id, note.value));
+  const rm = document.createElement('button');
+  rm.className = 'rm'; rm.textContent = '×'; rm.title = t('favRemove');
+  rm.onclick = () => setFavorites(removeFavorite(favorites, f.id));
+  row.append(go, note, rm);
+  return row;
+}
+
 function hidePopup() {
   if (selected !== -1) {
     selected = -1;
@@ -752,8 +828,9 @@ function init() {
   }
   langSel.value = currentLang;
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
-  langSel.onchange = () => { setLang(langSel.value); hidePopup(); };
+  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); };
   buildDimSelect();
+  buildFavList();
   applyI18n();
   resize();
   // offline support (PWA); requires a secure context, harmless otherwise
@@ -761,5 +838,5 @@ function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
 }
-function curReset() { tile = null; structToggles.forEach((tg) => tg.points = null); hidePopup(); }
+function curReset() { tile = null; structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); }
 init();

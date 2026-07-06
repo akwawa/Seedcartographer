@@ -166,6 +166,33 @@ test('a preset loads its criteria and search succeeds', async ({ page }) => {
   await expect(page.locator('#presetSel')).toHaveValue('');
 });
 
+test('favorites: pin from the popup, note persists across reload, remove', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await expect(page.locator('#favList .fav')).toHaveCount(0);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#popup')).toBeVisible();
+  // pin the selected result
+  await page.click('.pop-fav');
+  await expect(page.locator('.pop-fav')).toHaveText('★');
+  await expect(page.locator('#favList .fav')).toHaveCount(1);
+  // annotate, then reload: the favorite and its note survive
+  await page.fill('#favList .fav-note', 'spawn base');
+  await page.locator('#favList .fav-note').blur();
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator('#favList .fav')).toHaveCount(1);
+  await expect(page.locator('#favList .fav-note')).toHaveValue('spawn base');
+  // favorites are per-dimension: none listed in the Nether
+  await page.selectOption('#dimSel', '-1');
+  await expect(page.locator('#favList .fav')).toHaveCount(0);
+  await page.selectOption('#dimSel', '0');
+  // remove it
+  await page.click('#favList .fav .rm');
+  await expect(page.locator('#favList .fav')).toHaveCount(0);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,
