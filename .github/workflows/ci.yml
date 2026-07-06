@@ -50,7 +50,8 @@ jobs:
       - run: npm run e2e
 
   # SonarQube Cloud analysis (quality gate + unit-test coverage). Requires the
-  # SONAR_TOKEN repository secret; skipped when it is not available (forks).
+  # SONAR_TOKEN repository secret; the scan step is skipped when it is not
+  # available (Dependabot PRs, forks) so those PRs are not blocked.
   sonar:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -65,6 +66,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run coverage
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

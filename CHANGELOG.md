@@ -17,6 +17,9 @@ et la release GitHub.
 ## [Non publié]
 
 ### Corrigé
+- Le job CI `sonar` n'échoue plus sur les MR Dependabot : le scan est sauté
+  quand le secret `SONAR_TOKEN` n'est pas disponible, comme documenté
+  ([#89](https://github.com/akwawa/Seedcartographer/issues/89)).
 - Démo GitHub Pages et image Docker réparées : les modules récents
   (`coords.js`, `slime.js`, `presets.js`, `favorites.js`, `legend.js`,
   `theme.js`, et côté Docker aussi `biomes.js`, `export.js`, `sw.js`,
