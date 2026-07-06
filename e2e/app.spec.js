@@ -236,6 +236,24 @@ test('Export PNG downloads a snapshot of the current view', async ({ page }) => 
   expect(buf.length).toBeGreaterThan(1000);
 });
 
+test('Import CSV shows places as pins in the list and on the map', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.locator('#importFile').setInputFiles({
+    name: 'places.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('x,z,nearby_structures\n-384,0,2\n100,200\n')
+  });
+  await expect(page.locator('#searchInfo')).toHaveText(/2/);
+  await expect(page.locator('#results .result')).toHaveCount(2);
+  await expect(page.locator('#popup')).toBeVisible();
+  await expect(page.locator('#exportBtns')).toBeVisible();
+  // a CSV with no valid rows reports an error
+  await page.locator('#importFile').setInputFiles({
+    name: 'bad.csv', mimeType: 'text/csv', buffer: Buffer.from('x,z\nfoo,bar\n')
+  });
+  await expect(page.locator('#searchInfo')).toHaveClass(/err/);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

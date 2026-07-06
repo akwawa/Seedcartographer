@@ -44,6 +44,53 @@ function exportFileName(seed, kind, ext) {
   return `seedcartographer-${String(seed).replace(/[^\w-]+/g, '_')}-${kind}.${ext}`;
 }
 
+// split one CSV line into cells, honouring quoted fields ("" = escaped quote)
+function splitCSVLine(line) {
+  const out = [];
+  let cur = '', quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch !== '"') { cur += ch; }
+      else if (line[i + 1] === '"') { cur += '"'; i++; }
+      else { quoted = false; }
+    } else if (ch === '"') { quoted = true; }
+    else if (ch === ',') { out.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  out.push(cur);
+  return out;
+}
+
+// Parse a locations CSV back into pins — the mirror of resultsToCSV, but
+// lenient: only the two leading x,z columns are required, a header line is
+// ignored, malformed rows are counted in `skipped`, output capped at `max`.
+function parseLocationsCSV(text, max = 1500) {
+  const lines = String(text).split(/\r?\n/).filter((l) => l.trim() !== '');
+  const hits = [];
+  let skipped = 0;
+  lines.forEach((line, idx) => {
+    if (hits.length >= max) return;
+    const cells = splitCSVLine(line);
+    // Number('') is 0, so blank cells must be rejected explicitly
+    const int = (v) => {
+      const s = String(v ?? '').trim();
+      return s !== '' && Number.isInteger(Number(s)) ? Number(s) : null;
+    };
+    const x = int(cells[0]), z = int(cells[1]);
+    if (x === null || z === null) {
+      if (idx > 0) skipped++;   // a non-numeric first line is just the header
+      return;
+    }
+    const count = int(cells[2]) ?? 0;
+    hits.push({ x, z, count });
+  });
+  return { hits, skipped };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { resultsToCSV, resultsToJSON, csvField, mapCartoucheLines, exportFileName };
+  module.exports = {
+    resultsToCSV, resultsToJSON, csvField,
+    mapCartoucheLines, exportFileName, parseLocationsCSV, splitCSVLine
+  };
 }

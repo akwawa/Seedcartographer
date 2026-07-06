@@ -12,6 +12,10 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Import CSV de lieux (format de l'export existant, `x,z,…`) : les lieux
+  s'affichent comme épingles sur la carte et dans la liste ; lignes invalides
+  ignorées, en-tête optionnel
+  ([#48](https://github.com/akwawa/Seedcartographer/issues/48)).
 - Export PNG de la vue de carte (tuiles, couches, épingles) avec cartouche
   seed / version / dimension / coordonnées du centre, téléchargé localement
   ([#47](https://github.com/akwawa/Seedcartographer/issues/47)).
