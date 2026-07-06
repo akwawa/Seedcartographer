@@ -26,12 +26,12 @@ module.exports = [
         currentLang: 'readonly', I18N_LANGS: 'readonly',
         // provided by export.js / biomes.js, loaded first
         resultsToCSV: 'readonly', resultsToJSON: 'readonly',
-        biomeLabel: 'readonly'
+        biomeLabel: 'readonly', convertCoords: 'readonly'
       }
     }
   },
   {
-    files: ['i18n.js', 'export.js', 'biomes.js'],
+    files: ['i18n.js', 'export.js', 'biomes.js', 'coords.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { ...globals.browser, module: 'readonly' }
@@ -44,7 +44,7 @@ module.exports = [
   {
     // i18n.js <-> biomes.js reference each other's bindings at call time
     files: ['i18n.js'],
-    languageOptions: { globals: { biomeLabel: 'readonly' } }
+    languageOptions: { globals: { biomeLabel: 'readonly', convertCoords: 'readonly' } }
   },
   {
     files: ['biomes.js'],

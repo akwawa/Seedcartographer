@@ -461,6 +461,15 @@ function selectPin(i) {
   [...resultsEl.children].forEach((c) => c.classList.toggle('sel', +c.dataset.i === i));
   draw(); requestRender(0); syncHash(); showPopup(p);
 }
+// copy `text` on click, flashing a Copied / Copy failed feedback on the button
+function wireCopyButton(btn, text, idleLabel) {
+  btn.onclick = () => {
+    copyText(text)
+      .then(() => { btn.textContent = t('copied'); })
+      .catch(() => { btn.textContent = t('copyFailed'); });
+    setTimeout(() => { btn.textContent = idleLabel(); }, 1200);
+  };
+}
 function showPopup(p) {
   const pop = $('#popup');
   pop.textContent = '';
@@ -468,39 +477,24 @@ function showPopup(p) {
   xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
   const btn = document.createElement('button');
   btn.className = 'pop-tp'; btn.textContent = t('copyTp');
-  btn.onclick = () => {
-    copyText(`/tp @s ${p.x} ~ ${p.z}`)
-      .then(() => { btn.textContent = t('copied'); })
-      .catch(() => { btn.textContent = t('copyFailed'); });
-    setTimeout(() => { btn.textContent = t('copyTp'); }, 1200);
-  };
+  wireCopyButton(btn, `/tp @s ${p.x} ~ ${p.z}`, () => t('copyTp'));
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×';
   close.title = t('close');
   close.onclick = hidePopup;
   pop.append(close, xEl, btn);
   // equivalent coordinates in the linked dimension (÷8 / ×8); none for the End
-  const conv = convertedCoords(p);
+  const conv = convertCoords(world.dim, p.x, p.z);
   if (conv) {
+    const label = `${conv.label} ≈ ${conv.x}, ${conv.z}`;
     const row = document.createElement('button');
     row.className = 'pop-conv';
-    row.textContent = `${conv.label} ≈ ${conv.x}, ${conv.z}`;
+    row.textContent = label;
     row.title = t('copyConverted');
-    row.onclick = () => {
-      copyText(`${conv.x} ~ ${conv.z}`)
-        .then(() => { row.textContent = t('copied'); })
-        .catch(() => { row.textContent = t('copyFailed'); });
-      setTimeout(() => { row.textContent = `${conv.label} ≈ ${conv.x}, ${conv.z}`; }, 1200);
-    };
+    wireCopyButton(row, `${conv.x} ~ ${conv.z}`, () => label);
     pop.append(row);
   }
   pop.style.display = 'block';
-}
-// Overworld <-> Nether coordinate mapping (1:8); the End has no equivalent.
-function convertedCoords(p) {
-  if (world.dim === 0) return { label: 'Nether', x: Math.floor(p.x / 8), z: Math.floor(p.z / 8) };
-  if (world.dim === -1) return { label: 'Overworld', x: p.x * 8, z: p.z * 8 };
-  return null;
 }
 function hidePopup() {
   if (selected !== -1) {
