@@ -12,6 +12,10 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Presets de critères de recherche chargeables en un clic (bosquet de
+  cerisiers en bord d'océan, village + avant-poste, champs de champignons,
+  spot de ferme à slimes), libellés traduits
+  ([#43](https://github.com/akwawa/Seedcartographer/issues/43)).
 - Chunks à slimes (calculés depuis la seed, RNG Java pur) : couche activable
   sur la carte (Overworld) et critère de recherche « au moins N chunks à
   slimes dans un rayon R »

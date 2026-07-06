@@ -152,6 +152,8 @@ function setDimension(dim) {
   world.dim = dim;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  const presetSel = $('#presetSel');
+  if (presetSel) presetSel.value = '';   // criteria no longer match any preset
   addMainBiomeRow();
   structToggles.forEach((tg) => { tg.on = false; tg.points = null; });
   buildStructToggleUI();
@@ -639,6 +641,30 @@ function syncHash() {
 function readHash() {
   try { return JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))); } catch { return null; }
 }
+// Rebuild the criteria rows from a share-link-shaped `c` object. Values may
+// be attacker-controlled (share links): coerce everything to integers and cap
+// list sizes before building any DOM from them.
+function applyCriteria(c) {
+  const int = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
+  const rows = (v) => (Array.isArray(v) ? v : []).slice(0, MAX_CRIT_ROWS);
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  if (!c) return;
+  rows(c.mb).forEach((b) => { b = int(b); if (b !== null) addMainBiomeRow(b); });
+  $('#adjMode').value = c.am === 'or' ? 'or' : 'and';
+  rows(c.ac).forEach((r) => {
+    const b = int(r && r.b), d = int(r && r.d);
+    if (b !== null && d !== null && d >= 0) addAdjRow(b, d, int(r && r.n) === 1);
+  });
+  $('#structMode').value = c.sm === 'or' ? 'or' : 'and';
+  rows(c.sc).forEach((r) => {
+    const ty = int(r && r.t), mn = int(r && r.mn), rr = int(r && r.r);
+    if (ty !== null && mn !== null && rr !== null && mn >= 0 && rr >= 0) addStructRow(ty, mn, rr);
+  });
+  const rg = int(c.rg), sp = int(c.sp);
+  if (rg !== null) $('#range').value = rg;
+  if (sp !== null) $('#step').value = sp;
+}
+
 let hashState = null;
 function applyHashCriteria() {
   // called once biome/structure lists exist; builds the criteria rows from
@@ -654,32 +680,34 @@ function applyHashCriteria() {
       rg: c.rg, sp: c.sp
     };
   }
-  // Hash values are attacker-controlled (share links): coerce everything to
-  // integers and cap list sizes before building any DOM from them.
-  const int = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
-  const rows = (v) => (Array.isArray(v) ? v : []).slice(0, MAX_CRIT_ROWS);
-  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
-  if (c) {
-    rows(c.mb).forEach((b) => { b = int(b); if (b !== null) addMainBiomeRow(b); });
-    $('#adjMode').value = c.am === 'or' ? 'or' : 'and';
-    rows(c.ac).forEach((r) => {
-      const b = int(r && r.b), d = int(r && r.d);
-      if (b !== null && d !== null && d >= 0) addAdjRow(b, d, int(r && r.n) === 1);
-    });
-    $('#structMode').value = c.sm === 'or' ? 'or' : 'and';
-    rows(c.sc).forEach((r) => {
-      const ty = int(r && r.t), mn = int(r && r.mn), rr = int(r && r.r);
-      if (ty !== null && mn !== null && rr !== null && mn >= 0 && rr >= 0) addStructRow(ty, mn, rr);
-    });
-    const rg = int(c.rg), sp = int(c.sp);
-    if (rg !== null) $('#range').value = rg;
-    if (sp !== null) $('#step').value = sp;
-  }
+  applyCriteria(c);
   if (!rowsOf('#mainBiomes').length) {
     // demo: cherry grove + warm ocean + >=2 villages (matches built-in seed 141)
     addMainBiomeRow(185); addAdjRow(44, 400); addStructRow(structToggles[0].type, 2, 800);
     if (!c) { $('#range').value = 5000; $('#step').value = 16; }
   }
+}
+
+// ---------- criteria presets ----------
+function buildPresetSelect() {
+  const sel = $('#presetSel');
+  const ph = document.createElement('option');
+  ph.value = ''; ph.dataset.i18n = 'presetPlaceholder'; ph.textContent = t('presetPlaceholder');
+  sel.appendChild(ph);
+  for (const p of PRESETS) {
+    const o = document.createElement('option');
+    o.value = p.id; o.dataset.i18n = p.labelKey; o.textContent = t(p.labelKey);
+    sel.appendChild(o);
+  }
+  sel.onchange = () => {
+    const preset = PRESETS.find((p) => p.id === sel.value);
+    if (!preset) return;
+    // presets are Overworld recipes; leave the current dimension first
+    if (world.dim !== 0) { setDimension(0); $('#dimSel').value = '0'; }
+    applyCriteria(presetCriteria(preset, structToggles.map((tg) => tg.type)));
+    sel.value = preset.id;   // setDimension may have reset the picker
+    syncHash();
+  };
 }
 
 // ---------- init ----------
@@ -705,6 +733,7 @@ function init() {
   };
   $('#exportCsv').onclick = () => exportResults('csv');
   $('#exportJson').onclick = () => exportResults('json');
+  buildPresetSelect();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addStruct').onclick = () => addStructRow();

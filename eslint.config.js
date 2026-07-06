@@ -27,8 +27,9 @@ module.exports = [
         // provided by export.js / biomes.js, loaded first
         resultsToCSV: 'readonly', resultsToJSON: 'readonly',
         biomeLabel: 'readonly', convertCoords: 'readonly',
-        // provided by slime.js, loaded first
-        SLIME_STRUCT_TYPE: 'readonly'
+        // provided by slime.js / presets.js, loaded first
+        SLIME_STRUCT_TYPE: 'readonly',
+        PRESETS: 'readonly', presetCriteria: 'readonly'
       }
     }
   },
@@ -76,7 +77,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'presets.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
