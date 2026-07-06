@@ -1,10 +1,12 @@
 // app.js — UI, map rendering, search orchestration. Talks to worker.js.
 'use strict';
 
+// Two instances of the same engine worker: tiles/probes/structures on one,
+// the sliced search job on the other, so a long search never delays a tile
+// render or a biome probe (at the cost of a second WASM instance in memory).
 const worker = new Worker('./worker.js');
+const searchWorker = new Worker('./worker.js');
 let MC_NEWEST = 28;
-let workerReady = false;
-const pending = [];                 // messages queued until worker is ready
 let reqSeq = 1;
 
 // ---------- DOM ----------
@@ -24,21 +26,46 @@ let structToggles = [];                         // [{type,label,on,color,points}
 let renderReq = 0, biomeProbeReq = 0;
 
 // ---------- worker plumbing ----------
-function send(msg, transfer) {
-  if (!workerReady) { pending.push([msg, transfer]); return; }
-  worker.postMessage(msg, transfer || []);
+// per-worker readiness + queue of messages sent before the engine was up
+for (const w of [worker, searchWorker]) {
+  w.engineReady = false;
+  w.pending = [];
+  w.onerror = (e) => console.error('WORKER ERROR:', e.message, e.filename, e.lineno);
+  w.onmessageerror = (e) => console.error('WORKER MSGERROR', e);
 }
-worker.onerror = (e) => console.error('WORKER ERROR:', e.message, e.filename, e.lineno);
-worker.onmessageerror = (e) => console.error('WORKER MSGERROR', e);
+function post(w, msg, transfer) {
+  if (!w.engineReady) { w.pending.push([msg, transfer]); return; }
+  w.postMessage(msg, transfer || []);
+}
+function send(msg, transfer) { post(worker, msg, transfer); }
+function sendSearch(msg) { post(searchWorker, msg); }
+function engineUp(w) {
+  w.engineReady = true;
+  w.pending.forEach(([m, t]) => w.postMessage(m, t || []));
+  w.pending.length = 0;
+}
+searchWorker.onmessage = (e) => {
+  const d = e.data;
+  if (d.type === 'fatal') { showFatal(d.message); return; }
+  if (d.type === 'ready') { engineUp(searchWorker); return; }
+  if (d.type === 'searchProgress') {
+    if (d.reqId === searchReq) $('#searchProgressBar').style.width = d.pct + '%';
+    return;
+  }
+  if (d.type === 'search') onSearchResult(d);
+};
 worker.onmessage = (e) => {
   const d = e.data;
   if (d.type === 'fatal') { showFatal(d.message); return; }
   if (d.type === 'ready') {
-    workerReady = true; MC_NEWEST = d.mcNewest;
+    MC_NEWEST = d.mcNewest;
     if (!Number.isInteger(world.mc) || world.mc < 1 || world.mc > MC_NEWEST) world.mc = MC_NEWEST;
     buildVersionSelect();
-    send({ type: 'biomeList' });
-    pending.forEach(([m, t]) => worker.postMessage(m, t || [])); pending.length = 0;
+    // the biome list must be answered before any queued render so the legend
+    // and dropdowns can resolve ids: post it ahead of the pending flush
+    worker.engineReady = true;
+    worker.postMessage({ type: 'biomeList' });
+    engineUp(worker);
     return;
   }
   if (d.type === 'biomeList') { onBiomeList(d.list); return; }
@@ -69,11 +96,6 @@ worker.onmessage = (e) => {
     markLegend(d.id);
     return;
   }
-  if (d.type === 'searchProgress') {
-    if (d.reqId === searchReq) $('#searchProgressBar').style.width = d.pct + '%';
-    return;
-  }
-  if (d.type === 'search') { onSearchResult(d); return; }
 };
 
 // toggle the search button between Search and Cancel + show the progress bar
@@ -441,7 +463,7 @@ function runSearch() {
   searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
   searchReq = reqSeq;
   setSearchBusy(true);
-  send({
+  sendSearch({
     type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
@@ -917,7 +939,7 @@ function init() {
     curReset(); requestRender(0); syncHash();
   };
   $('#searchBtn').onclick = () => {
-    if (searchBusy) send({ type: 'cancelSearch', reqId: searchReq });
+    if (searchBusy) sendSearch({ type: 'cancelSearch', reqId: searchReq });
     else runSearch();
   };
   $('#pngBtn').onclick = exportMapPNG;
