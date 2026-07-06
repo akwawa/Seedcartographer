@@ -67,16 +67,6 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      # TEMP debug: per-file new-code coverage on this PR (removed before merge)
-      - if: github.event_name == 'pull_request'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          sleep 60
-          curl -sS -u "$SONAR_TOKEN:" -o /tmp/cov.json \
-            "https://sonarcloud.io/api/measures/component_tree?component=akwawa_Seedcartographer&pullRequest=$PR&metricKeys=new_coverage,new_uncovered_lines,new_lines_to_cover&qualifiers=FIL"
-          jq '.components[] | select(.measures | length > 0) | {path, measures}' /tmp/cov.json
 
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
