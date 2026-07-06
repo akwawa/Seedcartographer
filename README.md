@@ -161,11 +161,21 @@ sélectionner.
   le WASM sur la branche de mise à jour (le job CI `wasm` échoue sinon).
 - **Recompiler le WASM** : voir [`BUILDING.md`](BUILDING.md).
 
-## Historique des versions
+## Historique des versions et releases
 
 Les modifications sont tracées dans [`CHANGELOG.md`](CHANGELOG.md) (format
 Keep a Changelog) ; chaque merge request y ajoute son entrée dans la section
 « Non publié ».
+
+Les releases sont automatisées par **release-please** (workflow
+`release-please.yml`) : une MR de release est maintenue sur `main` (bump de
+`package.json` + section de changelog générée depuis les messages de commit) ;
+sa fusion crée le tag `v*` et la release GitHub. Les messages de commit
+suivent la convention
+[Conventional Commits](https://www.conventionalcommits.org/fr/) —
+`feat:` (Ajouté, bump mineur), `fix:` (Corrigé, bump correctif),
+`feat!:`/`BREAKING CHANGE` (bump majeur), `docs:`/`chore:`/`test:`/`ci:`
+(sans effet sur la version).
 
 ## Licence
 
