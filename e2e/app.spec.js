@@ -270,6 +270,18 @@ test('theme toggle switches to light, updates theme-color and persists', async (
   await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
 });
 
+test('help dialog opens, is translated live and closes', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#helpBtn');
+  await expect(page.locator('#helpDlg')).toBeVisible();
+  await expect(page.locator('#helpDlg h2')).toHaveText('Help');
+  await page.selectOption('#langSel', 'fr');
+  await expect(page.locator('#helpDlg h2')).toHaveText('Aide');
+  await page.click('#helpClose');
+  await expect(page.locator('#helpDlg')).toBeHidden();
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,
