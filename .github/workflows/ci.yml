@@ -50,10 +50,13 @@ jobs:
       - run: npm run e2e
 
   # SonarQube Cloud analysis (quality gate + unit-test coverage). Requires the
-  # SONAR_TOKEN repository secret; skipped when it is not available (forks).
+  # SONAR_TOKEN repository secret; the scan step is skipped when it is not
+  # available (Dependabot PRs, forks) so those PRs are not blocked.
   sonar:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
@@ -64,9 +67,10 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run coverage
+      # the secrets context is not allowed in a step `if`: the token is
+      # exposed as job-level env and tested through the env context instead
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        if: env.SONAR_TOKEN != ''
 
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
