@@ -19,6 +19,12 @@ au moment du tag de release, la section est renommée en version datée.
   non-régression aligne désormais ces listes sur `sw.js`
   ([#79](https://github.com/akwawa/Seedcartographer/issues/79)).
 
+### Modifié
+- La version du cache du service worker n'est plus incrémentée à la main :
+  les déploiements Pages et Docker l'estampillent avec un hash de contenu des
+  assets (`scripts/sw-version.js`), invalidant le cache à chaque changement
+  ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
+
 ### Ajouté
 - Thème clair : bascule ☀/☾ dans la barre du haut, détection
   `prefers-color-scheme`, choix mémorisé (`localStorage`), couleur de

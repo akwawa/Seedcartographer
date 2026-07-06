@@ -1,9 +1,10 @@
 // sw.js — offline support. Everything the app needs is precached at install;
-// same-origin requests are served cache-first. Bump VERSION whenever any
-// precached asset changes so clients pick up the new files.
+// same-origin requests are served cache-first. VERSION below is a dev
+// placeholder: deployments stamp it with a content hash of ASSETS
+// (scripts/sw-version.js), so any asset change invalidates the cache.
 'use strict';
 
-const VERSION = 'seedcartographer-v11';
+const VERSION = 'seedcartographer-dev';
 const ASSETS = [
   './',
   './index.html',

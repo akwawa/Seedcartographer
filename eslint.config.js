@@ -95,7 +95,7 @@ module.exports = [
     }
   },
   {
-    files: ['test/**/*.js', 'eslint.config.js', 'playwright.config.js'],
+    files: ['test/**/*.js', 'scripts/**/*.js', 'eslint.config.js', 'playwright.config.js'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: { ...globals.node }
