@@ -14,6 +14,29 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.2.0](https://github.com/akwawa/Seedcartographer/compare/v0.1.0...v0.2.0) (2026-07-06)
+
+
+### Ajouté
+
+* add an in-app help dialog ([0a527b3](https://github.com/akwawa/Seedcartographer/commit/0a527b3d857c1067d991d399397c27e29c6b5291)), closes [#55](https://github.com/akwawa/Seedcartographer/issues/55)
+* automate releases with release-please ([a3560c7](https://github.com/akwawa/Seedcartographer/commit/a3560c7e43d0916e1b74d4b946162661d2426e71)), closes [#53](https://github.com/akwawa/Seedcartographer/issues/53)
+* multi-arch Docker image (amd64/arm64) with a Trivy PR gate ([d717009](https://github.com/akwawa/Seedcartographer/commit/d717009878c0f0bd7efa1c3f32435786491756c1)), closes [#54](https://github.com/akwawa/Seedcartographer/issues/54)
+* show world spawn and strongholds, with distance criteria ([e640b37](https://github.com/akwawa/Seedcartographer/commit/e640b37ee0b61136016d3558938b207f97070e90)), closes [#41](https://github.com/akwawa/Seedcartographer/issues/41)
+
+
+### Corrigé
+
+* **ci:** skip the Sonar scan when SONAR_TOKEN is unavailable ([d03fd59](https://github.com/akwawa/Seedcartographer/commit/d03fd5975adeb37caaf44883887568dbc7bda420)), closes [#89](https://github.com/akwawa/Seedcartographer/issues/89)
+* **ci:** test the Sonar token through the env context ([5e5a689](https://github.com/akwawa/Seedcartographer/commit/5e5a6895a9c5ac6674c25e52a619d5c492811fe2))
+
+
+### Modifié
+
+* address Sonar findings on the spawn/strongholds change ([ee93a56](https://github.com/akwawa/Seedcartographer/commit/ee93a56d422ee853dab6980da155b623e26127d2))
+* drop a redundant return in the tile worker handler ([5df31cf](https://github.com/akwawa/Seedcartographer/commit/5df31cf4a91efa7ff5a2111737083590a9550e4b))
+* run the search on a dedicated engine worker ([ffaac27](https://github.com/akwawa/Seedcartographer/commit/ffaac27ea7e8b1cf519fae3e31ec8baed6415968)), closes [#50](https://github.com/akwawa/Seedcartographer/issues/50)
+
 ## [Non publié]
 
 ### Corrigé
