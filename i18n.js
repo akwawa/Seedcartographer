@@ -4,6 +4,7 @@
 
 const I18N = {
   en: {
+    copyConverted: "Copy the converted coordinates",
     dimension: "Dimension",
     structFortress: "Nether fortress",
     structBastion: "Bastion remnant",
@@ -72,6 +73,7 @@ const I18N = {
     structTrialChamber: 'Trial chamber'
   },
   fr: {
+    copyConverted: "Copier les coordonnées converties",
     dimension: "Dimension",
     structFortress: "Forteresse du Nether",
     structBastion: "Bastion en ruine",
@@ -140,6 +142,7 @@ const I18N = {
     structTrialChamber: "Salle d'épreuves"
   },
   es: {
+    copyConverted: "Copiar las coordenadas convertidas",
     dimension: "Dimensión",
     structFortress: "Fortaleza del Nether",
     structBastion: "Bastión en ruinas",
@@ -208,6 +211,7 @@ const I18N = {
     structTrialChamber: 'Cámara de pruebas'
   },
   de: {
+    copyConverted: "Umgerechnete Koordinaten kopieren",
     dimension: "Dimension",
     structFortress: "Netherfestung",
     structBastion: "Bastionsruine",

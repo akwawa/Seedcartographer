@@ -12,6 +12,8 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Pop-up de lieu : coordonnées équivalentes Nether ⇄ Overworld (÷8 / ×8) avec
+  copie en un clic ([#46](https://github.com/akwawa/Seedcartographer/issues/46)).
 - `CHANGELOG.md` au format Keep a Changelog, avec la règle de mise à jour par
   merge request ([#40](https://github.com/akwawa/Seedcartographer/issues/40)).
 

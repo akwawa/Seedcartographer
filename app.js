@@ -479,7 +479,28 @@ function showPopup(p) {
   close.title = t('close');
   close.onclick = hidePopup;
   pop.append(close, xEl, btn);
+  // equivalent coordinates in the linked dimension (÷8 / ×8); none for the End
+  const conv = convertedCoords(p);
+  if (conv) {
+    const row = document.createElement('button');
+    row.className = 'pop-conv';
+    row.textContent = `${conv.label} ≈ ${conv.x}, ${conv.z}`;
+    row.title = t('copyConverted');
+    row.onclick = () => {
+      copyText(`${conv.x} ~ ${conv.z}`)
+        .then(() => { row.textContent = t('copied'); })
+        .catch(() => { row.textContent = t('copyFailed'); });
+      setTimeout(() => { row.textContent = `${conv.label} ≈ ${conv.x}, ${conv.z}`; }, 1200);
+    };
+    pop.append(row);
+  }
   pop.style.display = 'block';
+}
+// Overworld <-> Nether coordinate mapping (1:8); the End has no equivalent.
+function convertedCoords(p) {
+  if (world.dim === 0) return { label: 'Nether', x: Math.floor(p.x / 8), z: Math.floor(p.z / 8) };
+  if (world.dim === -1) return { label: 'Overworld', x: p.x * 8, z: p.z * 8 };
+  return null;
 }
 function hidePopup() {
   if (selected !== -1) {
