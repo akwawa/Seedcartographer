@@ -28,8 +28,9 @@ module.exports = [
         resultsToCSV: 'readonly', resultsToJSON: 'readonly',
         mapCartoucheLines: 'readonly', exportFileName: 'readonly', parseLocationsCSV: 'readonly',
         biomeLabel: 'readonly', convertCoords: 'readonly',
-        // provided by slime.js / presets.js, loaded first
+        // provided by slime.js / markers.js / presets.js, loaded first
         SLIME_STRUCT_TYPE: 'readonly',
+        SPAWN_STRUCT_TYPE: 'readonly', STRONGHOLD_STRUCT_TYPE: 'readonly',
         PRESETS: 'readonly', presetCriteria: 'readonly',
         // provided by favorites.js, loaded first
         parseFavorites: 'readonly', addFavorite: 'readonly', findFavorite: 'readonly',
@@ -79,12 +80,14 @@ module.exports = [
         SEARCH_MAX_CELLS: 'readonly',
         SEARCH_MAX_HITS: 'readonly',
         slimeChunksInBox: 'readonly', // slime.js
-        SLIME_STRUCT_TYPE: 'readonly'
+        SLIME_STRUCT_TYPE: 'readonly',
+        SPAWN_STRUCT_TYPE: 'readonly',       // markers.js
+        STRONGHOLD_STRUCT_TYPE: 'readonly'
       }
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

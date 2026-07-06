@@ -1,6 +1,6 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js');
+importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors
@@ -70,6 +70,42 @@ function slimeLayerPoints(d) {
     .map(([cx, cz]) => [cx * 16, cz * 16]);   // NW block corner of each chunk
 }
 
+// Spawn and strongholds are Overworld-only, world-wide (not box-bound) and
+// expensive to compute (biome checks), so they are cached per world.
+const STRONGHOLD_MAX = 200;
+let markerCache = { key: null, spawn: null, strongholds: null };
+function markerKey() { return `${curSeedStr}|${curMc}|${curLarge}`; }
+function spawnPoints(dim) {
+  if ((dim || 0) !== 0) return [];
+  if (markerCache.key !== markerKey()) markerCache = { key: markerKey(), spawn: null, strongholds: null };
+  if (!markerCache.spawn) {
+    ensureList(1);
+    M._getSpawnPos(listPtr);
+    const b = listPtr >> 2;
+    markerCache.spawn = [[M.HEAP32[b], M.HEAP32[b + 1]]];
+  }
+  return markerCache.spawn;
+}
+function strongholdPoints(dim) {
+  if ((dim || 0) !== 0) return [];
+  if (markerCache.key !== markerKey()) markerCache = { key: markerKey(), spawn: null, strongholds: null };
+  if (!markerCache.strongholds) {
+    ensureList(STRONGHOLD_MAX);
+    const n = M._listStrongholds(listPtr, STRONGHOLD_MAX);
+    const b = listPtr >> 2;
+    const pts = [];
+    for (let i = 0; i < n; i++) pts.push([M.HEAP32[b + i * 2], M.HEAP32[b + i * 2 + 1]]);
+    markerCache.strongholds = pts;
+  }
+  return markerCache.strongholds;
+}
+// points for the synthetic marker types, or null for real structure enums
+function syntheticPoints(type, dim) {
+  if (type === SPAWN_STRUCT_TYPE) return spawnPoints(dim);
+  if (type === STRONGHOLD_STRUCT_TYPE) return strongholdPoints(dim);
+  return null;
+}
+
 // pick the smallest cubiomes scale >= bpp so the cell grid stays ~viewport-sized
 function chooseScale(bpp) {
   const S = [4, 16, 64, 256];
@@ -128,6 +164,8 @@ async function runSearchJob(d) {
           : [];
         return { points, min: c.min, radius: c.radius };
       }
+      const synth = syntheticPoints(c.type, d.dim);
+      if (synth) return { points: synth, min: c.min, radius: c.radius };
       const cap = 40000;
       ensureList(cap);
       const n = M._listStructures(c.type,
@@ -219,6 +257,11 @@ onmessage = (e) => {
     for (const st of d.types) {
       if (st === SLIME_STRUCT_TYPE) {
         out.push({ type: st, points: slimeLayerPoints(d) });
+        continue;
+      }
+      const synth = syntheticPoints(st, d.dim);
+      if (synth) {
+        out.push({ type: st, points: synth });
         continue;
       }
       const n = M._listStructures(st, d.x0, d.z0, d.x1, d.z1, listPtr, cap);

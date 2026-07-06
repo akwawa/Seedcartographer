@@ -113,6 +113,10 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   dimension) avec une note libre ; les favoris apparaissent dans le panneau et
   comme losanges dorés sur la carte, et sont conservés dans le navigateur
   (`localStorage`) — rien ne quitte la machine.
+- **Spawn et strongholds.** Les couches « Spawn du monde » et « Forteresse de
+  l'End (stronghold) » (Overworld) affichent le point d'apparition et les
+  strongholds exacts ; la section « structures proches » propose les critères
+  « à moins de N blocs du spawn / d'un stronghold ».
 - **Chunks à slimes.** La couche « Chunks à slimes » (Overworld) les affiche en
   vert sur la carte — calculés directement depuis la seed (RNG Java), sans le
   moteur cubiomes ; la couche n'apparaît qu'à un zoom raisonnable. La section

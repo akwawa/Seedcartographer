@@ -31,6 +31,10 @@ et la release GitHub.
   ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
 
 ### Ajouté
+- Spawn du monde et strongholds (positions exactes vérifiées par biomes,
+  moteur cubiomes recompilé) : couches activables sur la carte (Overworld) et
+  critères de recherche « à moins de N blocs du spawn / d'un stronghold »
+  ([#41](https://github.com/akwawa/Seedcartographer/issues/41)).
 - Page d'aide intégrée (bouton « ? ») : critères ET/OU/absent, raccourcis
   carte, limites connues, licence et crédits — traduite dans les 4 langues
   ([#55](https://github.com/akwawa/Seedcartographer/issues/55)).
