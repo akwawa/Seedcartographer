@@ -31,6 +31,8 @@ jobs:
              theme.js export.js mcfinder.js mcfinder.wasm \
              manifest.webmanifest icon.svg sw.js _site/
           cp -r fonts _site/
+      # stamp the service-worker cache version with a content hash of the assets
+      - run: node scripts/sw-version.js _site
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:

@@ -79,8 +79,10 @@ sélectionner.
 - **Application installable et hors-ligne (PWA).** Servie en HTTPS (ou sur
   localhost), l'application s'installe depuis le navigateur et fonctionne
   ensuite sans réseau : tous les fichiers (moteur WASM compris) sont mis en
-  cache par un service worker. Pour publier une mise à jour, incrémenter
-  `VERSION` dans `sw.js`.
+  cache par un service worker. La version du cache est estampillée
+  automatiquement au déploiement (hash de contenu des assets,
+  `scripts/sw-version.js`) : tout changement d'asset invalide le cache sans
+  intervention manuelle.
 - **Thème clair ou sombre.** La bascule ☀/☾ en haut à droite change de thème ;
   au premier chargement le thème suit la préférence du système
   (`prefers-color-scheme`) et le choix manuel est mémorisé.
