@@ -31,6 +31,9 @@ et la release GitHub.
   ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
 
 ### Ajouté
+- Page d'aide intégrée (bouton « ? ») : critères ET/OU/absent, raccourcis
+  carte, limites connues, licence et crédits — traduite dans les 4 langues
+  ([#55](https://github.com/akwawa/Seedcartographer/issues/55)).
 - Image Docker multi-architecture (`linux/amd64` + `linux/arm64`, QEMU/buildx)
   et scan de vulnérabilités Trivy en pull request, en échec sur CVE critiques
   corrigeables ([#54](https://github.com/akwawa/Seedcartographer/issues/54)).

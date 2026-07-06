@@ -75,7 +75,8 @@ docker run --rm -p 8080:80 seedcartographer
    ouverte ailleurs, elle rejoue exactement la même recherche.
 
 Glisse pour te déplacer, molette pour zoomer, clique une épingle pour la
-sélectionner.
+sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
+(critères, raccourcis carte, limites, licence).
 
 ## Bon à savoir
 

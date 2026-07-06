@@ -30,6 +30,7 @@
   <button id="shareBtn" class="btn ghost" data-i18n="shareLink">Share link</button>
   <select id="langSel" class="ver" title="Language"></select>
   <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
+  <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
 </header>
 
 <main>
@@ -111,6 +112,24 @@
     <div class="maphelp mono" data-i18n="maphelp">drag to pan · scroll to zoom · click a pin</div>
   </div>
 </main>
+
+<dialog id="helpDlg" class="help">
+  <button id="helpClose" class="help-close" data-i18n-title="close" title="Close">×</button>
+  <h2 data-i18n="helpTitle">Help</h2>
+  <h3 data-i18n="helpCriteriaTitle">Search criteria</h3>
+  <p data-i18n="helpCriteria"></p>
+  <h3 data-i18n="helpMapTitle">Map</h3>
+  <p data-i18n="helpMap"></p>
+  <h3 data-i18n="helpLimitsTitle">Known limits</h3>
+  <p data-i18n="helpLimits"></p>
+  <h3 data-i18n="helpCreditsTitle">License &amp; credits</h3>
+  <p data-i18n="helpCredits"></p>
+  <p class="help-links">
+    <a href="https://github.com/akwawa/Seedcartographer" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="https://github.com/akwawa/Seedcartographer/blob/main/LICENSE" target="_blank" rel="noopener">CC BY-NC 4.0</a> ·
+    <a href="https://github.com/Cubitect/cubiomes" target="_blank" rel="noopener">cubiomes</a>
+  </p>
+</dialog>
 
 <script src="./i18n.js"></script>
 <script src="./biomes.js"></script>

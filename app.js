@@ -945,6 +945,8 @@ function init() {
   langSel.value = currentLang;
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
+  $('#helpBtn').onclick = () => $('#helpDlg').showModal();
+  $('#helpClose').onclick = () => $('#helpDlg').close();
   buildDimSelect();
   buildFavList();
   initTheme();
