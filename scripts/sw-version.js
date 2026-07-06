@@ -33,15 +33,25 @@ function stampVersion(swSource, version) {
   return out;
 }
 
-// hash the assets of `dir` and rewrite its sw.js in place; returns the
-// version. Every constructed path is validated to stay inside `dir` so a
-// hostile ASSETS entry (or CLI argument) cannot reach the wider filesystem.
+// The tool only ever works below the invoking process's working directory
+// (the CI workspace / staging dir): every path derived from the CLI argument
+// or from an ASSETS entry is canonicalized and validated against that
+// untainted base before any filesystem access.
+function insideCwd(abs) {
+  const base = fs.realpathSync(process.cwd());
+  if (abs !== base && !abs.startsWith(base + path.sep)) {
+    throw new Error(`path escapes the working directory: ${abs}`);
+  }
+  return abs;
+}
+
+// hash the assets of `dir` and rewrite its sw.js in place; returns the version
 function stampDir(dir) {
-  const root = fs.realpathSync(path.resolve(dir));
+  const root = insideCwd(fs.realpathSync(path.resolve(dir)));
   const resolveInside = (rel) => {
     const abs = path.resolve(root, rel);
     if (!abs.startsWith(root + path.sep)) throw new Error(`path escapes ${root}: ${rel}`);
-    return abs;
+    return insideCwd(abs);
   };
   const swPath = resolveInside('sw.js');
   const src = fs.readFileSync(swPath, 'utf8');

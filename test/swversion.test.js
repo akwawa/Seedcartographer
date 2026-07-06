@@ -2,7 +2,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { parseAssets, contentVersion, stampVersion, stampDir } = require('../scripts/sw-version.js');
 
@@ -28,8 +27,10 @@ test('stampVersion replaces the VERSION line and rejects sources without one', (
   assert.throws(() => stampVersion('no version', 'x'), /VERSION/);
 });
 
+// stampDir only accepts directories below the working directory, so the
+// test fixtures live in a scratch dir inside the repository
 test('stampDir rewrites sw.js in place from the on-disk assets', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'swv-'));
+  const dir = fs.mkdtempSync(path.join(process.cwd(), '.tmp-swv-'));
   fs.writeFileSync(path.join(dir, 'sw.js'), SW);
   fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html>');
   fs.writeFileSync(path.join(dir, 'app.js'), 'app v1');
@@ -43,9 +44,13 @@ test('stampDir rewrites sw.js in place from the on-disk assets', () => {
 });
 
 test('stampDir refuses asset paths escaping the target directory', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'swv-'));
+  const dir = fs.mkdtempSync(path.join(process.cwd(), '.tmp-swv-'));
   fs.writeFileSync(path.join(dir, 'sw.js'),
     "const VERSION = 'seedcartographer-dev';\nconst ASSETS = ['./../evil.js'];\n");
   assert.throws(() => stampDir(dir), /escapes/);
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('stampDir refuses directories outside the working directory', () => {
+  assert.throws(() => stampDir('/'), /escapes/);
 });
