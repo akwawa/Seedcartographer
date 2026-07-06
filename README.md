@@ -129,6 +129,12 @@ sélectionner.
   pull request.
 - **Recompiler le WASM** : voir [`BUILDING.md`](BUILDING.md).
 
+## Historique des versions
+
+Les modifications sont tracées dans [`CHANGELOG.md`](CHANGELOG.md) (format
+Keep a Changelog) ; chaque merge request y ajoute son entrée dans la section
+« Non publié ».
+
 ## Licence
 
 Ce projet est distribué sous licence
