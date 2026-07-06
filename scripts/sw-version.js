@@ -33,11 +33,19 @@ function stampVersion(swSource, version) {
   return out;
 }
 
-// hash the assets of `dir` and rewrite its sw.js in place; returns the version
+// hash the assets of `dir` and rewrite its sw.js in place; returns the
+// version. Every constructed path is validated to stay inside `dir` so a
+// hostile ASSETS entry (or CLI argument) cannot reach the wider filesystem.
 function stampDir(dir) {
-  const swPath = path.join(dir, 'sw.js');
+  const root = fs.realpathSync(path.resolve(dir));
+  const resolveInside = (rel) => {
+    const abs = path.resolve(root, rel);
+    if (!abs.startsWith(root + path.sep)) throw new Error(`path escapes ${root}: ${rel}`);
+    return abs;
+  };
+  const swPath = resolveInside('sw.js');
   const src = fs.readFileSync(swPath, 'utf8');
-  const files = parseAssets(src).map((p) => ({ path: p, content: fs.readFileSync(path.join(dir, p)) }));
+  const files = parseAssets(src).map((p) => ({ path: p, content: fs.readFileSync(resolveInside(p)) }));
   const version = contentVersion(files);
   fs.writeFileSync(swPath, stampVersion(src, version));
   return version;

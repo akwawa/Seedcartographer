@@ -41,3 +41,11 @@ test('stampDir rewrites sw.js in place from the on-disk assets', () => {
   assert.notStrictEqual(stampDir(dir), v1);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('stampDir refuses asset paths escaping the target directory', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'swv-'));
+  fs.writeFileSync(path.join(dir, 'sw.js'),
+    "const VERSION = 'seedcartographer-dev';\nconst ASSETS = ['./../evil.js'];\n");
+  assert.throws(() => stampDir(dir), /escapes/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
