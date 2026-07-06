@@ -30,8 +30,11 @@ Puis ouvre http://localhost:8000 dans ton navigateur.
 
 ### Avec Docker
 
-Une image est publiée sur GitHub Container Registry à chaque mise à jour de
-`main` (tag `latest`) et à chaque tag `v*` (tag de version) :
+Une image **multi-architecture** (`linux/amd64` et `linux/arm64` — Raspberry
+Pi, serveurs ARM) est publiée sur GitHub Container Registry à chaque mise à
+jour de `main` (tag `latest`) et à chaque tag `v*` (tag de version) ; chaque
+pull request passe un scan de vulnérabilités Trivy (échec sur CVE critiques
+corrigeables) :
 
 ```bash
 docker run --rm -p 8080:80 ghcr.io/akwawa/seedcartographer:latest

@@ -31,6 +31,9 @@ et la release GitHub.
   ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
 
 ### Ajouté
+- Image Docker multi-architecture (`linux/amd64` + `linux/arm64`, QEMU/buildx)
+  et scan de vulnérabilités Trivy en pull request, en échec sur CVE critiques
+  corrigeables ([#54](https://github.com/akwawa/Seedcartographer/issues/54)).
 - Releases automatisées avec release-please : MR de release maintenue en
   continu (bump `package.json`, section de changelog générée), tag et release
   GitHub créés à sa fusion ; convention Conventional Commits documentée
