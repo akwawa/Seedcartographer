@@ -254,6 +254,22 @@ test('Import CSV shows places as pins in the list and on the map', async ({ page
   await expect(page.locator('#searchInfo')).toHaveClass(/err/);
 });
 
+test('theme toggle switches to light, updates theme-color and persists', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // dark by default (headless prefers dark is not guaranteed; force via toggle)
+  const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+  await page.click('#themeBtn');
+  const flipped = theme === 'dark' ? 'light' : 'dark';
+  await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
+  const metaColor = await page.getAttribute('meta[name="theme-color"]', 'content');
+  expect(metaColor).toBe(flipped === 'light' ? '#eef1f5' : '#0c1016');
+  // the choice survives a reload
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

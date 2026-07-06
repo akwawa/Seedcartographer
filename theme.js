@@ -1,0 +1,21 @@
+// theme.js — light/dark theme selection logic. Pure, shared between app.js
+// (script tag) and the Node test suite (require).
+'use strict';
+
+// browser-chrome color per theme (meta theme-color)
+const THEME_COLORS = { dark: '#0c1016', light: '#eef1f5' };
+
+// stored user choice wins; otherwise follow the system, defaulting to dark
+// (the app's historical look) unless the system explicitly asks for light
+function resolveTheme(stored, prefersLight) {
+  if (stored === 'light' || stored === 'dark') return stored;
+  return prefersLight ? 'light' : 'dark';
+}
+
+function otherTheme(theme) {
+  return theme === 'dark' ? 'light' : 'dark';
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { THEME_COLORS, resolveTheme, otherTheme };
+}
