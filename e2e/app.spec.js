@@ -305,6 +305,29 @@ test('spawn and strongholds: layers plus distance-to-spawn criterion', async ({ 
   await expect(page.locator('#structLayers .layer', { hasText: 'World spawn' })).toHaveCount(0);
 });
 
+test('tiles keep rendering while a long search runs on its own worker', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.fill('#range', '60000');
+  await page.click('#searchBtn');
+  await page.waitForFunction(() => parseInt(document.querySelector('#searchProgressBar').style.width, 10) > 0, { timeout: 60000 });
+  // zoom out: a fresh tile must arrive while the search is still running
+  const before = await page.evaluate(() => {
+    const c = document.querySelector('#map');
+    return c.getContext('2d').getImageData(0, 0, c.width, 1).data.join(',');
+  });
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, 1200);
+  await page.waitForFunction((prev) => {
+    const c = document.querySelector('#map');
+    return c.getContext('2d').getImageData(0, 0, c.width, 1).data.join(',') !== prev;
+  }, before, { timeout: 15000 });
+  // the search is genuinely still in flight
+  await expect(page.locator('#searchBtn')).toHaveText(/Cancel/);
+  await page.click('#searchBtn');   // cancel to end quickly
+  await waitForSearchDone(page);
+});
+
 test('forged hash values are ignored without breaking the app', async ({ page }) => {
   const forged = Buffer.from(encodeURIComponent(JSON.stringify({
     s: '141', m: 'evil', l: 0, x: 0, z: 0, b: 2,

@@ -137,7 +137,7 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 |---|---|
 | `index.html`, `styles.css` | Interface |
 | `app.js` | Carte (pan/zoom, rendu, épingles), UI, partage de lien |
-| `worker.js` | Web Worker : possède l'instance WASM (tuiles + recherche) |
+| `worker.js` | Web Worker moteur — instancié deux fois : tuiles/sondes d'un côté, recherche de l'autre |
 | `seed.js` | Conversion seed → entier 64 bits (partagé worker/tests) |
 | `search.js` | Balayage multi-critères de la grille de biomes (partagé worker/tests) |
 | `slime.js` | Calcul des chunks à slimes (RNG Java, partagé worker/tests) |

@@ -25,6 +25,10 @@ et la release GitHub.
   ([#79](https://github.com/akwawa/Seedcartographer/issues/79)).
 
 ### Modifié
+- La recherche tourne dans un second Web Worker avec sa propre instance du
+  moteur WASM : les rendus de tuiles et les sondes de biome ne partagent plus
+  sa file de messages — la carte reste totalement fluide pendant une longue
+  recherche ([#50](https://github.com/akwawa/Seedcartographer/issues/50)).
 - La version du cache du service worker n'est plus incrémentée à la main :
   les déploiements Pages et Docker l'estampillent avec un hash de contenu des
   assets (`scripts/sw-version.js`), invalidant le cache à chaque changement
