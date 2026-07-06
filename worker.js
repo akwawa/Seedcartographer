@@ -3,6 +3,7 @@
 importScripts('./mcfinder.js');
 importScripts('./seed.js');
 importScripts('./search.js');
+importScripts('./slime.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors
@@ -58,6 +59,20 @@ function applyWorld(seedStr, mc, large, dim) {
   curSeedStr = seedStr; curMc = mc; curLarge = large; curDim = dim;
 }
 
+// slime chunks are pure JS (slime.js), Overworld-only. The layer goes empty on
+// oversized boxes (zoomed way out, chunks would be sub-pixel anyway); the
+// search clause caps its point list like the structure lister does.
+const SLIME_LAYER_MAX_CHUNKS = 120000;
+const SLIME_SEARCH_MAX_POINTS = 40000;
+function slimeLayerPoints(d) {
+  if ((d.dim || 0) !== 0) return [];
+  const chunksInBox = ((Math.floor(d.x1 / 16) - Math.floor(d.x0 / 16) + 1)
+                     * (Math.floor(d.z1 / 16) - Math.floor(d.z0 / 16) + 1));
+  if (chunksInBox > SLIME_LAYER_MAX_CHUNKS) return [];
+  return slimeChunksInBox(seedToBigInt(d.seed), d.x0, d.z0, d.x1, d.z1, SLIME_LAYER_MAX_CHUNKS)
+    .map(([cx, cz]) => [cx * 16, cz * 16]);   // NW block corner of each chunk
+}
+
 // pick the smallest cubiomes scale >= bpp so the cell grid stays ~viewport-sized
 function chooseScale(bpp) {
   const S = [4, 16, 64, 256];
@@ -106,6 +121,16 @@ async function runSearchJob(d) {
 
     // 2) structure positions per clause (fast)
     const structClauses = (d.structClauses || []).map((c) => {
+      if (c.type === SLIME_STRUCT_TYPE) {
+        // chunk centers, so distances behave like structure positions
+        const points = (d.dim || 0) === 0
+          ? slimeChunksInBox(seedToBigInt(d.seed),
+              d.cx - d.range - c.radius, d.cz - d.range - c.radius,
+              d.cx + d.range + c.radius, d.cz + d.range + c.radius,
+              SLIME_SEARCH_MAX_POINTS).map(([sx, sz]) => [sx * 16 + 8, sz * 16 + 8])
+          : [];
+        return { points, min: c.min, radius: c.radius };
+      }
       const cap = 40000;
       ensureList(cap);
       const n = M._listStructures(c.type,
@@ -190,6 +215,10 @@ onmessage = (e) => {
     ensureList(cap);
     const out = [];
     for (const st of d.types) {
+      if (st === SLIME_STRUCT_TYPE) {
+        out.push({ type: st, points: slimeLayerPoints(d) });
+        continue;
+      }
       const n = M._listStructures(st, d.x0, d.z0, d.x1, d.z1, listPtr, cap);
       const base = listPtr >> 2;
       const pts = [];

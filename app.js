@@ -194,6 +194,17 @@ function draw() {
   // structure markers (only those in view)
   for (const t of structToggles) {
     if (!t.on || !t.points) continue;
+    if (t.slime) {
+      // chunk-sized overlay squares rather than fixed markers
+      const size = 16 / view.bpp;
+      ctx.fillStyle = 'rgba(111,206,78,.4)'; ctx.strokeStyle = 'rgba(30,80,20,.7)'; ctx.lineWidth = 1;
+      for (const [x, z] of t.points) {
+        const sx = w2sx(x), sy = w2sy(z);
+        if (sx < -size || sy < -size || sx > W || sy > H) continue;
+        ctx.beginPath(); ctx.rect(sx, sy, size, size); ctx.fill(); ctx.stroke();
+      }
+      continue;
+    }
     ctx.fillStyle = t.color; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1;
     for (const [x, z] of t.points) {
       const sx = w2sx(x), sy = w2sy(z);
@@ -530,6 +541,9 @@ function resolveStructConsts(defs) {
     defs.forEach((d, idx) => {
       structToggles.push({ type: vals[idx], labelKey: d[1], dim: d[2], on: false, color: structColors[idx % structColors.length], points: null });
     });
+    // slime chunks are computed in JS from the seed (slime.js), not by the
+    // engine; the synthetic type is routed to slime.js by the worker
+    structToggles.push({ type: SLIME_STRUCT_TYPE, labelKey: 'structSlimeChunks', dim: 0, slime: true, on: false, color: '#6fce4e', points: null });
     buildStructToggleUI();
     applyHashCriteria();
   };

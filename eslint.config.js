@@ -26,7 +26,9 @@ module.exports = [
         currentLang: 'readonly', I18N_LANGS: 'readonly',
         // provided by export.js / biomes.js, loaded first
         resultsToCSV: 'readonly', resultsToJSON: 'readonly',
-        biomeLabel: 'readonly', convertCoords: 'readonly'
+        biomeLabel: 'readonly', convertCoords: 'readonly',
+        // provided by slime.js, loaded first
+        SLIME_STRUCT_TYPE: 'readonly'
       }
     }
   },
@@ -67,12 +69,14 @@ module.exports = [
         seedToBigInt: 'readonly',     // seed.js
         scanGrid: 'readonly',         // search.js
         SEARCH_MAX_CELLS: 'readonly',
-        SEARCH_MAX_HITS: 'readonly'
+        SEARCH_MAX_HITS: 'readonly',
+        slimeChunksInBox: 'readonly', // slime.js
+        SLIME_STRUCT_TYPE: 'readonly'
       }
     }
   },
   {
-    files: ['seed.js', 'search.js'],
+    files: ['seed.js', 'search.js', 'slime.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

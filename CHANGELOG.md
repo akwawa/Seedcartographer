@@ -12,6 +12,10 @@ au moment du tag de release, la section est renommée en version datée.
 ## [Non publié]
 
 ### Ajouté
+- Chunks à slimes (calculés depuis la seed, RNG Java pur) : couche activable
+  sur la carte (Overworld) et critère de recherche « au moins N chunks à
+  slimes dans un rayon R »
+  ([#42](https://github.com/akwawa/Seedcartographer/issues/42)).
 - Mises à jour automatiques des dépendances avec Dependabot : actions GitHub
   (SHA épinglés), devDependencies npm et submodule cubiomes, regroupées chaque
   semaine ([#52](https://github.com/akwawa/Seedcartographer/issues/52)).
