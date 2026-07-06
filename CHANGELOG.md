@@ -6,8 +6,13 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
 projet adhère au [versionnage sémantique](https://semver.org/lang/fr/).
 
 **Règle de contribution** : chaque merge request ajoute son entrée dans la
-section « Non publié » (catégories : Ajouté / Modifié / Corrigé / Sécurité) ;
-au moment du tag de release, la section est renommée en version datée.
+section « Non publié » (catégories : Ajouté / Modifié / Corrigé / Sécurité).
+Les releases sont automatisées par
+[release-please](https://github.com/googleapis/release-please) : une MR de
+release maintient le bump de version et une section générée depuis les
+commits conventionnels ; avant de la fusionner, déplacer le contenu de
+« Non publié » dans la nouvelle section de version. La fusion crée le tag
+et la release GitHub.
 
 ## [Non publié]
 
@@ -26,6 +31,10 @@ au moment du tag de release, la section est renommée en version datée.
   ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
 
 ### Ajouté
+- Releases automatisées avec release-please : MR de release maintenue en
+  continu (bump `package.json`, section de changelog générée), tag et release
+  GitHub créés à sa fusion ; convention Conventional Commits documentée
+  ([#53](https://github.com/akwawa/Seedcartographer/issues/53)).
 - Thème clair : bascule ☀/☾ dans la barre du haut, détection
   `prefers-color-scheme`, choix mémorisé (`localStorage`), couleur de
   l'interface navigateur (`theme-color`) ajustée dynamiquement
