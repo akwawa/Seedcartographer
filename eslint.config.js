@@ -26,6 +26,7 @@ module.exports = [
         currentLang: 'readonly', I18N_LANGS: 'readonly',
         // provided by export.js / biomes.js, loaded first
         resultsToCSV: 'readonly', resultsToJSON: 'readonly',
+        mapCartoucheLines: 'readonly', exportFileName: 'readonly',
         biomeLabel: 'readonly', convertCoords: 'readonly',
         // provided by slime.js / presets.js, loaded first
         SLIME_STRUCT_TYPE: 'readonly',

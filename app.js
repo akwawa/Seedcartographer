@@ -713,12 +713,35 @@ function mcLabel() {
   const v = MC_VERSIONS.find(([val]) => val === world.mc);
   return v ? v[1] : String(world.mc);
 }
-function downloadFile(name, text, mime) {
+function downloadBlob(name, blob) {
   const a = document.createElement('a');
-  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const url = URL.createObjectURL(blob);
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+function downloadFile(name, text, mime) {
+  downloadBlob(name, new Blob([text], { type: mime }));
+}
+
+// snapshot of the current map view (tiles, layers, pins) + a cartouche band
+function exportMapPNG() {
+  const band = Math.round(64 * dpr);
+  const out = document.createElement('canvas');
+  out.width = canvas.width; out.height = canvas.height + band;
+  const o = out.getContext('2d');
+  o.drawImage(canvas, 0, 0);
+  o.fillStyle = '#0c1016';
+  o.fillRect(0, canvas.height, out.width, band);
+  o.fillStyle = '#dfe7f1';
+  o.font = `${Math.round(12 * dpr)}px monospace`;
+  const lines = mapCartoucheLines({
+    seed: world.seed, mcLabel: mcLabel(), large: world.large,
+    dimension: (DIMENSIONS.find(([v]) => v === world.dim) || [0, 'Overworld'])[1],
+    cx: Math.round(view.cx), cz: Math.round(view.cz)
+  });
+  lines.forEach((ln, i) => o.fillText(ln, Math.round(10 * dpr), canvas.height + Math.round((18 + i * 17) * dpr)));
+  out.toBlob((blob) => { if (blob) downloadBlob(exportFileName(world.seed, 'map', 'png'), blob); }, 'image/png');
 }
 function exportResults(fmt) {
   if (!pins.length) return;
@@ -843,6 +866,7 @@ function init() {
     if (searchBusy) send({ type: 'cancelSearch', reqId: searchReq });
     else runSearch();
   };
+  $('#pngBtn').onclick = exportMapPNG;
   $('#exportCsv').onclick = () => exportResults('csv');
   $('#exportJson').onclick = () => exportResults('json');
   buildPresetSelect();

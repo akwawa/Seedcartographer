@@ -28,6 +28,22 @@ function resultsToJSON(hits, meta) {
   }, null, 2) + '\n';
 }
 
+// Cartouche lines stamped under a PNG map export. Language-independent
+// technical labels so the file stays self-describing wherever it travels.
+function mapCartoucheLines(meta) {
+  return [
+    `Seed: ${meta.seed}`,
+    `Java ${meta.mcLabel}${meta.large ? ' (Large Biomes)' : ''} — ${meta.dimension}`,
+    `Center: ${meta.cx}, ${meta.cz}`
+  ];
+}
+
+// download name for an export of `kind` ('map', 'csv'…): seed sanitized to
+// filesystem-safe characters
+function exportFileName(seed, kind, ext) {
+  return `seedcartographer-${String(seed).replace(/[^\w-]+/g, '_')}-${kind}.${ext}`;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { resultsToCSV, resultsToJSON, csvField };
+  module.exports = { resultsToCSV, resultsToJSON, csvField, mapCartoucheLines, exportFileName };
 }
