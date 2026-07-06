@@ -24,13 +24,13 @@ function isSlimeChunk(worldSeed, chunkX, chunkZ) {
       + BigInt(Math.imul(chunkZ, 0x5f24f))
     ) ^ 0x3ad8025fn);
   let state = (mix ^ JAVA_LCG_MULT) & JAVA_LCG_MASK;
-  // Random.nextInt(10), including its modulo-bias rejection loop (the
-  // `bits - val + 9` test overflows Java ints, hence the `| 0`)
+  // Random.nextInt(10), including its modulo-bias rejection loop: Java
+  // rejects the draw when `bits - val + 9` overflows a 32-bit int
   for (;;) {
     state = (state * JAVA_LCG_MULT + JAVA_LCG_ADD) & JAVA_LCG_MASK;
     const bits = Number(state >> 17n);
     const val = bits % 10;
-    if (((bits - val + 9) | 0) >= 0) return val === 0;
+    if (bits - val + 9 <= 0x7FFFFFFF) return val === 0;
   }
 }
 

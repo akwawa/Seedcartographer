@@ -191,26 +191,11 @@ function draw() {
     ctx.drawImage(tile.canvas, px, py, dw, dh);
   }
 
-  // structure markers (only those in view)
+  // structure / slime layers (only points in view)
   for (const t of structToggles) {
     if (!t.on || !t.points) continue;
-    if (t.slime) {
-      // chunk-sized overlay squares rather than fixed markers
-      const size = 16 / view.bpp;
-      ctx.fillStyle = 'rgba(111,206,78,.4)'; ctx.strokeStyle = 'rgba(30,80,20,.7)'; ctx.lineWidth = 1;
-      for (const [x, z] of t.points) {
-        const sx = w2sx(x), sy = w2sy(z);
-        if (sx < -size || sy < -size || sx > W || sy > H) continue;
-        ctx.beginPath(); ctx.rect(sx, sy, size, size); ctx.fill(); ctx.stroke();
-      }
-      continue;
-    }
-    ctx.fillStyle = t.color; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1;
-    for (const [x, z] of t.points) {
-      const sx = w2sx(x), sy = w2sy(z);
-      if (sx < -8 || sy < -8 || sx > W + 8 || sy > H + 8) continue;
-      ctx.beginPath(); ctx.rect(sx - 3, sy - 3, 6, 6); ctx.fill(); ctx.stroke();
-    }
+    if (t.slime) drawSlimeLayer(t.points, W, H);
+    else drawStructMarkers(t, W, H);
   }
 
   // result pins
@@ -224,6 +209,25 @@ function draw() {
   ctx.beginPath(); ctx.moveTo(W / 2 - 7, H / 2); ctx.lineTo(W / 2 + 7, H / 2);
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
+}
+
+function drawStructMarkers(t, W, H) {
+  ctx.fillStyle = t.color; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1;
+  for (const [x, z] of t.points) {
+    const sx = w2sx(x), sy = w2sy(z);
+    if (sx < -8 || sy < -8 || sx > W + 8 || sy > H + 8) continue;
+    ctx.beginPath(); ctx.rect(sx - 3, sy - 3, 6, 6); ctx.fill(); ctx.stroke();
+  }
+}
+// slime chunks render as chunk-sized overlay squares rather than fixed markers
+function drawSlimeLayer(points, W, H) {
+  const size = 16 / view.bpp;
+  ctx.fillStyle = 'rgba(111,206,78,.4)'; ctx.strokeStyle = 'rgba(30,80,20,.7)'; ctx.lineWidth = 1;
+  for (const [x, z] of points) {
+    const sx = w2sx(x), sy = w2sy(z);
+    if (sx < -size || sy < -size || sx > W || sy > H) continue;
+    ctx.beginPath(); ctx.rect(sx, sy, size, size); ctx.fill(); ctx.stroke();
+  }
 }
 
 function drawPin(sx, sy, active) {

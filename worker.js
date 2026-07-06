@@ -1,9 +1,6 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js');
-importScripts('./seed.js');
-importScripts('./search.js');
-importScripts('./slime.js');
+importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors
