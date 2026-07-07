@@ -598,3 +598,23 @@ test('the minimap is painted across its whole surface', async ({ page }) => {
   }, { timeout: 15000 });
   expect(await paintedRatio()).toBeGreaterThan(0.9);
 });
+
+test('the go-to control recenters the map and rejects bad input', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  const state = () => page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  await page.fill('#gotoInput', '1234, -5678');
+  await page.press('#gotoInput', 'Enter');
+  const s = await state();
+  expect(s.x).toBe(1234);
+  expect(s.z).toBe(-5678);
+  // malformed input is flagged and does not move the view
+  await page.fill('#gotoInput', 'nope');
+  await page.press('#gotoInput', 'Enter');
+  await expect(page.locator('#gotoInput')).toHaveClass(/bad/);
+  const s2 = await state();
+  expect(s2.x).toBe(1234);
+  // typing again clears the error state
+  await page.fill('#gotoInput', '0, 0');
+  await expect(page.locator('#gotoInput')).not.toHaveClass(/bad/);
+});
