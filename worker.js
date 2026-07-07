@@ -285,7 +285,7 @@ async function runSeedSearchJob(d) {
     const hits = scanGrid(seedScanParams(d, cols, cols, gx0, gz0, SC));
     postMessage({
       type: 'seedScanned', reqId: d.reqId, seed: seedStr,
-      hit: hits && hits.length ? hits[0] : null
+      hit: hits?.length ? hits[0] : null
     });
     // let cancel messages through between seeds
     await yieldToQueue();
