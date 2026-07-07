@@ -415,9 +415,8 @@ test.describe('mobile', () => {
       }
       ev('pointerup', 1, cx - 140, cy); ev('pointerup', 2, cx + 140, cy);
     });
-    await page.waitForFunction((prev) => {
-      const s = JSON.parse(decodeURIComponent(atob(location.hash.slice(1))));
-      return s.b < prev;
-    }, before);
+    await expect.poll(
+      () => page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))).b)
+    ).toBeLessThan(before);
   });
 });
