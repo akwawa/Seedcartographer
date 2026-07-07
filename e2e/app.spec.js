@@ -415,8 +415,8 @@ test.describe('mobile', () => {
       }
       ev('pointerup', 1, cx - 140, cy); ev('pointerup', 2, cx + 140, cy);
     });
-    await expect.poll(
-      () => page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))).b)
-    ).toBeLessThan(before);
+    // the hash is synced synchronously when the last pointer lifts
+    const zoomed = await page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))).b);
+    expect(zoomed).toBeLessThan(before);
   });
 });
