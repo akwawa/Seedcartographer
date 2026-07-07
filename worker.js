@@ -138,6 +138,36 @@ function chooseScale(bpp) {
   return 256;
 }
 
+// Resolve the search request's structure and pair clauses into point lists.
+// Pair clauses ("a T1 and a T2 within `gap` blocks of each other") become
+// midpoint pseudo-structures fed to the same per-cell radius machinery.
+function buildStructClauses(d) {
+  const clauses = (d.structClauses || []).map((c) => {
+    if (c.type === SLIME_STRUCT_TYPE) {
+      // chunk centers, so distances behave like structure positions
+      const points = (d.dim || 0) === 0
+        ? slimeChunksInBox(seedToBigInt(d.seed),
+            d.cx - d.range - c.radius, d.cz - d.range - c.radius,
+            d.cx + d.range + c.radius, d.cz + d.range + c.radius,
+            SLIME_SEARCH_MAX_POINTS).map(([sx, sz]) => [sx * 16 + 8, sz * 16 + 8])
+        : [];
+      return { points, min: c.min, radius: c.radius };
+    }
+    const points = pointsOfType(c.type, d.dim,
+      d.cx - d.range - c.radius, d.cz - d.range - c.radius,
+      d.cx + d.range + c.radius, d.cz + d.range + c.radius, 40000);
+    return { points, min: c.min, radius: c.radius, inMain: !!c.inMain };
+  });
+  for (const c of d.pairClauses || []) {
+    const x0 = d.cx - d.range - c.radius - c.gap, z0 = d.cz - d.range - c.radius - c.gap;
+    const x1 = d.cx + d.range + c.radius + c.gap, z1 = d.cz + d.range + c.radius + c.gap;
+    const a = pointsOfType(c.t1, d.dim, x0, z0, x1, z1, 40000);
+    const b = c.t2 === c.t1 ? a : pointsOfType(c.t2, d.dim, x0, z0, x1, z1, 40000);
+    clauses.push({ points: pairMidpoints(a, b, c.gap), min: 1, radius: c.radius });
+  }
+  return clauses;
+}
+
 // ---- sliced, cancellable search ----
 let searchBusy = false;
 let searchCancelId = 0;
@@ -178,31 +208,7 @@ async function runSearchJob(d) {
     }
 
     // 2) structure positions per clause (fast)
-    const structClauses = (d.structClauses || []).map((c) => {
-      if (c.type === SLIME_STRUCT_TYPE) {
-        // chunk centers, so distances behave like structure positions
-        const points = (d.dim || 0) === 0
-          ? slimeChunksInBox(seedToBigInt(d.seed),
-              d.cx - d.range - c.radius, d.cz - d.range - c.radius,
-              d.cx + d.range + c.radius, d.cz + d.range + c.radius,
-              SLIME_SEARCH_MAX_POINTS).map(([sx, sz]) => [sx * 16 + 8, sz * 16 + 8])
-          : [];
-        return { points, min: c.min, radius: c.radius };
-      }
-      const points = pointsOfType(c.type, d.dim,
-        d.cx - d.range - c.radius, d.cz - d.range - c.radius,
-        d.cx + d.range + c.radius, d.cz + d.range + c.radius, 40000);
-      return { points, min: c.min, radius: c.radius, inMain: !!c.inMain };
-    });
-    // pair clauses: "a T1 and a T2 within `gap` blocks of each other" become
-    // midpoint pseudo-structures fed to the same per-cell radius machinery
-    for (const c of d.pairClauses || []) {
-      const x0 = d.cx - d.range - c.radius - c.gap, z0 = d.cz - d.range - c.radius - c.gap;
-      const x1 = d.cx + d.range + c.radius + c.gap, z1 = d.cz + d.range + c.radius + c.gap;
-      const a = pointsOfType(c.t1, d.dim, x0, z0, x1, z1, 40000);
-      const b = c.t2 === c.t1 ? a : pointsOfType(c.t2, d.dim, x0, z0, x1, z1, 40000);
-      structClauses.push({ points: pairMidpoints(a, b, c.gap), min: 1, radius: c.radius });
-    }
+    const structClauses = buildStructClauses(d);
     progress(85);
     await yieldToQueue();
 

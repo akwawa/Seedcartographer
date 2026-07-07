@@ -614,9 +614,9 @@ function runSearch() {
   const structClauses = rowsOf('#structClauses').map((r) => {
     const ins = r.querySelectorAll('input.num');
     return {
-      type: parseInt(r.querySelector('select').value, 10),
-      min: parseInt(ins[0].value, 10) || 0,
-      radius: parseInt(ins[1].value, 10) || 0,
+      type: Number.parseInt(r.querySelector('select').value, 10),
+      min: Number.parseInt(ins[0].value, 10) || 0,
+      radius: Number.parseInt(ins[1].value, 10) || 0,
       inMain: r.querySelector('input.inmain').checked
     };
   }).filter((c) => Number.isFinite(c.type) && c.min > 0 && c.radius > 0);
@@ -624,9 +624,9 @@ function runSearch() {
     const sels = r.querySelectorAll('select');
     const ins = r.querySelectorAll('input.num');
     return {
-      t1: parseInt(sels[0].value, 10), t2: parseInt(sels[1].value, 10),
-      gap: parseInt(ins[0].value, 10) || 0,
-      radius: parseInt(ins[1].value, 10) || 0
+      t1: Number.parseInt(sels[0].value, 10), t2: Number.parseInt(sels[1].value, 10),
+      gap: Number.parseInt(ins[0].value, 10) || 0,
+      radius: Number.parseInt(ins[1].value, 10) || 0
     };
   }).filter((c) => Number.isFinite(c.t1) && Number.isFinite(c.t2) && c.gap > 0 && c.radius > 0);
   const intOrNull = (sel) => {
@@ -933,9 +933,9 @@ function readCriteria() {
     sc: rowsOf('#structClauses').map((r) => {
       const ins = r.querySelectorAll('input.num');
       return {
-        t: parseInt(r.querySelector('select').value, 10),
-        mn: parseInt(ins[0].value, 10) || 0,
-        r: parseInt(ins[1].value, 10) || 0,
+        t: Number.parseInt(r.querySelector('select').value, 10),
+        mn: Number.parseInt(ins[0].value, 10) || 0,
+        r: Number.parseInt(ins[1].value, 10) || 0,
         im: r.querySelector('input.inmain').checked ? 1 : 0
       };
     }),
@@ -943,8 +943,8 @@ function readCriteria() {
       const sels = r.querySelectorAll('select');
       const ins = r.querySelectorAll('input.num');
       return {
-        t1: parseInt(sels[0].value, 10), t2: parseInt(sels[1].value, 10),
-        g: parseInt(ins[0].value, 10) || 0, r: parseInt(ins[1].value, 10) || 0
+        t1: Number.parseInt(sels[0].value, 10), t2: Number.parseInt(sels[1].value, 10),
+        g: Number.parseInt(ins[0].value, 10) || 0, r: Number.parseInt(ins[1].value, 10) || 0
       };
     }),
     rg: $('#range').value, sp: $('#step').value,
