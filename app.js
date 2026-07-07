@@ -1331,6 +1331,16 @@ function init() {
     view.cx = p.x; view.cz = p.z;
     draw(); requestRender(0); syncHash();
   });
+  const gotoInput = $('#gotoInput');
+  $('#gotoForm').onsubmit = (e) => {
+    e.preventDefault();
+    const p = parseGotoInput(gotoInput.value);
+    gotoInput.classList.toggle('bad', !p);
+    if (!p) return;
+    view.cx = p.x; view.cz = p.z;
+    draw(); requestRender(0); syncHash();
+  };
+  gotoInput.oninput = () => gotoInput.classList.remove('bad');
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {
     const collapsed = document.body.classList.toggle('panel-collapsed');

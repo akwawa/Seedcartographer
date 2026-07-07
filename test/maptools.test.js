@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT,
-  minimapClickToWorld, viewportRectOnMinimap
+  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT
 } = require('../maptools.js');
 
 test('scaleBarSpec picks the longest 1/2/5×10^n length that fits', () => {
@@ -51,4 +51,23 @@ test('minimap click maps back to world coordinates around the shared center', ()
 test('the viewport rectangle is centered and scaled by the zoom-out factor', () => {
   const r = viewportRectOnMinimap(800, 600, 176, 132);
   assert.deepStrictEqual(r, { x: 88 - 50, y: 66 - 37.5, w: 100, h: 75 });
+});
+
+test('parseGotoInput accepts two integers with common separators', () => {
+  assert.deepStrictEqual(parseGotoInput('100, -250'), { x: 100, z: -250 });
+  assert.deepStrictEqual(parseGotoInput('  -3;7  '), { x: -3, z: 7 });
+  assert.deepStrictEqual(parseGotoInput('0 0'), { x: 0, z: 0 });
+  assert.deepStrictEqual(parseGotoInput('12\t34'), { x: 12, z: 34 });
+});
+
+test('parseGotoInput rejects malformed or out-of-world input', () => {
+  assert.strictEqual(parseGotoInput(''), null);
+  assert.strictEqual(parseGotoInput('abc'), null);
+  assert.strictEqual(parseGotoInput('100'), null);
+  assert.strictEqual(parseGotoInput('1, 2, 3'), null);
+  assert.strictEqual(parseGotoInput('1.5, 2'), null);
+  assert.strictEqual(parseGotoInput(`0, ${GOTO_LIMIT + 1}`), null);
+  assert.strictEqual(parseGotoInput(`-${GOTO_LIMIT + 1}, 0`), null);
+  // the border itself is still reachable
+  assert.deepStrictEqual(parseGotoInput(`${GOTO_LIMIT}, 0`), { x: GOTO_LIMIT, z: 0 });
 });

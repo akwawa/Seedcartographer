@@ -85,6 +85,26 @@ function viewportRectOnMinimap(mainW, mainH, mmW, mmH) {
   return { x: mmW / 2 - w / 2, y: mmH / 2 - h / 2, w, h };
 }
 
+// Farthest coordinate reachable in Java (the world border).
+const GOTO_LIMIT = 29999984;
+
+// Parse a "go to" input — two integers separated by a comma, semicolon or
+// whitespace ("100, -250", "100 -250"…). Returns null when the text is not
+// two coordinates or one of them lies beyond the world border.
+/**
+ * @param {string} str raw field content
+ * @returns {{x: number, z: number}|null} world point, or null when invalid
+ */
+function parseGotoInput(str) {
+  // the separator alternation is unambiguous (comma/semicolon vs pure
+  // whitespace), so the regex cannot backtrack super-linearly
+  const m = /^\s*(-?\d+)(?:\s*[,;]\s*|\s+)(-?\d+)\s*$/.exec(String(str ?? ''));
+  if (!m) return null;
+  const x = Number.parseInt(m[1], 10), z = Number.parseInt(m[2], 10);
+  if (Math.abs(x) > GOTO_LIMIT || Math.abs(z) > GOTO_LIMIT) return null;
+  return { x, z };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap };
+  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT };
 }

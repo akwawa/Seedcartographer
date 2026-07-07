@@ -16,6 +16,12 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Ajouté
+- Contrôle « aller à » sur la carte : un champ « x, z » (Entrée ou bouton)
+  recentre la vue sur les coordonnées saisies, avec validation (deux entiers,
+  bordure du monde) et signalement visuel des entrées invalides ; le lien de
+  partage reflète la nouvelle position (#108).
+
 ### Corrigé
 - Stock SonarCloud ramené à zéro (41 issues ouvertes, dont la seule
   vulnérabilité : l'image Docker tournait en root — remplacée par

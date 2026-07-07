@@ -144,6 +144,10 @@
       <input type="range" id="ySlider" min="-64" max="320" step="1" value="60" data-i18n-aria="yLayerAria" aria-label="Altitude (Y layer)">
       <span id="yVal" class="mono yval">60</span>
     </label>
+    <form id="gotoForm" class="goto">
+      <input id="gotoInput" class="mono" placeholder="x, z" spellcheck="false" autocomplete="off" aria-label="Go to coordinates" data-i18n-aria="gotoAria">
+      <button class="btn tiny" data-i18n="gotoBtn" data-i18n-title="gotoAria" title="Go to coordinates">Go</button>
+    </form>
     <canvas id="minimap" width="176" height="132" aria-label="Overview minimap" data-i18n-aria="minimapAria"></canvas>
     <details id="legend" class="legend">
       <summary data-i18n="legend">Legend</summary>
