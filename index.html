@@ -28,7 +28,7 @@
   </div>
   <button id="pngBtn" class="btn ghost" data-i18n="exportPng">Export PNG</button>
   <button id="shareBtn" class="btn ghost" data-i18n="shareLink">Share link</button>
-  <select id="langSel" class="ver" title="Language"></select>
+  <select id="langSel" class="ver" title="Language" data-i18n-title="langTitle"></select>
   <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
   <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
 </header>
@@ -67,13 +67,13 @@
       </div>
 
       <div class="field two">
-        <div><label data-i18n="searchRadius">Search radius</label><input id="range" class="num" type="number" min="500" step="500" value="5000"></div>
-        <div><label><span data-i18n="resolution">Resolution</span> <span class="opt" data-i18n="step">step</span></label><input id="step" class="num" type="number" min="16" step="8" value="16"></div>
+        <div><label for="range" data-i18n="searchRadius">Search radius</label><input id="range" class="num" type="number" min="500" step="500" value="5000"></div>
+        <div><label for="step"><span data-i18n="resolution">Resolution</span> <span class="opt" data-i18n="step">step</span></label><input id="step" class="num" type="number" min="16" step="8" value="16"></div>
       </div>
 
       <button id="searchBtn" class="btn primary" data-i18n="searchBtn">Search this area</button>
-      <div id="searchProgress" class="progress" hidden><div id="searchProgressBar" class="bar"></div></div>
-      <div id="searchInfo" class="info"></div>
+      <div id="searchProgress" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="searching" hidden><div id="searchProgressBar" class="bar"></div></div>
+      <div id="searchInfo" class="info" role="status"></div>
     </section>
 
     <section class="card">
@@ -102,9 +102,9 @@
   </aside>
 
   <div class="mapwrap">
-    <canvas id="map"></canvas>
-    <div id="hud" class="hud"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
-    <div id="popup" class="popup"></div>
+    <canvas id="map" tabindex="0" role="application" aria-label="Interactive map" data-i18n-aria="mapAria"></canvas>
+    <div id="hud" class="hud" aria-hidden="true"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
+    <div id="popup" class="popup" role="dialog"></div>
     <details id="legend" class="legend">
       <summary data-i18n="legend">Legend</summary>
       <div id="legendList" class="legend-list"></div>

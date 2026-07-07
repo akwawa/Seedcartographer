@@ -346,3 +346,36 @@ test('forged hash values are ignored without breaking the app', async ({ page })
   // invalid version falls back to the newest
   await expect(page.locator('#mcver option:checked')).toHaveText('1.21');
 });
+
+test('map pans and zooms with the keyboard', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  const state = () => page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  await page.focus('#map');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  const s1 = await state();
+  expect(s1.x).toBeGreaterThan(-392);
+  expect(s1.z).toBeGreaterThan(56);
+  await page.keyboard.press('-');
+  const s2 = await state();
+  expect(s2.b).toBeGreaterThan(s1.b);
+  await page.keyboard.press('+');
+  const s3 = await state();
+  expect(s3.b).toBeLessThan(s2.b);
+});
+
+test('axe-core audit: no WCAG A/AA violations in either theme', async ({ page }) => {
+  const AxeBuilder = require('@axe-core/playwright').default;
+  await page.goto('/');
+  await waitForApp(page);
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate((th) => document.documentElement.dataset.theme = th, theme);
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    expect(results.violations, theme + ': ' + JSON.stringify(results.violations.map((v) => ({
+      id: v.id, nodes: v.nodes.map((n) => n.target)
+    })), null, 2)).toEqual([]);
+  }
+});

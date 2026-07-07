@@ -49,7 +49,10 @@ searchWorker.onmessage = (e) => {
   if (d.type === 'fatal') { showFatal(d.message); return; }
   if (d.type === 'ready') { engineUp(searchWorker); return; }
   if (d.type === 'searchProgress') {
-    if (d.reqId === searchReq) $('#searchProgressBar').style.width = d.pct + '%';
+    if (d.reqId === searchReq) {
+      $('#searchProgressBar').style.width = d.pct + '%';
+      $('#searchProgress').setAttribute('aria-valuenow', String(Math.round(d.pct)));
+    }
     return;
   }
   if (d.type === 'search') onSearchResult(d);
@@ -105,6 +108,7 @@ function setSearchBusy(on) {
   btn.textContent = t(btn.dataset.i18n);
   const prog = $('#searchProgress');
   prog.hidden = !on;
+  prog.setAttribute('aria-valuenow', '0');
   $('#searchProgressBar').style.width = '0%';
 }
 
@@ -348,6 +352,25 @@ canvas.addEventListener('wheel', (e) => {
   draw(); requestRender(); syncHash();
 }, { passive: false });
 
+// keyboard navigation: the canvas is focusable (tabindex=0); arrows pan,
+// +/- zoom around the view center, Escape dismisses the pin popup
+function zoomBy(factor) {
+  view.bpp = Math.min(512, Math.max(0.5, view.bpp * factor));
+  draw(); requestRender(); syncHash();
+}
+canvas.addEventListener('keydown', (e) => {
+  const pan = 60 * view.bpp;   // ~60 screen pixels per keypress
+  const moves = { ArrowLeft: [-pan, 0], ArrowRight: [pan, 0], ArrowUp: [0, -pan], ArrowDown: [0, pan] };
+  if (moves[e.key]) {
+    view.cx += moves[e.key][0]; view.cz += moves[e.key][1];
+    draw(); requestRender(); syncHash();
+  } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
+  else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
+  else if (e.key === 'Escape') { hidePopup(); }
+  else return;
+  e.preventDefault();
+});
+
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
@@ -404,6 +427,13 @@ function numInput(value, min, step, cls) {
   inp.className = 'num' + (cls ? ' ' + cls : '');
   return inp;
 }
+// dynamically built controls carry an i18n-tracked aria-label so screen
+// readers get a name (there is no room for a visible one in a criteria row)
+function aria(el, key) {
+  el.dataset.i18nAria = key;
+  el.setAttribute('aria-label', t(key));
+  return el;
+}
 function subLbl(key) {
   const s = document.createElement('span');
   s.className = 'sub-lbl'; s.dataset.i18n = key; s.textContent = t(key);
@@ -421,15 +451,16 @@ function addRow(container, parts) {
   container.appendChild(row);
 }
 function addMainBiomeRow(biome) {
-  addRow($('#mainBiomes'), [biomeSelect(biome)]);
+  addRow($('#mainBiomes'), [aria(biomeSelect(biome), 'ariaBiome')]);
 }
 function addAdjRow(biome, dist, negate) {
   const neg = critSelect([['0', t('present'), 'present'], ['1', t('absent'), 'absent']], negate ? '1' : '0');
   neg.className = 'neg';
-  addRow($('#adjClauses'), [biomeSelect(biome), neg, subLbl('within'), numInput(dist ?? 400, 0, 16), subLbl('blocks')]);
+  aria(neg, 'ariaPresence');
+  addRow($('#adjClauses'), [aria(biomeSelect(biome), 'ariaBiome'), neg, subLbl('within'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks')]);
 }
 function addStructRow(type, min, radius) {
-  addRow($('#structClauses'), [structSelect(type), subLbl('atLeast'), numInput(min ?? 1, 0, 1, 'sm'), subLbl('within'), numInput(radius ?? 800, 0, 50), subLbl('blocks')]);
+  addRow($('#structClauses'), [aria(structSelect(type), 'ariaStructType'), subLbl('atLeast'), aria(numInput(min ?? 1, 0, 1, 'sm'), 'ariaMinCount'), subLbl('within'), aria(numInput(radius ?? 800, 0, 50), 'ariaRadius'), subLbl('blocks')]);
 }
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
@@ -554,6 +585,7 @@ function wireCopyButton(btn, text, idleLabel) {
 function showPopup(p) {
   const pop = $('#popup');
   pop.textContent = '';
+  pop.setAttribute('aria-label', `${p.x}, ${p.z}`);
   const xEl = document.createElement('div');
   xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
   const btn = document.createElement('button');
