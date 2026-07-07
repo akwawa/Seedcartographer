@@ -91,7 +91,8 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   au premier chargement le thème suit la préférence du système
   (`prefers-color-scheme`) et le choix manuel est mémorisé.
 - **Interface multilingue.** L'interface est disponible en français, anglais,
-  espagnol et allemand : la langue du navigateur est détectée automatiquement et
+  espagnol, allemand, italien et portugais brésilien : la langue du navigateur
+  est détectée automatiquement et
   le sélecteur en haut à droite permet d'en changer (choix mémorisé). Les noms
   de biomes restent ceux du moteur cubiomes (identifiants techniques).
 
@@ -142,7 +143,7 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 | `search.js` | Balayage multi-critères de la grille de biomes (partagé worker/tests) |
 | `slime.js` | Calcul des chunks à slimes (RNG Java, partagé worker/tests) |
 | `presets.js` | Presets de critères de recherche (partagé app/tests) |
-| `i18n.js` | Traductions de l'interface (FR, EN, ES, DE) |
+| `i18n.js` | Traductions de l'interface (FR, EN, ES, DE, IT, PT-BR) |
 | `mcfinder.js`, `mcfinder.wasm` | Moteur cubiomes compilé |
 | `mcfinder.c` | Source C du wrapper — voir `BUILDING.md` pour recompiler |
 | `cubiomes/` | Bibliothèque cubiomes (submodule git épinglé) |
