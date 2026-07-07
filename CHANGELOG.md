@@ -17,6 +17,9 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Support mobile et tactile : pinch-zoom à deux doigts sur la carte, panneau
+  de critères repliable en tiroir sur petit écran, cibles tactiles agrandies
+  sur les appareils à pointeur grossier (#62).
 - Accessibilité : navigation clavier de la carte (flèches, +/-, Échap),
   labels ARIA sur les contrôles dynamiques et la carte (traduits), focus
   visibles, contrastes conformes WCAG AA et audit axe-core dans les tests

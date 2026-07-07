@@ -198,8 +198,24 @@ main{flex:1 1 auto;display:flex;min-height:0}
 
 ::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:2px solid var(--panel)}
 
+/* the criteria drawer toggle only exists on small screens */
+.panel-toggle{display:none}
+
 @media (max-width:820px){
   main{flex-direction:column}
   .panel{width:100%;flex:0 0 auto;max-height:46%;border-right:none;border-bottom:1px solid var(--line)}
   .world .lbl input{width:120px}
+  .topbar{flex-wrap:wrap;gap:10px}
+  .panel-toggle{display:block}
+  body.panel-collapsed .panel{display:none}
+}
+
+/* comfortable touch targets on coarse-pointer devices */
+@media (pointer:coarse){
+  .btn{padding:11px 16px}
+  .btn.tiny{padding:8px 12px}
+  .crit .rm,.fav .rm{padding:8px 12px}
+  input,select{padding:10px 11px}
+  .layer{padding:10px 8px}
+  .popup .pop-close,.help .help-close{padding:8px 12px}
 }

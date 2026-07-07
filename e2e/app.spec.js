@@ -379,3 +379,44 @@ test('axe-core audit: no WCAG A/AA violations in either theme', async ({ page })
     })), null, 2)).toEqual([]);
   }
 });
+
+test.describe('mobile', () => {
+  test.use({ viewport: { width: 390, height: 740 }, hasTouch: true });
+
+  test('the criteria panel folds into a drawer on small screens', async ({ page }) => {
+    await page.goto('/');
+    await waitForApp(page);
+    const toggle = page.locator('#panelToggle');
+    await expect(toggle).toBeVisible();
+    await expect(page.locator('#panel')).toBeVisible();
+    await toggle.click();
+    await expect(page.locator('#panel')).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(page.locator('#panel')).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  test('two-finger pinch zooms the map', async ({ page }) => {
+    await page.goto('/');
+    await waitForApp(page);
+    const before = 2.2;   // default view.bpp — there is no hash before any interaction
+    // synthetic two-pointer pinch: fingers move apart -> zoom in (smaller bpp)
+    await page.evaluate(() => {
+      const c = document.querySelector('#map');
+      const r = c.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const ev = (type, id, x, y) => c.dispatchEvent(new PointerEvent(type, {
+        pointerId: id, pointerType: 'touch', clientX: x, clientY: y, isPrimary: id === 1, bubbles: true
+      }));
+      ev('pointerdown', 1, cx - 40, cy); ev('pointerdown', 2, cx + 40, cy);
+      for (let i = 1; i <= 5; i++) {
+        ev('pointermove', 1, cx - 40 - i * 20, cy); ev('pointermove', 2, cx + 40 + i * 20, cy);
+      }
+      ev('pointerup', 1, cx - 140, cy); ev('pointerup', 2, cx + 140, cy);
+    });
+    // the hash is synced synchronously when the last pointer lifts
+    const zoomed = await page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))).b);
+    expect(zoomed).toBeLessThan(before);
+  });
+});
