@@ -1064,7 +1064,7 @@ function init() {
     const d = parseInt(hashState.d, 10);
     world.dim = (d === -1 || d === 1) ? d : 0;
     view.cx = hashState.x; view.cz = hashState.z; view.bpp = hashState.b;
-    const y = parseInt(hashState.y, 10);
+    const y = Number.parseInt(hashState.y, 10);
     if (Number.isFinite(y)) yLayer = Math.min(320, Math.max(-64, y));
   }
   $('#seed').value = world.seed;
@@ -1111,7 +1111,7 @@ function init() {
   ySlider.value = String(yLayer); yVal.textContent = String(yLayer);
   ySlider.oninput = () => { yVal.textContent = ySlider.value; };
   ySlider.onchange = () => {
-    yLayer = Math.min(320, Math.max(-64, parseInt(ySlider.value, 10) || 0));
+    yLayer = Math.min(320, Math.max(-64, Number.parseInt(ySlider.value, 10) || 0));
     requestRender(0); syncHash();
   };
   $('#minimap').addEventListener('click', (e) => {
