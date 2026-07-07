@@ -56,7 +56,7 @@ function runScenario({ range = 5000, SC = 16, step = 48 } = {}) {
 }
 
 // best-of-N wall time smooths out CI runner noise
-function bench(iterations = 5, options) {
+function bench(options, iterations = 5) {
   let best = Infinity, hits = -1;
   for (let i = 0; i < iterations; i++) {
     const r = runScenario(options);
@@ -67,7 +67,7 @@ function bench(iterations = 5, options) {
 }
 
 if (require.main === module) {
-  const budget = parseInt(process.env.BENCH_BUDGET_MS || '2000', 10);
+  const budget = Number.parseInt(process.env.BENCH_BUDGET_MS || '2000', 10);
   const { best, hits } = bench();
   console.log(`scanGrid benchmark: best of 5 = ${best.toFixed(1)} ms (${hits} hits, budget ${budget} ms)`);
   if (hits < 0) {

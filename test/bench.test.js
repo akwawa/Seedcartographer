@@ -25,7 +25,7 @@ test('the scenario produces hits and a positive duration (small size)', () => {
 });
 
 test('bench returns the best of N runs', () => {
-  const { best, hits } = bench(2, { range: 400 });
+  const { best, hits } = bench({ range: 400 }, 2);
   assert.strictEqual(Number.isFinite(best) && best >= 0, true);
   assert.strictEqual(hits >= 0, true);
 });
