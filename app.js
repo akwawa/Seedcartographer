@@ -79,7 +79,7 @@ worker.onmessage = (e) => {
       const tmp = document.createElement('canvas');
       tmp.width = d.cols; tmp.height = d.rows;
       tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
-      minimapTile = tmp;
+      minimapTile = { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
       drawMinimap();
       return;
     }
@@ -311,7 +311,16 @@ function drawMinimap() {
   const c = mm.getContext('2d');
   c.clearRect(0, 0, mm.width, mm.height);
   c.fillStyle = mapBg; c.fillRect(0, 0, mm.width, mm.height);
-  if (minimapTile) c.drawImage(minimapTile, 0, 0);
+  if (minimapTile) {
+    // the tile covers the zoomed-out view: map its world rect onto the
+    // minimap canvas instead of blitting raw cells at 1:1 in the corner
+    const bpp = view.bpp * MINIMAP_ZOOM_OUT;
+    const px = (minimapTile.originX - view.cx) / bpp + mm.width / 2;
+    const py = (minimapTile.originZ - view.cz) / bpp + mm.height / 2;
+    c.imageSmoothingEnabled = false;
+    c.drawImage(minimapTile.canvas, px, py,
+      minimapTile.cols * minimapTile.scale / bpp, minimapTile.rows * minimapTile.scale / bpp);
+  }
   const r = viewportRectOnMinimap(canvas.width / dpr, canvas.height / dpr, mm.width, mm.height);
   c.strokeStyle = '#f2a73b'; c.lineWidth = 1.5;
   c.strokeRect(r.x, r.y, r.w, r.h);
