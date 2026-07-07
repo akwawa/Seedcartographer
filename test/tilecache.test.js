@@ -50,3 +50,15 @@ test('tilesInView filters by world and intersection, paints coarse first', () =>
   const edge = tilesInView([t(4, 500, 0)], wk, rect);
   assert.deepStrictEqual(edge, []);
 });
+
+test('tilesInView caps painting to the freshest tiles of the order', () => {
+  const wk = tileWorldKey(W, 60);
+  const t = (scale, x) => ({ worldKey: wk, scale, originX: x, originZ: 0, cols: 100, rows: 100 });
+  const entries = [t(16, 0), t(16, 100), t(4, 0), t(4, 50), t(4, 100)];
+  const rect = { x0: 0, z0: 0, x1: 400, z1: 400 };
+  // uncapped: all five, coarse first
+  assert.strictEqual(tilesInView(entries, wk, rect).length, 5);
+  // capped: the last (finest, freshest) of the painting order survive
+  const capped = tilesInView(entries, wk, rect, 2);
+  assert.deepStrictEqual(capped.map((e) => [e.scale, e.originX]), [[4, 50], [4, 100]]);
+});
