@@ -1011,7 +1011,7 @@ function applyHashCriteria() {
   // called once biome/structure lists exist; builds the criteria rows from
   // the hash, or falls back to sensible demo defaults
   // legacy single-criteria share links (c.a = main biome id) are migrated
-  const c = normalizeLegacyCriteria(hashState && hashState.c);
+  const c = normalizeLegacyCriteria(hashState?.c);
   applyCriteria(c);
   if (!rowsOf('#mainBiomes').length) {
     // demo: cherry grove + warm ocean + >=2 villages (matches built-in seed 141)

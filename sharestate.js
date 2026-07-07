@@ -39,7 +39,7 @@ function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
  * @returns {any} criteria in the current shape
  */
 function normalizeLegacyCriteria(c) {
-  if (!c || c.a === undefined) return c;
+  if (c?.a === undefined) return c;
   return {
     mb: [c.a], am: 'and',
     ac: c.ba ? [{ b: c.ba, d: c.ad }] : [],
@@ -64,11 +64,11 @@ function sanitizeCriteria(c, maxRows) {
   const rows = (/** @type {any} */ v) => (Array.isArray(v) ? v : []).slice(0, maxRows);
   const mb = rows(c.mb).map(intOrNull).filter((b) => b !== null);
   const ac = rows(c.ac).map((r) => {
-    const b = intOrNull(r && r.b), d = intOrNull(r && r.d);
-    return b !== null && d !== null && d >= 0 ? { b, d, n: intOrNull(r && r.n) === 1 } : null;
+    const b = intOrNull(r?.b), d = intOrNull(r?.d);
+    return b !== null && d !== null && d >= 0 ? { b, d, n: intOrNull(r?.n) === 1 } : null;
   }).filter(Boolean);
   const sc = rows(c.sc).map((r) => {
-    const t = intOrNull(r && r.t), mn = intOrNull(r && r.mn), rr = intOrNull(r && r.r);
+    const t = intOrNull(r?.t), mn = intOrNull(r?.mn), rr = intOrNull(r?.r);
     return t !== null && mn !== null && rr !== null && mn >= 0 && rr >= 0 ? { t, mn, r: rr } : null;
   }).filter(Boolean);
   return {
