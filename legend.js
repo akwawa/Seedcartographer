@@ -6,6 +6,12 @@
 // biomes:  [{id, name, rgb:[r,g,b], …}] from the engine's biomeList
 // label:   name -> localized label (biomeLabel)
 // Returns unique known biomes, sorted by localized label.
+/**
+ * @param {Iterable<number>} present biome ids seen in the rendered tile
+ * @param {Array<{id: number, name: string, rgb: number[]}>} biomes engine biome list
+ * @param {(name: string) => string} label technical name -> localized label
+ * @returns {Array<{id: number, name: string, rgb: number[], label: string}>}
+ */
 function legendEntries(present, biomes, label) {
   const byId = new Map(biomes.map((b) => [b.id, b]));
   return [...new Set(present)]

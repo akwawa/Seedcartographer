@@ -13,6 +13,12 @@ const { scanGrid } = require('../search.js');
 
 // deterministic pseudo-random biome grid (LCG): benchmark inputs must not
 // vary between runs or machines
+/**
+ * @param {number} cols grid width in cells
+ * @param {number} rows grid height in cells
+ * @param {number[]} biomes biome ids to draw from
+ * @returns {Int32Array} cols*rows biome grid
+ */
 function buildGrid(cols, rows, biomes) {
   const grid = new Int32Array(cols * rows);
   let state = 42;
@@ -24,7 +30,13 @@ function buildGrid(cols, rows, biomes) {
 }
 
 // evenly spread synthetic structure points over the block box
+/**
+ * @param {number} count number of points wanted
+ * @param {number} extent half-size of the block box
+ * @returns {Array<[number, number]>} [x, z] block positions
+ */
 function buildPoints(count, extent) {
+  /** @type {Array<[number, number]>} */
   const points = [];
   const stride = Math.floor((2 * extent) / Math.sqrt(count));
   for (let z = -extent; z < extent && points.length < count; z += stride) {
@@ -36,6 +48,10 @@ function buildPoints(count, extent) {
 }
 
 // one full scan over a (2*range/SC)^2 grid; returns {ms, hits}
+/**
+ * @param {{range?: number, SC?: number, step?: number}} [options]
+ * @returns {{ms: number, hits: number}} wall time and hit count
+ */
 function runScenario({ range = 5000, SC = 16, step = 48 } = {}) {
   const pad = 400;
   const gx0 = Math.floor((-range - pad) / SC), gz0 = gx0;
@@ -56,6 +72,11 @@ function runScenario({ range = 5000, SC = 16, step = 48 } = {}) {
 }
 
 // best-of-N wall time smooths out CI runner noise
+/**
+ * @param {{range?: number, SC?: number, step?: number}} [options]
+ * @param {number} [iterations]
+ * @returns {{best: number, hits: number}} best wall time over N runs
+ */
 function bench(options, iterations = 5) {
   let best = Infinity, hits = -1;
   for (let i = 0; i < iterations; i++) {

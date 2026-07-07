@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Typage progressif : les modules purs (seed, search, export, coords, slime,
+  markers, presets, favoris, légende, thème, scripts) sont annotés en JSDoc et
+  vérifiés par `tsc --noEmit` (`checkJs`) dans le job CI `test`
+  ([#65](https://github.com/akwawa/Seedcartographer/issues/65)).
 - Micro-benchmark de performance de `scanGrid` exécuté en CI (grille
   synthétique déterministe, meilleur temps sur 5 exécutions) : le job `test`
   échoue si le budget de temps est dépassé, les durées sont journalisées

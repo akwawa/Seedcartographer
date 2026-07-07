@@ -3,6 +3,10 @@
 'use strict';
 
 // Java String.hashCode, then sign-extended to 64 bits — matches Minecraft.
+/**
+ * @param {string|number|bigint} s seed input as typed by the user
+ * @returns {bigint} signed 64-bit world seed
+ */
 function seedToBigInt(s) {
   s = String(s).trim();
   if (/^-?\d+$/.test(s)) return BigInt.asIntN(64, BigInt(s));

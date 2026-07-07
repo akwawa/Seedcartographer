@@ -3,6 +3,10 @@
 'use strict';
 
 // Quote a CSV field when it contains a separator, quote or newline.
+/**
+ * @param {string|number} v raw field value
+ * @returns {string} CSV-safe field
+ */
 function csvField(v) {
   const s = String(v);
   return /[",\n\r]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
@@ -10,6 +14,16 @@ function csvField(v) {
 
 // hits: [{x, z, count}] -> CSV with one row per location. seed/version are
 // repeated on each row so a file stays self-contained when merged with others.
+/**
+ * @typedef {{x: number, z: number, count: number}} Hit
+ * @typedef {{seed: string|number, mcLabel: string, large?: boolean,
+ *            dimension?: string, criteria?: object}} ExportMeta
+ */
+/**
+ * @param {Hit[]} hits found locations
+ * @param {ExportMeta} meta world description repeated on each row
+ * @returns {string} CSV text
+ */
 function resultsToCSV(hits, meta) {
   const head = 'x,z,nearby_structures,seed,mc_version';
   const rows = hits.map((h) => [h.x, h.z, h.count, meta.seed, meta.mcLabel].map(csvField).join(','));
@@ -17,6 +31,11 @@ function resultsToCSV(hits, meta) {
 }
 
 // Full export: world, criteria and hits, pretty-printed.
+/**
+ * @param {Hit[]} hits found locations
+ * @param {ExportMeta} meta world and criteria description
+ * @returns {string} pretty-printed JSON text
+ */
 function resultsToJSON(hits, meta) {
   return JSON.stringify({
     seed: meta.seed,
@@ -30,6 +49,11 @@ function resultsToJSON(hits, meta) {
 
 // Cartouche lines stamped under a PNG map export. Language-independent
 // technical labels so the file stays self-describing wherever it travels.
+/**
+ * @param {{seed: string|number, mcLabel: string, large: boolean,
+ *          dimension: string, cx: number, cz: number}} meta view description
+ * @returns {string[]} cartouche lines
+ */
 function mapCartoucheLines(meta) {
   return [
     `Seed: ${meta.seed}`,
@@ -40,11 +64,21 @@ function mapCartoucheLines(meta) {
 
 // download name for an export of `kind` ('map', 'csv'…): seed sanitized to
 // filesystem-safe characters
+/**
+ * @param {string|number|bigint} seed world seed (sanitized)
+ * @param {string} kind export kind ('map', 'results'…)
+ * @param {string} ext file extension without the dot
+ * @returns {string}
+ */
 function exportFileName(seed, kind, ext) {
   return `seedcartographer-${String(seed).replace(/[^\w-]+/g, '_')}-${kind}.${ext}`;
 }
 
 // split one CSV line into cells, honouring quoted fields ("" = escaped quote)
+/**
+ * @param {string} line one CSV line
+ * @returns {string[]} cells
+ */
 function splitCSVLine(line) {
   const out = [];
   let cur = '', quoted = false;
@@ -65,15 +99,21 @@ function splitCSVLine(line) {
 // Parse a locations CSV back into pins — the mirror of resultsToCSV, but
 // lenient: only the two leading x,z columns are required, a header line is
 // ignored, malformed rows are counted in `skipped`, output capped at `max`.
+/**
+ * @param {string} text CSV file content
+ * @param {number} [max] cap on returned locations
+ * @returns {{hits: Hit[], skipped: number}}
+ */
 function parseLocationsCSV(text, max = 1500) {
   const lines = String(text).split(/\r?\n/).filter((l) => l.trim() !== '');
+  /** @type {Hit[]} */
   const hits = [];
   let skipped = 0;
   lines.forEach((line, idx) => {
     if (hits.length >= max) return;
     const cells = splitCSVLine(line);
     // Number('') is 0, so blank cells must be rejected explicitly
-    const int = (v) => {
+    const int = (/** @type {string|undefined} */ v) => {
       const s = String(v ?? '').trim();
       return s !== '' && Number.isInteger(Number(s)) ? Number(s) : null;
     };
