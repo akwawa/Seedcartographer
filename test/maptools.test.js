@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT,
-  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT
+  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure
 } = require('../maptools.js');
 
 test('scaleBarSpec picks the longest 1/2/5×10^n length that fits', () => {
@@ -70,4 +70,13 @@ test('parseGotoInput rejects malformed or out-of-world input', () => {
   assert.strictEqual(parseGotoInput(`-${GOTO_LIMIT + 1}, 0`), null);
   // the border itself is still reachable
   assert.deepStrictEqual(parseGotoInput(`${GOTO_LIMIT}, 0`), { x: GOTO_LIMIT, z: 0 });
+});
+
+test('rulerMeasure returns the euclidean distance and per-axis deltas', () => {
+  assert.deepStrictEqual(rulerMeasure({ x: 0, z: 0 }, { x: 3, z: 4 }), { dist: 5, dx: 3, dz: 4 });
+  assert.deepStrictEqual(rulerMeasure({ x: 10, z: -5 }, { x: 10, z: -5 }), { dist: 0, dx: 0, dz: 0 });
+  // symmetric and sign-insensitive
+  assert.deepStrictEqual(rulerMeasure({ x: 3, z: 4 }, { x: 0, z: 0 }), { dist: 5, dx: 3, dz: 4 });
+  // non-integer distances are rounded to whole blocks
+  assert.strictEqual(rulerMeasure({ x: 0, z: 0 }, { x: 1, z: 1 }).dist, 1);
 });

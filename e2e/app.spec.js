@@ -618,3 +618,25 @@ test('the go-to control recenters the map and rejects bad input', async ({ page 
   await page.fill('#gotoInput', '0, 0');
   await expect(page.locator('#gotoInput')).not.toHaveClass(/bad/);
 });
+
+test('the ruler measures a distance between two clicks', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#rulerBtn');
+  await expect(page.locator('#rulerBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  // clicks land well away from the map-corner controls (goto form, ruler)
+  await page.mouse.click(box.x + 300, box.y + 300);
+  await page.mouse.click(box.x + 400, box.y + 300);
+  const r = await page.evaluate(() => ruler);
+  expect(r.done).toBe(true);
+  expect(r.b.x - r.a.x).toBeGreaterThan(0);
+  expect(r.b.z).toBe(r.a.z);
+  // Escape leaves ruler mode and clears the measurement
+  await page.focus('#map');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#rulerBtn')).not.toHaveClass(/on/);
+  const r2 = await page.evaluate(() => ruler);
+  expect(r2.on).toBe(false);
+  expect(r2.a).toBe(null);
+});

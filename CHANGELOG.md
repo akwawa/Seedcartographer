@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Outil règle : le bouton 📏 sur la carte active un mode mesure — deux clics
+  tracent un segment et affichent la distance en blocs (euclidienne et par
+  axes, aperçu en direct au survol), Échap ou re-clic sur le bouton pour
+  sortir ; logique de mesure en module pur testé (#109).
+
+### Ajouté
 - Contrôle « aller à » sur la carte : un champ « x, z » (Entrée ou bouton)
   recentre la vue sur les coordonnées saisies, avec validation (deux entiers,
   bordure du monde) et signalement visuel des entrées invalides ; le lien de

@@ -105,6 +105,21 @@ function parseGotoInput(str) {
   return { x, z };
 }
 
+// Ruler measurement between two world points: Euclidean distance and
+// per-axis deltas, all in blocks.
+/**
+ * @param {{x: number, z: number}} a first endpoint
+ * @param {{x: number, z: number}} b second endpoint
+ * @returns {{dist: number, dx: number, dz: number}}
+ */
+function rulerMeasure(a, b) {
+  return {
+    dist: Math.round(Math.hypot(b.x - a.x, b.z - a.z)),
+    dx: Math.abs(b.x - a.x),
+    dz: Math.abs(b.z - a.z)
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT };
+  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure };
 }

@@ -38,7 +38,7 @@ module.exports = [
         // provided by legend.js / theme.js / maptools.js, loaded first
         legendEntries: 'readonly',
         scaleBarSpec: 'readonly', gridSpec: 'readonly', gridLines: 'readonly',
-        MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly', parseGotoInput: 'readonly',
+        MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly', parseGotoInput: 'readonly', rulerMeasure: 'readonly',
         tileWorldKey: 'readonly', tileKey: 'readonly', createTileCache: 'readonly', tilesInView: 'readonly',
         seedToBigInt: 'readonly',
         SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
