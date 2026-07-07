@@ -25,7 +25,7 @@ createMcFinder().then((mod) => {
   ready = true;
   postMessage({ type: 'ready', mcNewest: M._c_mc_newest() });
 }).catch((err) => {
-  postMessage({ type: 'fatal', message: 'WASM module failed to load: ' + (err && err.message || err) });
+  postMessage({ type: 'fatal', message: 'WASM module failed to load: ' + (err?.message || err) });
 });
 
 function ensureArea(cells) {
@@ -51,8 +51,8 @@ function ensureSearchArea(cells) {
 }
 
 let curSeedStr = null, curMc = null, curLarge = null, curDim = null;
-function applyWorld(seedStr, mc, large, dim) {
-  dim = dim || 0;
+function applyWorld(seedStr, mc, large, rawDim) {
+  const dim = rawDim || 0;
   if (seedStr === curSeedStr && mc === curMc && large === curLarge && dim === curDim) return;
   M._initGen(mc, large ? 1 : 0, seedToBigInt(seedStr), dim);
   curSeedStr = seedStr; curMc = mc; curLarge = large; curDim = dim;
@@ -293,61 +293,68 @@ async function runSeedSearchJob(d) {
   postMessage({ type: 'seedBatchDone', reqId: d.reqId });
 }
 
+// render one biome tile (RGBA + present-biome set) for the requested view
+function handleRender(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const scale = chooseScale(d.bpp);
+  // world block bounds of the viewport, scaled NW corner and cell grid size
+  const sx0 = Math.floor((d.cx - d.w * d.bpp / 2) / scale);
+  const sz0 = Math.floor((d.cz - d.h * d.bpp / 2) / scale);
+  const cols = Math.ceil((d.w * d.bpp) / scale) + 1;
+  const rows = Math.ceil((d.h * d.bpp) / scale) + 1;
+  ensureArea(cols * rows);
+  const ok = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, scaledY(d.y));
+  const rgba = new Uint8ClampedArray(cols * rows * 4);
+  const present = new Set();
+  // hovering a legend entry re-renders with `highlight`: other biomes dim
+  const hl = Number.isInteger(d.highlight) ? d.highlight : null;
+  if (ok) paintTile(rgba, present, cols * rows, hl);
+  postMessage({
+    type: 'tile', reqId: d.reqId, ok: !!ok, rgba: rgba.buffer, cols, rows, scale, present: [...present], highlight: hl,
+    // world coords of the cell-grid NW corner, for placement on the map
+    originX: sx0 * scale, originZ: sz0 * scale
+  }, [rgba.buffer]);
+}
+function paintTile(rgba, present, cells, hl) {
+  const base = areaPtr >> 2;
+  for (let i = 0; i < cells; i++) {
+    let id = M.HEAP32[base + i];
+    if (id < 0 || id > 255) id = 0;
+    present.add(id);
+    const c = id * 3;
+    const dim = hl !== null && id !== hl ? 0.3 : 1;
+    rgba[i * 4] = colors[c] * dim;
+    rgba[i * 4 + 1] = colors[c + 1] * dim;
+    rgba[i * 4 + 2] = colors[c + 2] * dim;
+    rgba[i * 4 + 3] = 255;
+  }
+}
+function handleStructures(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const cap = 4000;
+  ensureList(cap);
+  const out = [];
+  for (const st of d.types) {
+    if (st === SLIME_STRUCT_TYPE) {
+      out.push({ type: st, points: slimeLayerPoints(d) });
+      continue;
+    }
+    out.push({ type: st, points: pointsOfType(st, d.dim, d.x0, d.z0, d.x1, d.z1, cap) });
+  }
+  postMessage({ type: 'structures', reqId: d.reqId, groups: out });
+}
+
 onmessage = (e) => {
   if (!ready) { /* messages before ready are re-sent by main */ return; }
   const d = e.data;
 
   if (d.type === 'render') {
-    applyWorld(d.seed, d.mc, d.large, d.dim);
-    const scale = chooseScale(d.bpp);
-    // world block bounds of the viewport
-    const halfW = d.w * d.bpp / 2, halfH = d.h * d.bpp / 2;
-    const x0b = d.cx - halfW, z0b = d.cz - halfH;
-    // scaled NW corner (floor) and cell grid size
-    const sx0 = Math.floor(x0b / scale), sz0 = Math.floor(z0b / scale);
-    const cols = Math.ceil((d.w * d.bpp) / scale) + 1;
-    const rows = Math.ceil((d.h * d.bpp) / scale) + 1;
-    ensureArea(cols * rows);
-    const ok = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, scaledY(d.y));
-    const rgba = new Uint8ClampedArray(cols * rows * 4);
-    const present = new Set();
-    // hovering a legend entry re-renders with `highlight`: other biomes dim
-    const hl = Number.isInteger(d.highlight) ? d.highlight : null;
-    if (ok) {
-      const base = areaPtr >> 2;
-      for (let i = 0; i < cols * rows; i++) {
-        let id = M.HEAP32[base + i];
-        if (id < 0 || id > 255) id = 0;
-        present.add(id);
-        const c = id * 3;
-        const dim = hl !== null && id !== hl ? 0.3 : 1;
-        rgba[i * 4] = colors[c] * dim;
-        rgba[i * 4 + 1] = colors[c + 1] * dim;
-        rgba[i * 4 + 2] = colors[c + 2] * dim;
-        rgba[i * 4 + 3] = 255;
-      }
-    }
-    postMessage({
-      type: 'tile', reqId: d.reqId, ok: !!ok, rgba: rgba.buffer, cols, rows, scale, present: [...present], highlight: hl,
-      // world coords of the cell-grid NW corner, for placement on the map
-      originX: sx0 * scale, originZ: sz0 * scale
-    }, [rgba.buffer]);
+    handleRender(d);
     return;
   }
 
   if (d.type === 'structures') {
-    applyWorld(d.seed, d.mc, d.large, d.dim);
-    const cap = 4000;
-    ensureList(cap);
-    const out = [];
-    for (const st of d.types) {
-      if (st === SLIME_STRUCT_TYPE) {
-        out.push({ type: st, points: slimeLayerPoints(d) });
-        continue;
-      }
-      out.push({ type: st, points: pointsOfType(st, d.dim, d.x0, d.z0, d.x1, d.z1, cap) });
-    }
-    postMessage({ type: 'structures', reqId: d.reqId, groups: out });
+    handleStructures(d);
     return;
   }
 
@@ -396,6 +403,5 @@ onmessage = (e) => {
       list.push({ id, name, dim: M._biomeDimension(id), rgb: [colors[id * 3], colors[id * 3 + 1], colors[id * 3 + 2]] });
     }
     postMessage({ type: 'biomeList', list });
-    return;
   }
 };

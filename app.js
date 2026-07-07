@@ -58,51 +58,51 @@ searchWorker.onmessage = (e) => {
   }
   if (d.type === 'search') onSearchResult(d);
 };
+// engine startup: version list first, then the biome list ahead of any
+// queued render so the legend and dropdowns can resolve ids
+function onEngineReady(d) {
+  MC_NEWEST = d.mcNewest;
+  if (!Number.isInteger(world.mc) || world.mc < 1 || world.mc > MC_NEWEST) world.mc = MC_NEWEST;
+  buildVersionSelect();
+  worker.engineReady = true;
+  worker.postMessage({ type: 'biomeList' });
+  engineUp(worker);
+}
+function tileCanvasOf(d) {
+  const tmp = document.createElement('canvas');
+  tmp.width = d.cols; tmp.height = d.rows;
+  tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
+  return { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
+}
+function onTileMessage(d) {
+  if (d.reqId === minimapReq) {
+    if (!d.ok) return;
+    minimapTile = tileCanvasOf(d);
+    drawMinimap();
+    return;
+  }
+  if (d.reqId !== renderReq) return;            // stale
+  if (!d.ok) {
+    searchInfo.textContent = t('tileFailed');
+    searchInfo.className = 'info err';
+    return;
+  }
+  tile = tileCanvasOf(d);
+  // highlight re-renders keep the legend DOM intact (hover must survive);
+  // they also carry dimmed pixels, so only plain tiles enter the cache
+  if (d.highlight == null) {
+    const wk = tileWorldKey(world, yLayer);
+    tileCache.put({ ...tile, worldKey: wk, key: tileKey(wk, d.scale, d.originX, d.originZ) });
+    buildLegend(d.present || []);
+  }
+  draw();
+}
 worker.onmessage = (e) => {
   const d = e.data;
   if (d.type === 'fatal') { showFatal(d.message); return; }
-  if (d.type === 'ready') {
-    MC_NEWEST = d.mcNewest;
-    if (!Number.isInteger(world.mc) || world.mc < 1 || world.mc > MC_NEWEST) world.mc = MC_NEWEST;
-    buildVersionSelect();
-    // the biome list must be answered before any queued render so the legend
-    // and dropdowns can resolve ids: post it ahead of the pending flush
-    worker.engineReady = true;
-    worker.postMessage({ type: 'biomeList' });
-    engineUp(worker);
-    return;
-  }
+  if (d.type === 'ready') { onEngineReady(d); return; }
   if (d.type === 'biomeList') { onBiomeList(d.list); return; }
-  if (d.type === 'tile') {
-    if (d.reqId === minimapReq) {
-      if (!d.ok) return;
-      const tmp = document.createElement('canvas');
-      tmp.width = d.cols; tmp.height = d.rows;
-      tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
-      minimapTile = { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
-      drawMinimap();
-      return;
-    }
-    if (d.reqId !== renderReq) return;            // stale
-    if (!d.ok) {
-      searchInfo.textContent = t('tileFailed');
-      searchInfo.className = 'info err';
-      return;
-    }
-    const tmp = document.createElement('canvas');
-    tmp.width = d.cols; tmp.height = d.rows;
-    tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
-    tile = { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
-    // highlight re-renders keep the legend DOM intact (hover must survive);
-    // they also carry dimmed pixels, so only plain tiles enter the cache
-    if (d.highlight == null) {
-      const wk = tileWorldKey(world, yLayer);
-      tileCache.put({ ...tile, worldKey: wk, key: tileKey(wk, d.scale, d.originX, d.originZ) });
-      buildLegend(d.present || []);
-    }
-    draw();
-    return;
-  }
+  if (d.type === 'tile') { onTileMessage(d); return; }
   if (d.type === 'structures') {
     d.groups.forEach((g) => { const t = structToggles.find((s) => s.type === g.type); if (t) t.points = g.points; });
     draw();
@@ -143,7 +143,9 @@ function copyText(text) {
     ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy') ? resolve() : reject(new Error('copy rejected')); }
+    // deprecated, but it is the only copy mechanism available on insecure
+    // (plain http) contexts, which this fallback exists for. NOSONAR
+    try { document.execCommand('copy') ? resolve() : reject(new Error('copy rejected')); } // NOSONAR javascript:S1874
     catch (err) { reject(err); }
     finally { ta.remove(); }
   });
@@ -173,7 +175,7 @@ function buildVersionSelect() {
   sel.value = String(world.mc);
   if (sel.value === '') { world.mc = MC_NEWEST; sel.value = String(MC_NEWEST); }
   sel.onchange = () => {
-    world.mc = parseInt(sel.value, 10);
+    world.mc = Number.parseInt(sel.value, 10);
     curReset(); draw(); requestRender(0); syncHash();
   };
 }
@@ -187,7 +189,7 @@ function buildDimSelect() {
     sel.appendChild(o);
   }
   sel.value = String(world.dim);
-  sel.onchange = () => setDimension(parseInt(sel.value, 10));
+  sel.onchange = () => setDimension(Number.parseInt(sel.value, 10));
 }
 function setDimension(dim) {
   world.dim = dim;
@@ -1072,11 +1074,11 @@ function buildStructToggleUI() {
 // Current criteria as a plain object — used by the share hash and the exports.
 function readCriteria() {
   return {
-    mb: rowsOf('#mainBiomes').map((r) => parseInt(r.querySelector('select').value, 10)),
+    mb: rowsOf('#mainBiomes').map((r) => Number.parseInt(r.querySelector('select').value, 10)),
     am: $('#adjMode').value,
     ac: rowsOf('#adjClauses').map((r) => ({
-      b: parseInt(r.querySelector('select').value, 10),
-      d: parseInt(r.querySelector('input').value, 10) || 0,
+      b: Number.parseInt(r.querySelector('select').value, 10),
+      d: Number.parseInt(r.querySelector('input').value, 10) || 0,
       n: r.querySelector('select.neg').value === '1' ? 1 : 0
     })),
     sm: $('#structMode').value,

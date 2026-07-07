@@ -193,13 +193,14 @@ int listStructures(int structType, int x0, int z0, int x1, int z1,
     int r0z = (int)floorf((float)z0/regBlocks) - 1;
     int r1z = (int)floorf((float)z1/regBlocks) + 1;
     int n = 0;
-    for(int rz = r0z; rz <= r1z && n < maxN; rz++)
-    for(int rx = r0x; rx <= r1x && n < maxN; rx++){
-        Pos p;
-        if(!getStructurePos(structType, MC, SEED, rx, rz, &p)) continue;
-        if(p.x < x0 || p.x > x1 || p.z < z0 || p.z > z1) continue;
-        if(!isViableStructurePos(structType, &G, p.x, p.z, 0)) continue;
-        out[n*2] = p.x; out[n*2+1] = p.z; n++;
+    for(int rz = r0z; rz <= r1z && n < maxN; rz++){
+        for(int rx = r0x; rx <= r1x && n < maxN; rx++){
+            Pos p;
+            if(!getStructurePos(structType, MC, SEED, rx, rz, &p)) continue;
+            if(p.x < x0 || p.x > x1 || p.z < z0 || p.z > z1) continue;
+            if(!isViableStructurePos(structType, &G, p.x, p.z, 0)) continue;
+            out[n*2] = p.x; out[n*2+1] = p.z; n++;
+        }
     }
     return n;
 }

@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Corrigé
+- Stock SonarCloud ramené à zéro (41 issues ouvertes, dont la seule
+  vulnérabilité : l'image Docker tournait en root — remplacée par
+  `nginx-unprivileged` sur le port 8080) : refactors de complexité
+  (`scanGrid`, `worker.js`, `app.js`), assertions de tests reconnues par
+  l'analyse, `Number.parseInt`, optional chaining, et deux suppressions
+  justifiées `NOSONAR` (fallback `execCommand` en http, parité Java de
+  `charCodeAt`) (#107).
 - Réactivité du rendu restaurée : la minimap se régénère sur son propre
   débounce (400 ms) au lieu de doubler chaque rendu moteur, la peinture du
   cache de tuiles est bornée aux 8 tuiles les plus utiles, et la minimap
