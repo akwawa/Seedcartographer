@@ -161,6 +161,8 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 - **Benchmark** : `node scripts/bench-scan.js` mesure `scanGrid` sur une grille
   synthétique réaliste ; la CI échoue si la durée dépasse le budget
   (`BENCH_BUDGET_MS`, 2 s).
+- **Typage** : `npm run typecheck` (JSDoc + `tsc --noEmit` via `checkJs` sur
+  les modules purs — typage statique sans migration TypeScript).
 - **Lint** : `npm run lint` (ESLint) et `npm run lint:css` (stylelint) ; la CI vérifie aussi le `Dockerfile` (hadolint), les workflows (actionlint) et `build.sh` (shellcheck).
 - **Qualité** : chaque push/PR est analysé par
   [SonarQube Cloud](https://sonarcloud.io/project/overview?id=akwawa_Seedcartographer)

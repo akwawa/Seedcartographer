@@ -26,6 +26,21 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //                                      scan in slices (progress / cancel)
 //   hits (optional)                  — accumulator from previous slices, used
 //                                      for duplicate-merging across slices
+/**
+ * @typedef {{biomes: Set<number>, dist: number, negate?: boolean}} AdjClause
+ * @typedef {{points: Array<[number, number]>, min: number, radius: number}} StructClause
+ * @typedef {{x: number, z: number, count: number}} SearchHit
+ */
+/**
+ * @param {{grid: Int32Array|number[], cols: number, rows: number,
+ *          gx0: number, gz0: number, SC: number,
+ *          cx: number, cz: number, range: number, step: number,
+ *          mergeDist: number, mainSet: Set<number>,
+ *          adjMode?: string, adjClauses?: AdjClause[],
+ *          structMode?: string, structClauses?: StructClause[],
+ *          rowStart?: number, rowEnd?: number, hits?: SearchHit[]}} p
+ * @returns {SearchHit[]|null} hits, or null when the request is malformed
+ */
 function scanGrid(p) {
   const { grid, cols, rows, gx0, gz0, SC, cx, cz, range, mergeDist } = p;
   const mainSet = p.mainSet;

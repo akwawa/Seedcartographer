@@ -41,6 +41,13 @@ const PRESETS = [
 // Resolve a preset to the share-link criteria shape. `structTypes` maps the
 // stable structure index to the engine enum value (structToggles order);
 // clauses whose index is unknown are dropped rather than mislabelled.
+/**
+ * @param {{c: {mb: number[], am: string, ac: Array<{b: number, d: number, n: number}>,
+ *              sm: string, sc: Array<{si: number, mn: number, r: number}>,
+ *              rg: number, sp: number}}} preset a PRESETS entry
+ * @param {number[]} structTypes stable structure index -> engine enum value
+ * @returns {object} criteria in the share-link `c` shape
+ */
 function presetCriteria(preset, structTypes) {
   const { mb, am, ac, sm, rg, sp } = preset.c;
   const sc = preset.c.sc

@@ -15,6 +15,12 @@ const JAVA_LCG_MASK = (1n << 48n) - 1n;
 // Minecraft's isSlimeChunk: seed the Java RNG with a per-chunk value derived
 // from the world seed, then test nextInt(10) == 0. The x/z products deliberately
 // overflow 32-bit ints before widening to long, hence Math.imul.
+/**
+ * @param {bigint} worldSeed signed 64-bit world seed
+ * @param {number} chunkX chunk coordinate X
+ * @param {number} chunkZ chunk coordinate Z
+ * @returns {boolean}
+ */
 function isSlimeChunk(worldSeed, chunkX, chunkZ) {
   const mix = BigInt.asIntN(64,
     (worldSeed
@@ -36,9 +42,19 @@ function isSlimeChunk(worldSeed, chunkX, chunkZ) {
 
 // All slime chunks whose chunk intersects the block box [x0,z0]-[x1,z1],
 // as [chunkX, chunkZ] pairs, capped at `max` entries.
+/**
+ * @param {bigint} worldSeed signed 64-bit world seed
+ * @param {number} x0 west block edge
+ * @param {number} z0 north block edge
+ * @param {number} x1 east block edge
+ * @param {number} z1 south block edge
+ * @param {number} max cap on the number of returned chunks
+ * @returns {Array<[number, number]>} [chunkX, chunkZ] pairs
+ */
 function slimeChunksInBox(worldSeed, x0, z0, x1, z1, max) {
   const ci0 = Math.floor(x0 / 16), ci1 = Math.floor(x1 / 16);
   const cj0 = Math.floor(z0 / 16), cj1 = Math.floor(z1 / 16);
+  /** @type {Array<[number, number]>} */
   const out = [];
   for (let cj = cj0; cj <= cj1; cj++) {
     for (let ci = ci0; ci <= ci1; ci++) {
