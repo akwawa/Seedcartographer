@@ -43,9 +43,14 @@ test('sanitizeCriteria coerces integers, drops junk and caps row counts', () => 
   assert.deepStrictEqual(c, {
     mb: [185, 44], am: 'and',
     ac: [{ b: 44, d: 400, n: true }],
-    sm: 'or', sc: [{ t: 7, mn: 2, r: 800 }],
+    sm: 'or', sc: [{ t: 7, mn: 2, r: 800, im: false }], pc: [],
     rg: null, sp: 16, s0: 60, s1: null
   });
+  // structure pairs: junk dropped, flags coerced
+  const p = sanitizeCriteria({ mb: [1], pc: [{ t1: 3, t2: 4, g: 300, r: 800 }, { t1: 'x' }, { t1: 1, t2: 2, g: -5, r: 10 }],
+    sc: [{ t: 7, mn: 1, r: 500, im: 1 }] }, 8);
+  assert.deepStrictEqual(p.pc, [{ t1: 3, t2: 4, g: 300, r: 800 }]);
+  assert.strictEqual(p.sc[0].im, true);
   // caps every list
   const many = sanitizeCriteria({ mb: Array.from({ length: 20 }, (_, i) => i) }, 8);
   assert.strictEqual(many.mb.length, 8);

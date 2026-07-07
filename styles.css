@@ -232,3 +232,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
   .layer{padding:10px 8px}
   .popup .pop-close,.help .help-close{padding:8px 12px}
 }
+
+/* per-structure-clause "in main biome" toggle */
+.crit .inmain-lbl{display:flex;align-items:center;gap:4px;cursor:pointer}
+.crit .inmain{width:13px;height:13px;padding:0}

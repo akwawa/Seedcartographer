@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Critères de structures avancés : paires de structures (« un T1 et un T2 à
+  moins de N blocs l'un de l'autre »), option « dans le biome principal » par
+  clause de structure, et détection des quad witch huts (filtre quad-base de
+  cubiomes + spot AFK optimal, recompilation WASM) disponible comme calque et
+  comme critère (#57).
 - Couverture de tests étendue : la logique du lien de partage (sérialisation
   du hash, assainissement des valeurs non fiables, migration des anciens
   liens) et les transformations écran⇄monde sont extraites d'`app.js` dans le

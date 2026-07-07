@@ -506,3 +506,40 @@ test('cached tiles repaint instantly when panning back', async ({ page }) => {
   });
   expect(centerNotBackground).toBe(true);
 });
+
+test('structure pair criterion finds village+outpost spots', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // the village-outpost preset is known to match on seed 141: replace its two
+  // structure clauses by one pair clause with the same meaning
+  await page.selectOption('#presetSel', 'village-outpost');
+  while (await page.locator('#structClauses .row').count()) {
+    await page.click('#structClauses .row .rm');
+  }
+  await page.click('#addPair');
+  const sels = page.locator('#pairClauses .row select');
+  await sels.nth(0).selectOption({ label: 'Village' });
+  await sels.nth(1).selectOption({ label: 'Pillager outpost' });
+  const nums = page.locator('#pairClauses .row input.num');
+  await nums.nth(0).fill('600');
+  await nums.nth(1).fill('800');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+});
+
+test('in-main-biome flag and quad hut layer work without errors', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria pass with the village clause restricted to the main biome?
+  // villages never stand in a cherry grove: the search must now find nothing
+  await page.check('#structClauses .row input.inmain');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/empty/);
+  // the quad hut layer toggles cleanly (usually empty: quads are very rare)
+  const quadLayer = page.locator('#structLayers .layer', { hasText: 'Quad witch huts' });
+  await expect(quadLayer).toHaveCount(1);
+  await quadLayer.locator('input').check();
+  await expect(quadLayer.locator('input')).toBeChecked();
+});

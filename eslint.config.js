@@ -30,7 +30,7 @@ module.exports = [
         biomeLabel: 'readonly', convertCoords: 'readonly',
         // provided by slime.js / markers.js / presets.js, loaded first
         SLIME_STRUCT_TYPE: 'readonly',
-        SPAWN_STRUCT_TYPE: 'readonly', STRONGHOLD_STRUCT_TYPE: 'readonly',
+        SPAWN_STRUCT_TYPE: 'readonly', STRONGHOLD_STRUCT_TYPE: 'readonly', QUADHUT_STRUCT_TYPE: 'readonly',
         PRESETS: 'readonly', presetCriteria: 'readonly',
         // provided by favorites.js, loaded first
         parseFavorites: 'readonly', addFavorite: 'readonly', findFavorite: 'readonly',
@@ -91,8 +91,10 @@ module.exports = [
         SEARCH_MAX_HITS: 'readonly',
         slimeChunksInBox: 'readonly', // slime.js
         SLIME_STRUCT_TYPE: 'readonly',
+        pairMidpoints: 'readonly',    // search.js
         SPAWN_STRUCT_TYPE: 'readonly',       // markers.js
-        STRONGHOLD_STRUCT_TYPE: 'readonly'
+        STRONGHOLD_STRUCT_TYPE: 'readonly',
+        QUADHUT_STRUCT_TYPE: 'readonly'
       }
     }
   },

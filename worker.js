@@ -107,6 +107,29 @@ function syntheticPoints(type, dim) {
   if (type === STRONGHOLD_STRUCT_TYPE) return strongholdPoints(dim);
   return null;
 }
+// quad witch hut AFK spots inside a block box (Overworld only)
+function quadHutPoints(dim, x0, z0, x1, z1) {
+  if ((dim || 0) !== 0) return [];
+  const cap = 500;
+  ensureList(cap);
+  const n = M._listQuadHuts(x0, z0, x1, z1, listPtr, cap);
+  const base = listPtr >> 2;
+  const pts = [];
+  for (let i = 0; i < n; i++) pts.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
+  return pts;
+}
+// structure points of any type (real, slime, spawn/stronghold, quad) in a box
+function pointsOfType(type, dim, x0, z0, x1, z1, cap) {
+  if (type === QUADHUT_STRUCT_TYPE) return quadHutPoints(dim, x0, z0, x1, z1);
+  const synth = syntheticPoints(type, dim);
+  if (synth) return synth;
+  ensureList(cap);
+  const n = M._listStructures(type, x0, z0, x1, z1, listPtr, cap);
+  const base = listPtr >> 2;
+  const pts = [];
+  for (let i = 0; i < n; i++) pts.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
+  return pts;
+}
 
 // pick the smallest cubiomes scale >= bpp so the cell grid stays ~viewport-sized
 function chooseScale(bpp) {
@@ -166,19 +189,20 @@ async function runSearchJob(d) {
           : [];
         return { points, min: c.min, radius: c.radius };
       }
-      const synth = syntheticPoints(c.type, d.dim);
-      if (synth) return { points: synth, min: c.min, radius: c.radius };
-      const cap = 40000;
-      ensureList(cap);
-      const n = M._listStructures(c.type,
+      const points = pointsOfType(c.type, d.dim,
         d.cx - d.range - c.radius, d.cz - d.range - c.radius,
-        d.cx + d.range + c.radius, d.cz + d.range + c.radius,
-        listPtr, cap);
-      const base = listPtr >> 2;
-      const points = [];
-      for (let i = 0; i < n; i++) points.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
-      return { points, min: c.min, radius: c.radius };
+        d.cx + d.range + c.radius, d.cz + d.range + c.radius, 40000);
+      return { points, min: c.min, radius: c.radius, inMain: !!c.inMain };
     });
+    // pair clauses: "a T1 and a T2 within `gap` blocks of each other" become
+    // midpoint pseudo-structures fed to the same per-cell radius machinery
+    for (const c of d.pairClauses || []) {
+      const x0 = d.cx - d.range - c.radius - c.gap, z0 = d.cz - d.range - c.radius - c.gap;
+      const x1 = d.cx + d.range + c.radius + c.gap, z1 = d.cz + d.range + c.radius + c.gap;
+      const a = pointsOfType(c.t1, d.dim, x0, z0, x1, z1, 40000);
+      const b = c.t2 === c.t1 ? a : pointsOfType(c.t2, d.dim, x0, z0, x1, z1, 40000);
+      structClauses.push({ points: pairMidpoints(a, b, c.gap), min: 1, radius: c.radius });
+    }
     progress(85);
     await yieldToQueue();
 
@@ -265,16 +289,7 @@ onmessage = (e) => {
         out.push({ type: st, points: slimeLayerPoints(d) });
         continue;
       }
-      const synth = syntheticPoints(st, d.dim);
-      if (synth) {
-        out.push({ type: st, points: synth });
-        continue;
-      }
-      const n = M._listStructures(st, d.x0, d.z0, d.x1, d.z1, listPtr, cap);
-      const base = listPtr >> 2;
-      const pts = [];
-      for (let i = 0; i < n; i++) pts.push([M.HEAP32[base + i * 2], M.HEAP32[base + i * 2 + 1]]);
-      out.push({ type: st, points: pts });
+      out.push({ type: st, points: pointsOfType(st, d.dim, d.x0, d.z0, d.x1, d.z1, cap) });
     }
     postMessage({ type: 'structures', reqId: d.reqId, groups: out });
     return;

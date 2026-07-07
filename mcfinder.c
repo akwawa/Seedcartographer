@@ -1,6 +1,7 @@
 // mcfinder.c — cubiomes wrapper for the web finder (engine v2: + map support).
 #include "generator.h"
 #include "finders.h"
+#include "quadbase.h"
 #include "util.h"
 #include <emscripten.h>
 #include <stdint.h>
@@ -133,6 +134,41 @@ int listStrongholds(int *out, int maxN){
         more = nextStronghold(&sh, &G);
         if(more < 0) return n;
         out[n*2] = sh.pos.x; out[n*2+1] = sh.pos.z; n++;
+    }
+    return n;
+}
+
+// Quad witch huts: for every 2x2 region block inside the box, check the
+// transposed 48-bit seed against the quad-base filter (hut size 7x7x9, AFK
+// sphere radius 128), then verify all four huts are biome-viable. Writes the
+// optimal AFK spot x,z pairs into `out` (up to maxN). Returns the count.
+EMSCRIPTEN_KEEPALIVE
+int listQuadHuts(int x0, int z0, int x1, int z1, int *out, int maxN){
+    StructureConfig sc;
+    if(!getStructureConfig(Swamp_Hut, MC, &sc)) return 0;
+    int regBlocks = sc.regionSize * 16;
+    int r0x = (int)floorf((float)x0/regBlocks) - 1;
+    int r1x = (int)floorf((float)x1/regBlocks) + 1;
+    int r0z = (int)floorf((float)z0/regBlocks) - 1;
+    int r1z = (int)floorf((float)z1/regBlocks) + 1;
+    int n = 0;
+    for(int rz = r0z; rz <= r1z && n < maxN; rz++)
+    for(int rx = r0x; rx <= r1x && n < maxN; rx++){
+        // isQuadBase* applies the structure salt itself: pass the transposed
+        // raw 48-bit world seed so regions (rx..rx+1, rz..rz+1) land on (0,0)
+        if(isQuadBaseFeature24(sc, moveStructure(SEED, -rx, -rz), 7, 7, 9) == 0)
+            continue;
+        Pos p[4];
+        int ok = 1;
+        for(int i = 0; i < 4 && ok; i++){
+            if(!getStructurePos(Swamp_Hut, MC, SEED, rx+(i&1), rz+(i>>1), &p[i])) ok = 0;
+            else if(!isViableStructurePos(Swamp_Hut, &G, p[i].x, p[i].z, 0)) ok = 0;
+        }
+        if(!ok) continue;
+        int spcnt;
+        Pos afk = getOptimalAfk(p, 7, 7, 9, &spcnt);
+        if(afk.x < x0 || afk.x > x1 || afk.z < z0 || afk.z > z1) continue;
+        out[n*2] = afk.x; out[n*2+1] = afk.z; n++;
     }
     return n;
 }
