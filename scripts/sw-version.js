@@ -17,7 +17,7 @@ const crypto = require('node:crypto');
  * @returns {string[]} asset paths relative to the site root
  */
 function parseAssets(swSource) {
-  const m = swSource.match(/const ASSETS = \[([^\]]*)\]/);
+  const m = /const ASSETS = \[([^\]]*)\]/.exec(swSource);
   if (!m) throw new Error('ASSETS array not found in sw.js');
   return [...m[1].matchAll(/'\.\/([^']*)'/g)].map(([, p]) => p).filter(Boolean);
 }
