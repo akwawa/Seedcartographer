@@ -310,12 +310,41 @@ function requestStructures() {
 }
 
 // ---------- pan / zoom ----------
+// One pointer drags the map; two pointers pinch-zoom around their midpoint.
 let dragging = false, lastX = 0, lastY = 0, moved = false;
-canvas.addEventListener('pointerdown', (e) => { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId); });
+const pointers = new Map();          // active pointerId -> {x, y}
+let pinchDist = 0;                   // finger distance at the last pinch frame
+function pinchState() {
+  const [a, b] = [...pointers.values()];
+  return { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+}
+canvas.addEventListener('pointerdown', (e) => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  // synthetic events (tests) carry no active pointer to capture
+  try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  if (pointers.size === 2) { dragging = false; moved = true; pinchDist = pinchState().dist; }
+  else if (pointers.size === 1) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; }
+});
 canvas.addEventListener('pointermove', (e) => {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
   hud.querySelector('.coords').textContent = `${Math.round(s2wx(mx))}, ${Math.round(s2wz(my))}`;
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const p = pinchState();
+    if (pinchDist > 0 && p.dist > 0) {
+      // keep the world point under the fingers' midpoint fixed: this covers
+      // both the zoom and the two-finger pan in one update
+      const cx = p.mx - r.left, cy = p.my - r.top;
+      const wx = s2wx(cx), wz = s2wz(cy);
+      view.bpp = Math.min(512, Math.max(0.5, view.bpp * pinchDist / p.dist));
+      view.cx = wx - (cx - canvas.width / (2 * dpr)) * view.bpp;
+      view.cz = wz - (cy - canvas.height / (2 * dpr)) * view.bpp;
+      draw();
+    }
+    pinchDist = p.dist;
+    return;
+  }
   if (dragging) {
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
@@ -325,11 +354,15 @@ canvas.addEventListener('pointermove', (e) => {
     clearTimeout(probeTimer); probeTimer = setTimeout(() => probeBiome(mx, my), 120);
   }
 });
-canvas.addEventListener('pointerup', (e) => {
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchDist = 0;
+  if (e.type === 'pointerup' && dragging && !moved) clickAt(e);
   dragging = false;
-  if (!moved) clickAt(e);
-  requestRender(0); syncHash();
-});
+  if (!pointers.size) { requestRender(0); syncHash(); }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
 let probeTimer = null;
 function probeBiome(mx, my) {
   biomeProbeReq = reqSeq++;
@@ -998,6 +1031,12 @@ function init() {
   langSel.value = currentLang;
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
+  // small screens: the criteria panel folds away so the map fills the screen
+  $('#panelToggle').onclick = () => {
+    const collapsed = document.body.classList.toggle('panel-collapsed');
+    $('#panelToggle').setAttribute('aria-expanded', String(!collapsed));
+    resize();   // the map area changed size
+  };
   $('#helpBtn').onclick = () => $('#helpDlg').showModal();
   $('#helpClose').onclick = () => $('#helpDlg').close();
   buildDimSelect();
