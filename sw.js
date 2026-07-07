@@ -23,6 +23,7 @@ const ASSETS = [
   './legend.js',
   './maptools.js',
   './tilecache.js',
+  './sharestate.js',
   './theme.js',
   './export.js',
   './mcfinder.js',
