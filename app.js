@@ -26,6 +26,7 @@ const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
 let showGrid = false;                           // coordinate-grid overlay toggle
+const tileCache = createTileCache();            // LRU of rendered tiles (pan/zoom reuse)
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
 
 // ---------- worker plumbing ----------
@@ -92,8 +93,13 @@ worker.onmessage = (e) => {
     tmp.width = d.cols; tmp.height = d.rows;
     tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
     tile = { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
-    // highlight re-renders keep the legend DOM intact (hover must survive)
-    if (d.highlight == null) buildLegend(d.present || []);
+    // highlight re-renders keep the legend DOM intact (hover must survive);
+    // they also carry dimmed pixels, so only plain tiles enter the cache
+    if (d.highlight == null) {
+      const wk = tileWorldKey(world, yLayer);
+      tileCache.put({ ...tile, worldKey: wk, key: tileKey(wk, d.scale, d.originX, d.originZ) });
+      buildLegend(d.present || []);
+    }
     draw();
     return;
   }
@@ -221,11 +227,15 @@ function draw() {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = mapBg; ctx.fillRect(0, 0, W, H);
 
-  if (tile) {
-    const px = w2sx(tile.originX), py = w2sy(tile.originZ);
-    const dw = tile.cols * tile.scale / view.bpp, dh = tile.rows * tile.scale / view.bpp;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tile.canvas, px, py, dw, dh);
+  ctx.imageSmoothingEnabled = false;
+  if (highlightBiome !== null && tile) {
+    // highlight tiles are dimmed: cached plain tiles must not show around them
+    drawTile(tile);
+  } else {
+    // paint every cached tile of this world under the view: known areas render
+    // instantly while the fresh tile is being computed (coarse first, then fine)
+    const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
+    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect)) drawTile(e);
   }
 
   // structure / slime layers (only points in view)
@@ -253,6 +263,11 @@ function draw() {
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
   drawMinimap();
+}
+
+function drawTile(e) {
+  const px = w2sx(e.originX), py = w2sy(e.originZ);
+  ctx.drawImage(e.canvas, px, py, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
 }
 
 // adaptive coordinate grid: chunk/region multiples with edge labels
@@ -1156,5 +1171,5 @@ function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
 }
-function curReset() { tile = null; structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); }
+function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); }
 init();

@@ -22,6 +22,7 @@ const ASSETS = [
   './favorites.js',
   './legend.js',
   './maptools.js',
+  './tilecache.js',
   './theme.js',
   './export.js',
   './mcfinder.js',

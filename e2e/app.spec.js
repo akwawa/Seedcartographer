@@ -482,3 +482,27 @@ test('surface-height criterion finds peaks and rejects impossible bands', async 
   await waitForSearchDone(page);
   await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
 });
+
+test('cached tiles repaint instantly when panning back', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // wait for the first rendered tile
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#map');
+    const d = c.getContext('2d').getImageData(0, Math.floor(c.height / 2), c.width, 1).data;
+    for (let i = 0; i < d.length; i += 4) if (d[i] !== 12 || d[i + 1] !== 16 || d[i + 2] !== 22) return true;
+    return false;
+  });
+  // pan away and immediately back with the keyboard, then read the canvas
+  // synchronously — before the debounced worker render (90 ms) can land:
+  // only the cache can have painted these pixels
+  const centerNotBackground = await page.evaluate(() => {
+    const c = document.querySelector('#map');
+    const press = (key) => c.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    for (let i = 0; i < 5; i++) press('ArrowRight');
+    for (let i = 0; i < 5; i++) press('ArrowLeft');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+    return d[0] !== 12 || d[1] !== 16 || d[2] !== 22;
+  });
+  expect(centerNotBackground).toBe(true);
+});
