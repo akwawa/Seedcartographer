@@ -16,6 +16,11 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Corrigé
+- La minimap couvre désormais toute sa surface : la tuile grossière rendue
+  par le worker était dessinée en 1:1 dans le coin (zones noires) au lieu
+  d'être cadrée sur le canvas via la transformation vue→minimap (#105).
+
 ## [0.3.0](https://github.com/akwawa/Seedcartographer/compare/v0.2.0...v0.3.0) (2026-07-07)
 
 ### Ajouté
