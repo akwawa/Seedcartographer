@@ -37,7 +37,7 @@ function gridSpec(bpp, minPx = 24) {
   for (const [step, kind] of GRID_STEPS) {
     if (step / bpp >= minPx) return { step, kind };
   }
-  const [step, kind] = GRID_STEPS[GRID_STEPS.length - 1];
+  const [step, kind] = GRID_STEPS.at(-1);
   return { step, kind };
 }
 
