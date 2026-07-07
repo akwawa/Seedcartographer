@@ -16,6 +16,7 @@ const hud = $('#hud'), resultsEl = $('#results'), searchInfo = $('#searchInfo');
 
 // ---------- state ----------
 const world = { seed: '141', mc: MC_NEWEST, large: false, dim: 0 };
+let yLayer = 60;                                // altitude for tiles, probe and search
 const DIMENSIONS = [[0, 'Overworld'], [-1, 'Nether'], [1, 'End']];
 const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
@@ -349,6 +350,7 @@ function requestRender(delay = 90) {
     renderReq = reqSeq++;
     send({
       type: 'render', reqId: renderReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+      y: yLayer,
       highlight: highlightBiome,
       cx: view.cx, cz: view.cz, bpp: view.bpp,
       w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
@@ -358,6 +360,7 @@ function requestRender(delay = 90) {
     minimapReq = reqSeq++;
     send({
       type: 'render', reqId: minimapReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+      y: yLayer,
       highlight: null,
       cx: view.cx, cz: view.cz, bpp: view.bpp * MINIMAP_ZOOM_OUT,
       w: mm.width, h: mm.height
@@ -435,7 +438,7 @@ canvas.addEventListener('pointercancel', endPointer);
 let probeTimer = null;
 function probeBiome(mx, my) {
   biomeProbeReq = reqSeq++;
-  send({ type: 'biome', reqId: biomeProbeReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) });
+  send({ type: 'biome', reqId: biomeProbeReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) });
 }
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -592,6 +595,7 @@ function runSearch() {
   setSearchBusy(true);
   sendSearch({
     type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+    y: yLayer,
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
     structMode: $('#structMode').value, structClauses,
@@ -948,7 +952,7 @@ function exportResults(fmt) {
 // ---------- URL hash sharing ----------
 function syncHash() {
   const state = {
-    s: world.seed, m: world.mc, l: world.large ? 1 : 0, d: world.dim,
+    s: world.seed, m: world.mc, l: world.large ? 1 : 0, d: world.dim, y: yLayer,
     x: Math.round(view.cx), z: Math.round(view.cz), b: +view.bpp.toFixed(2),
     c: readCriteria()
   };
@@ -1060,6 +1064,8 @@ function init() {
     const d = parseInt(hashState.d, 10);
     world.dim = (d === -1 || d === 1) ? d : 0;
     view.cx = hashState.x; view.cz = hashState.z; view.bpp = hashState.b;
+    const y = Number.parseInt(hashState.y, 10);
+    if (Number.isFinite(y)) yLayer = Math.min(320, Math.max(-64, y));
   }
   $('#seed').value = world.seed;
   $('#large').checked = world.large;
@@ -1101,6 +1107,13 @@ function init() {
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
+  const ySlider = $('#ySlider'), yVal = $('#yVal');
+  ySlider.value = String(yLayer); yVal.textContent = String(yLayer);
+  ySlider.oninput = () => { yVal.textContent = ySlider.value; };
+  ySlider.onchange = () => {
+    yLayer = Math.min(320, Math.max(-64, Number.parseInt(ySlider.value, 10) || 0));
+    requestRender(0); syncHash();
+  };
   $('#minimap').addEventListener('click', (e) => {
     const mm = e.currentTarget;
     const r = mm.getBoundingClientRect();

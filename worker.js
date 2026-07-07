@@ -5,7 +5,9 @@ importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './mark
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors
 let ready = false;
-const SCALE_Y = 15;      // ~y60 at 1:4 vertical scaling
+const DEFAULT_Y = 60;    // surface-ish default altitude
+// biomes are sampled at 1:4 vertically: block y -> scaled y
+function scaledY(y) { return Math.floor((Number.isInteger(y) ? y : DEFAULT_Y) / 4); }
 
 // reusable scratch buffers (grown on demand)
 let areaPtr = 0, areaCap = 0;
@@ -145,7 +147,7 @@ async function runSearchJob(d) {
     for (let j = 0; j < rows; j += GEN_BAND) {
       if (cancelled()) { fail('cancelled'); return; }
       const h = Math.min(GEN_BAND, rows - j);
-      if (!M._genBiomeArea(searchPtr + j * cols * 4, gx0, gz0 + j, cols, h, SC, 15)) {
+      if (!M._genBiomeArea(searchPtr + j * cols * 4, gx0, gz0 + j, cols, h, SC, scaledY(d.y))) {
         fail('area-too-large'); return;
       }
       progress(Math.round(80 * (j + h) / rows));
@@ -222,7 +224,7 @@ onmessage = (e) => {
     const cols = Math.ceil((d.w * d.bpp) / scale) + 1;
     const rows = Math.ceil((d.h * d.bpp) / scale) + 1;
     ensureArea(cols * rows);
-    const ok = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, SCALE_Y);
+    const ok = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, scaledY(d.y));
     const rgba = new Uint8ClampedArray(cols * rows * 4);
     const present = new Set();
     // hovering a legend entry re-renders with `highlight`: other biomes dim
@@ -276,7 +278,7 @@ onmessage = (e) => {
 
   if (d.type === 'biome') {
     applyWorld(d.seed, d.mc, d.large, d.dim);
-    const id = M._biomeAtBlock(d.x, d.z, 60);
+    const id = M._biomeAtBlock(d.x, d.z, Number.isInteger(d.y) ? d.y : DEFAULT_Y);
     postMessage({ type: 'biome', reqId: d.reqId, id, name: M.UTF8ToString(M._biomeName(id)) });
     return;
   }

@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Curseur d'altitude (couche Y, −64 à 320) : le rendu de la carte, la sonde
+  de biome du HUD et la recherche utilisent l'altitude choisie — un Y bas
+  révèle les biomes souterrains (lush caves, deep dark…) ; l'altitude est
+  conservée dans le lien de partage (#58).
 - Repères de navigation : échelle graphique (longueurs « rondes » adaptées au
   zoom), grille de coordonnées adaptative (chunks/régions selon le zoom,
   optionnelle) et minimap d'ensemble cliquable pour recentrer la carte (#60).

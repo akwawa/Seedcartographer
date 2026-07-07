@@ -436,3 +436,26 @@ test('minimap recenters the map and the grid toggle draws the overlay', async ({
   await page.uncheck('#gridChk');
   await expect(page.locator('#gridChk')).not.toBeChecked();
 });
+
+test('the Y slider reveals underground biomes and survives the share link', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  const tileRow = () => page.evaluate(() => {
+    const c = document.querySelector('#map');
+    return c.getContext('2d').getImageData(0, Math.floor(c.height / 2), c.width, 1).data.join(',');
+  });
+  const surface = await tileRow();
+  // drop to deep-slate depths: the rendered tile must change
+  await page.locator('#ySlider').fill('-52');
+  await page.locator('#ySlider').dispatchEvent('change');
+  await expect(page.locator('#yVal')).toHaveText('-52');
+  await expect.poll(tileRow).not.toBe(surface);
+  // the share link restores the altitude
+  const url = await page.evaluate(() => location.href);
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#yVal')).toHaveText('-52');
+  const s = await p2.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  expect(s.y).toBe(-52);
+});
