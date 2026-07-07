@@ -148,3 +148,35 @@ test('surface clause filters candidates and only samples passing cells', () => {
   hits = scanGrid(makeParams(grid, 8, 8, { surface: { min: 9999 } }));
   assert.ok(hits.length > 0);
 });
+
+test('pairMidpoints yields midpoints of distinct close pairs only', () => {
+  const { pairMidpoints } = require('../search.js');
+  const a = [[0, 0], [1000, 1000]];
+  const b = [[100, 0], [5000, 5000], [0, 0]];
+  // (0,0)-(100,0) is the only pair within 200; identical points are skipped
+  assert.deepStrictEqual(pairMidpoints(a, b, 200), [[50, 0]]);
+  // same-type pair: both orders produce midpoints, identical instances skipped
+  const same = [[0, 0], [100, 0]];
+  assert.deepStrictEqual(pairMidpoints(same, same, 200), [[50, 0], [50, 0]]);
+  // cap respected
+  assert.strictEqual(pairMidpoints(a, b, 1e9, 1).length, 1);
+  assert.deepStrictEqual(pairMidpoints([], b, 200), []);
+});
+
+test('inMain structure clauses only count structures on main-set cells', () => {
+  // 8x8 grid of biome 2 with a single main-biome (1) cell at (2,2)
+  const grid = makeGrid(8, 8, 2, [{ i: 2, j: 2, id: 1 }]);
+  const onMain = [32, 32];      // inside cell (2,2)
+  const offMain = [80, 80];     // cell (5,5), biome 2
+  const params = makeParams(grid, 8, 8, {
+    structClauses: [{ points: [onMain, offMain], min: 2, radius: 4000, inMain: true }]
+  });
+  // only one of the two points survives the inMain filter: min 2 fails
+  assert.deepStrictEqual(scanGrid(params), []);
+  params.structClauses = [{ points: [onMain, offMain], min: 1, radius: 4000, inMain: true }];
+  const hits = scanGrid(params);
+  assert.ok(hits.length > 0);
+  // without the flag both points count
+  params.structClauses = [{ points: [onMain, offMain], min: 2, radius: 4000 }];
+  assert.ok(scanGrid(params).length > 0);
+});

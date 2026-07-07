@@ -7,7 +7,8 @@
 
 const SPAWN_STRUCT_TYPE = -3;
 const STRONGHOLD_STRUCT_TYPE = -4;
+const QUADHUT_STRUCT_TYPE = -5;
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE };
+  module.exports = { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE };
 }

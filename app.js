@@ -193,6 +193,7 @@ function setDimension(dim) {
   world.dim = dim;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  $('#pairClauses').textContent = '';
   const presetSel = $('#presetSel');
   if (presetSel) presetSel.value = '';   // criteria no longer match any preset
   addMainBiomeRow();
@@ -576,8 +577,22 @@ function addAdjRow(biome, dist, negate) {
   aria(neg, 'ariaPresence');
   addRow($('#adjClauses'), [aria(biomeSelect(biome), 'ariaBiome'), neg, subLbl('within'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks')]);
 }
-function addStructRow(type, min, radius) {
-  addRow($('#structClauses'), [aria(structSelect(type), 'ariaStructType'), subLbl('atLeast'), aria(numInput(min ?? 1, 0, 1, 'sm'), 'ariaMinCount'), subLbl('within'), aria(numInput(radius ?? 800, 0, 50), 'ariaRadius'), subLbl('blocks')]);
+function addStructRow(type, min, radius, inMain) {
+  const im = document.createElement('input');
+  im.type = 'checkbox'; im.className = 'inmain'; im.checked = !!inMain;
+  aria(im, 'inMainBiome');
+  const imLbl = document.createElement('label');
+  imLbl.className = 'sub-lbl inmain-lbl';
+  imLbl.append(im, subLbl('inMainBiome'));
+  addRow($('#structClauses'), [aria(structSelect(type), 'ariaStructType'), subLbl('atLeast'), aria(numInput(min ?? 1, 0, 1, 'sm'), 'ariaMinCount'), subLbl('within'), aria(numInput(radius ?? 800, 0, 50), 'ariaRadius'), subLbl('blocks'), imLbl]);
+}
+// "a T1 and a T2 within `gap` blocks of each other, within `radius` of the spot"
+function addPairRow(t1, t2, gap, radius) {
+  addRow($('#pairClauses'), [
+    aria(structSelect(t1), 'ariaStructType'), aria(structSelect(t2), 'ariaStructType'),
+    subLbl('within'), aria(numInput(gap ?? 300, 0, 50, 'sm'), 'ariaDistance'), subLbl('ofEachOther'),
+    subLbl('within'), aria(numInput(radius ?? 800, 0, 50), 'ariaRadius'), subLbl('blocks')
+  ]);
 }
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
@@ -597,13 +612,23 @@ function runSearch() {
     negate: r.querySelector('select.neg').value === '1'
   })).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
   const structClauses = rowsOf('#structClauses').map((r) => {
-    const ins = r.querySelectorAll('input');
+    const ins = r.querySelectorAll('input.num');
     return {
-      type: parseInt(r.querySelector('select').value, 10),
-      min: parseInt(ins[0].value, 10) || 0,
-      radius: parseInt(ins[1].value, 10) || 0
+      type: Number.parseInt(r.querySelector('select').value, 10),
+      min: Number.parseInt(ins[0].value, 10) || 0,
+      radius: Number.parseInt(ins[1].value, 10) || 0,
+      inMain: r.querySelector('input.inmain').checked
     };
   }).filter((c) => Number.isFinite(c.type) && c.min > 0 && c.radius > 0);
+  const pairClauses = rowsOf('#pairClauses').map((r) => {
+    const sels = r.querySelectorAll('select');
+    const ins = r.querySelectorAll('input.num');
+    return {
+      t1: Number.parseInt(sels[0].value, 10), t2: Number.parseInt(sels[1].value, 10),
+      gap: Number.parseInt(ins[0].value, 10) || 0,
+      radius: Number.parseInt(ins[1].value, 10) || 0
+    };
+  }).filter((c) => Number.isFinite(c.t1) && Number.isFinite(c.t2) && c.gap > 0 && c.radius > 0);
   const intOrNull = (sel) => {
     const v = $(sel).value.trim();
     const n = Number.parseInt(v, 10);
@@ -620,7 +645,7 @@ function runSearch() {
     y: yLayer,
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
-    structMode: $('#structMode').value, structClauses,
+    structMode: $('#structMode').value, structClauses, pairClauses,
     surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null,
     cx: Math.round(view.cx), cz: Math.round(view.cz), range, step, mergeDist: Math.max(256, step * 6)
   });
@@ -868,7 +893,8 @@ function resolveStructConsts(defs) {
     structToggles.push(
       { type: SLIME_STRUCT_TYPE, labelKey: 'structSlimeChunks', dim: 0, slime: true, on: false, color: '#6fce4e', points: null },
       { type: SPAWN_STRUCT_TYPE, labelKey: 'structSpawn', dim: 0, on: false, color: '#ff6b6b', points: null },
-      { type: STRONGHOLD_STRUCT_TYPE, labelKey: 'structStronghold', dim: 0, on: false, color: '#c0b3ff', points: null }
+      { type: STRONGHOLD_STRUCT_TYPE, labelKey: 'structStronghold', dim: 0, on: false, color: '#c0b3ff', points: null },
+      { type: QUADHUT_STRUCT_TYPE, labelKey: 'structQuadHut', dim: 0, on: false, color: '#ff9ff3', points: null }
     );
     buildStructToggleUI();
     applyHashCriteria();
@@ -905,11 +931,20 @@ function readCriteria() {
     })),
     sm: $('#structMode').value,
     sc: rowsOf('#structClauses').map((r) => {
-      const ins = r.querySelectorAll('input');
+      const ins = r.querySelectorAll('input.num');
       return {
-        t: parseInt(r.querySelector('select').value, 10),
-        mn: parseInt(ins[0].value, 10) || 0,
-        r: parseInt(ins[1].value, 10) || 0
+        t: Number.parseInt(r.querySelector('select').value, 10),
+        mn: Number.parseInt(ins[0].value, 10) || 0,
+        r: Number.parseInt(ins[1].value, 10) || 0,
+        im: r.querySelector('input.inmain').checked ? 1 : 0
+      };
+    }),
+    pc: rowsOf('#pairClauses').map((r) => {
+      const sels = r.querySelectorAll('select');
+      const ins = r.querySelectorAll('input.num');
+      return {
+        t1: Number.parseInt(sels[0].value, 10), t2: Number.parseInt(sels[1].value, 10),
+        g: Number.parseInt(ins[0].value, 10) || 0, r: Number.parseInt(ins[1].value, 10) || 0
       };
     }),
     rg: $('#range').value, sp: $('#step').value,
@@ -992,6 +1027,7 @@ function readHash() {
 // list sizes before building any DOM from them.
 function applyCriteria(raw) {
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  $('#pairClauses').textContent = '';
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
   if (!c) return;
@@ -999,7 +1035,8 @@ function applyCriteria(raw) {
   $('#adjMode').value = c.am;
   c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n));
   $('#structMode').value = c.sm;
-  c.sc.forEach((r) => addStructRow(r.t, r.mn, r.r));
+  c.sc.forEach((r) => addStructRow(r.t, r.mn, r.r, r.im));
+  c.pc.forEach((r) => addPairRow(r.t1, r.t2, r.g, r.r));
   if (c.rg !== null) $('#range').value = c.rg;
   if (c.sp !== null) $('#step').value = c.sp;
   if (c.s0 !== null) $('#surfMin').value = c.s0;
@@ -1103,6 +1140,7 @@ function init() {
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addStruct').onclick = () => addStructRow();
+  $('#addPair').onclick = () => addPairRow();
   $('#shareBtn').onclick = () => {
     syncHash();
     copyText(location.href)

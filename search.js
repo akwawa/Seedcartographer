@@ -19,7 +19,9 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   mainSet                          — Set of accepted biome ids for the spot
 //   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?}]
 //                                      (negate: the biome must be ABSENT within dist)
-//   structMode, structClauses        — 'and'|'or', [{points:[[x,z]], min, radius}]
+//   structMode, structClauses        — 'and'|'or', [{points:[[x,z]], min, radius,
+//                                      inMain?}] (inMain: only structures on a
+//                                      main-set biome cell count)
 //   surface (optional)               — {min?, max?, heightAt(x,z)} surface-
 //                                      height clause; heightAt is an engine
 //                                      callback, so it only runs on cells that
@@ -32,7 +34,8 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //                                      for duplicate-merging across slices
 /**
  * @typedef {{biomes: Set<number>, dist: number, negate?: boolean}} AdjClause
- * @typedef {{points: Array<[number, number]>, min: number, radius: number}} StructClause
+ * @typedef {{points: Array<[number, number]>, min: number, radius: number,
+ *            inMain?: boolean}} StructClause
  * @typedef {{x: number, z: number, count: number}} SearchHit
  * @typedef {{min?: number|null, max?: number|null,
  *            heightAt: (x: number, z: number) => number}} SurfaceClause
@@ -68,7 +71,17 @@ function scanGrid(p) {
       sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
     };
   });
-  const structs = structClauses.map((c) => ({ points: c.points, min: c.min, r2: c.radius * c.radius }));
+  const structs = structClauses.map((c) => ({
+    // "in main biome" restricts a clause to structures standing on a cell of
+    // the main-biome set; the grid covers box+pad, so out-of-grid points drop
+    points: c.inMain
+      ? c.points.filter(([sx, sz]) => {
+          const ci = Math.floor((sx - gx0 * SC) / SC), cj = Math.floor((sz - gz0 * SC) / SC);
+          return ci >= 0 && cj >= 0 && ci < cols && cj < rows && mainSet.has(grid[cj * cols + ci]);
+        })
+      : c.points,
+    min: c.min, r2: c.radius * c.radius
+  }));
   const surf = p.surface && typeof p.surface.heightAt === 'function'
     ? { min: p.surface.min ?? -Infinity, max: p.surface.max ?? Infinity, heightAt: p.surface.heightAt }
     : null;
@@ -157,6 +170,32 @@ function scanGrid(p) {
   return hits;
 }
 
+// Midpoints of every (a, b) pair closer than `gap` blocks (distinct points
+// only). These act as pseudo-structure positions for "T1 and T2 near each
+// other" criteria.
+/**
+ * @param {Array<[number, number]>} pointsA positions of the first type
+ * @param {Array<[number, number]>} pointsB positions of the second type
+ * @param {number} gap maximum distance between the two structures (blocks)
+ * @param {number} [cap] result cap
+ * @returns {Array<[number, number]>} pair midpoints
+ */
+function pairMidpoints(pointsA, pointsB, gap, cap = SEARCH_MAX_HITS) {
+  /** @type {Array<[number, number]>} */
+  const out = [];
+  const g2 = gap * gap;
+  for (const [ax, az] of pointsA) {
+    for (const [bx, bz] of pointsB) {
+      if (ax === bx && az === bz) continue;   // the same structure instance
+      const dx = ax - bx, dz = az - bz;
+      if (dx * dx + dz * dz > g2) continue;
+      out.push([Math.round((ax + bx) / 2), Math.round((az + bz) / 2)]);
+      if (out.length >= cap) return out;
+    }
+  }
+  return out;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scanGrid, SEARCH_MAX_HITS, SEARCH_MAX_CELLS };
+  module.exports = { scanGrid, pairMidpoints, SEARCH_MAX_HITS, SEARCH_MAX_CELLS };
 }

@@ -79,7 +79,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .lede em{color:var(--text);font-style:normal;font-weight:600}
 
 .field{margin-bottom:13px}
-.field>label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.02em}
+.field>label,.field>.crit-lbl{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.02em}
 .opt{color:var(--faint);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-left:4px}
 .field select,.field>.num{width:100%}
 .sub{display:flex;align-items:center;gap:7px;margin-top:7px;color:var(--muted);font-size:12.5px;flex-wrap:wrap}
@@ -232,3 +232,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
   .layer{padding:10px 8px}
   .popup .pop-close,.help .help-close{padding:8px 12px}
 }
+
+/* per-structure-clause "in main biome" toggle */
+.crit .inmain-lbl{display:flex;align-items:center;gap:4px;cursor:pointer}
+.crit .inmain{width:13px;height:13px;padding:0}
