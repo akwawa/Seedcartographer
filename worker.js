@@ -243,6 +243,56 @@ async function runSearchJob(d) {
   }
 }
 
+// ---- multi-seed search: test the criteria around the origin of many seeds ----
+let seedCancelId = 0;
+
+function seedScanParams(d, cols, rows, gx0, gz0, SC) {
+  return {
+    grid: M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cols * rows),
+    cols, rows, gx0, gz0, SC,
+    cx: 0, cz: 0, range: d.range, step: d.step, mergeDist: Math.max(256, d.step * 6),
+    mainSet: new Set(d.mainBiomes),
+    adjMode: d.adjMode,
+    adjClauses: (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate })),
+    structMode: d.structMode,
+    structClauses: buildStructClauses({ ...d, cx: 0, cz: 0 }),
+    surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
+      ? { min: d.surface.min, max: d.surface.max, heightAt: (x, z) => M._approxSurfaceY(x, z) }
+      : null,
+    hits: []
+  };
+}
+
+async function runSeedSearchJob(d) {
+  const cancelled = () => seedCancelId === d.reqId;
+  const SC = 16;
+  const pad = (d.adjClauses || []).reduce((m, c) => Math.max(m, c.dist), 0);
+  const gx0 = Math.floor((-d.range - pad) / SC);
+  const gz0 = gx0;
+  const cols = Math.ceil((d.range + pad) / SC) - gx0 + 2;
+  if (cols * cols > SEARCH_MAX_CELLS) {
+    postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
+    return;
+  }
+  ensureSearchArea(cols * cols);
+  for (const seedStr of d.seeds) {
+    if (cancelled()) break;
+    applyWorld(seedStr, d.mc, d.large, d.dim);
+    if (!M._genBiomeArea(searchPtr, gx0, gz0, cols, cols, SC, scaledY(d.y))) {
+      postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
+      return;
+    }
+    const hits = scanGrid(seedScanParams(d, cols, cols, gx0, gz0, SC));
+    postMessage({
+      type: 'seedScanned', reqId: d.reqId, seed: seedStr,
+      hit: hits && hits.length ? hits[0] : null
+    });
+    // let cancel messages through between seeds
+    await yieldToQueue();
+  }
+  postMessage({ type: 'seedBatchDone', reqId: d.reqId });
+}
+
 onmessage = (e) => {
   if (!ready) { /* messages before ready are re-sent by main */ return; }
   const d = e.data;
@@ -310,6 +360,16 @@ onmessage = (e) => {
 
   if (d.type === 'cancelSearch') {
     searchCancelId = d.reqId;
+    return;
+  }
+
+  if (d.type === 'seedSearch') {
+    runSeedSearchJob(d); // async: yields between seeds so cancel is processed
+    return;
+  }
+
+  if (d.type === 'cancelSeedSearch') {
+    seedCancelId = d.reqId;
     return;
   }
 

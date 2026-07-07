@@ -24,6 +24,7 @@ const ASSETS = [
   './maptools.js',
   './tilecache.js',
   './sharestate.js',
+  './seedsearch.js',
   './theme.js',
   './export.js',
   './mcfinder.js',

@@ -127,6 +127,11 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   entre Overworld, Nether et End : carte, biomes, structures (forteresses,
   bastions, portails en ruine du Nether, cités de l'End) et recherche suivent
   la dimension choisie, qui est incluse dans les liens de partage et les exports.
+- **Recherche multi-seeds.** Le panneau « Chercher une seed » teste de
+  nombreuses seeds (aléatoires ou séquentielles depuis la seed courante) avec
+  les critères du panneau, autour de l'origine du monde, sur un pool de
+  workers avec progression et annulation ; cliquer une seed candidate la
+  charge, centrée sur le premier lieu trouvé.
 - **Version de génération sélectionnable.** Le sélecteur « Java » dans la barre
   du haut permet de choisir la version (de 1.0 à 1.21, 1.21 par défaut) : la
   carte, les structures et la recherche sont recalculées pour la version

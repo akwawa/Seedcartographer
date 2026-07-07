@@ -597,18 +597,16 @@ function addPairRow(t1, t2, gap, radius) {
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
 // ---------- search ----------
-function runSearch() {
+// Criteria panel -> search-message fields, or null when no main biome is set.
+// Shared by the location search and the multi-seed search.
+function collectCriteria() {
   const mainBiomes = rowsOf('#mainBiomes')
-    .map((r) => parseInt(r.querySelector('select').value, 10))
+    .map((r) => Number.parseInt(r.querySelector('select').value, 10))
     .filter(Number.isFinite);
-  if (!mainBiomes.length) {
-    searchInfo.textContent = t('pickBiome');
-    searchInfo.className = 'info err';
-    return;
-  }
+  if (!mainBiomes.length) return null;
   const adjClauses = rowsOf('#adjClauses').map((r) => ({
-    biomes: [parseInt(r.querySelector('select').value, 10)],
-    dist: parseInt(r.querySelector('input').value, 10) || 0,
+    biomes: [Number.parseInt(r.querySelector('select').value, 10)],
+    dist: Number.parseInt(r.querySelector('input').value, 10) || 0,
     negate: r.querySelector('select.neg').value === '1'
   })).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
   const structClauses = rowsOf('#structClauses').map((r) => {
@@ -635,20 +633,155 @@ function runSearch() {
     return v !== '' && Number.isFinite(n) ? n : null;
   };
   const surfMin = intOrNull('#surfMin'), surfMax = intOrNull('#surfMax');
-  const range = parseInt($('#range').value, 10) || 4000;
-  const step = parseInt($('#step').value, 10) || 48;
+  return {
+    mainBiomes,
+    adjMode: $('#adjMode').value, adjClauses,
+    structMode: $('#structMode').value, structClauses, pairClauses,
+    surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null
+  };
+}
+
+function runSearch() {
+  const crit = collectCriteria();
+  if (!crit) {
+    searchInfo.textContent = t('pickBiome');
+    searchInfo.className = 'info err';
+    return;
+  }
+  const range = Number.parseInt($('#range').value, 10) || 4000;
+  const step = Number.parseInt($('#step').value, 10) || 48;
   searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
   searchReq = reqSeq;
   setSearchBusy(true);
   sendSearch({
     type: 'search', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
     y: yLayer,
-    mainBiomes,
-    adjMode: $('#adjMode').value, adjClauses,
-    structMode: $('#structMode').value, structClauses, pairClauses,
-    surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null,
+    ...crit,
     cx: Math.round(view.cx), cz: Math.round(view.cz), range, step, mergeDist: Math.max(256, step * 6)
   });
+}
+
+// ---------- multi-seed search (worker pool) ----------
+const seedPool = [];
+let seedReq = 0, seedBusy = false;
+let seedBatches = [], seedFoundCount = 0, seedScannedCount = 0, seedTotal = 0;
+let seedMsgBase = null, seedStart = '0', seedMode = 'random';
+
+function getSeedPool() {
+  const target = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+  while (seedPool.length < target) {
+    const w = new Worker('./worker.js');
+    w.engineReady = false; w.pending = []; w.idle = true;
+    w.onerror = (e) => console.error('SEED WORKER ERROR:', e.message);
+    w.onmessage = (e) => {
+      const d = e.data;
+      if (d.type === 'ready') { engineUp(w); return; }
+      if (d.type === 'seedScanned') onSeedScanned(d);
+      else if (d.type === 'seedBatchDone') onSeedBatchDone(w, d);
+    };
+    seedPool.push(w);
+  }
+  return seedPool;
+}
+function setSeedBusy(on) {
+  seedBusy = on;
+  const btn = $('#seedSearchBtn');
+  btn.dataset.i18n = on ? 'cancelBtn' : 'seedSearchBtn';
+  btn.textContent = t(btn.dataset.i18n);
+  const prog = $('#seedProgress');
+  prog.hidden = !on;
+  prog.value = 0;
+}
+function startSeedSearch() {
+  const crit = collectCriteria();
+  const seedInfo = $('#seedInfo');
+  if (!crit) {
+    seedInfo.textContent = t('pickBiome');
+    seedInfo.className = 'info err';
+    return;
+  }
+  seedTotal = Math.min(SEED_SEARCH_MAX_TOTAL, Math.max(1, Number.parseInt($('#seedCount').value, 10) || 500));
+  const radius = Math.min(5000, Math.max(500, Number.parseInt($('#seedRadius').value, 10) || 1500));
+  // seeds are only probed: a coarse stride keeps the per-seed cost low
+  const step = Math.max(32, Number.parseInt($('#step').value, 10) || 32);
+  seedReq = reqSeq++;
+  seedFoundCount = 0; seedScannedCount = 0;
+  seedBatches = planBatches(seedTotal, 8);
+  seedStart = $('#seed').value || '0';
+  seedMode = $('#seedMode').value;
+  seedMsgBase = {
+    type: 'seedSearch', reqId: seedReq, mc: world.mc, large: world.large, dim: world.dim,
+    y: yLayer, range: radius, step, ...crit
+  };
+  $('#seedResults').textContent = '';
+  seedInfo.textContent = t('searching'); seedInfo.className = 'info busy';
+  setSeedBusy(true);
+  getSeedPool().forEach(dispatchSeedBatch);
+}
+function nextSeedBatch() {
+  const b = seedBatches.shift();
+  if (!b) return null;
+  return seedMode === 'seq'
+    ? sequentialSeeds(seedStart, b.offset, b.count)
+    : randomSeeds(b.count, Math.random);
+}
+function dispatchSeedBatch(w) {
+  const seeds = nextSeedBatch();
+  if (!seeds) {
+    w.idle = true;
+    finishSeedSearchIfIdle();
+    return;
+  }
+  w.idle = false;
+  post(w, { ...seedMsgBase, seeds });
+}
+function onSeedScanned(d) {
+  if (d.reqId !== seedReq) return;
+  seedScannedCount++;
+  $('#seedProgress').value = Math.round(100 * seedScannedCount / seedTotal);
+  if (d.hit && seedFoundCount < SEED_SEARCH_MAX_FOUND) {
+    seedFoundCount++;
+    $('#seedResults').appendChild(seedResultRow(d.seed, d.hit));
+    if (seedFoundCount >= SEED_SEARCH_MAX_FOUND) cancelSeedSearch();
+  }
+}
+function onSeedBatchDone(w, d) {
+  if (d.reqId !== seedReq) return;
+  if (d.error) seedBatches = [];
+  dispatchSeedBatch(w);
+}
+function finishSeedSearchIfIdle() {
+  if (!seedBusy || !seedPool.every((w) => w.idle)) return;
+  setSeedBusy(false);
+  const seedInfo = $('#seedInfo');
+  if (seedFoundCount) {
+    seedInfo.textContent = t('seedDone', { f: seedFoundCount, n: seedScannedCount });
+    seedInfo.className = 'info ok';
+  } else {
+    seedInfo.textContent = t('seedNone', { n: seedScannedCount });
+    seedInfo.className = 'info empty';
+  }
+}
+function cancelSeedSearch() {
+  seedBatches = [];
+  for (const w of seedPool) post(w, { type: 'cancelSeedSearch', reqId: seedReq });
+}
+// clicking a candidate loads the seed and centers the map on its first hit
+function seedResultRow(seed, hit) {
+  const li = document.createElement('button');
+  li.className = 'result';
+  const rx = document.createElement('span');
+  rx.className = 'rx'; rx.textContent = seed;
+  const rc = document.createElement('span');
+  rc.className = 'rc'; rc.textContent = `${hit.x}, ${hit.z}`;
+  li.append(rx, rc);
+  li.onclick = () => {
+    $('#seed').value = seed;
+    world.seed = seed;
+    view.cx = hit.x; view.cz = hit.z;
+    curReset(); draw(); requestRender(0); syncHash();
+  };
+  return li;
 }
 function onSearchResult(d) {
   if (d.reqId !== searchReq) return;   // stale
@@ -1126,6 +1259,10 @@ function init() {
   $('#searchBtn').onclick = () => {
     if (searchBusy) sendSearch({ type: 'cancelSearch', reqId: searchReq });
     else runSearch();
+  };
+  $('#seedSearchBtn').onclick = () => {
+    if (seedBusy) cancelSeedSearch();
+    else startSeedSearch();
   };
   $('#pngBtn').onclick = exportMapPNG;
   const importInput = $('#importFile');
