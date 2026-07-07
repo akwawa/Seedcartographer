@@ -16,28 +16,10 @@ et la release GitHub.
 
 ## [Non publié]
 
-### Corrigé
-- Le job CI `sonar` n'échoue plus sur les MR Dependabot : le scan est sauté
-  quand le secret `SONAR_TOKEN` n'est pas disponible, comme documenté
-  ([#89](https://github.com/akwawa/Seedcartographer/issues/89)).
-- Démo GitHub Pages et image Docker réparées : les modules récents
-  (`coords.js`, `slime.js`, `presets.js`, `favorites.js`, `legend.js`,
-  `theme.js`, et côté Docker aussi `biomes.js`, `export.js`, `sw.js`,
-  manifest, icône) manquaient dans les listes de déploiement ; un test de
-  non-régression aligne désormais ces listes sur `sw.js`
-  ([#79](https://github.com/akwawa/Seedcartographer/issues/79)).
-
-### Modifié
-- La recherche tourne dans un second Web Worker avec sa propre instance du
-  moteur WASM : les rendus de tuiles et les sondes de biome ne partagent plus
-  sa file de messages — la carte reste totalement fluide pendant une longue
-  recherche ([#50](https://github.com/akwawa/Seedcartographer/issues/50)).
-- La version du cache du service worker n'est plus incrémentée à la main :
-  les déploiements Pages et Docker l'estampillent avec un hash de contenu des
-  assets (`scripts/sw-version.js`), invalidant le cache à chaque changement
-  ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
+## [0.2.0](https://github.com/akwawa/Seedcartographer/compare/v0.1.0...v0.2.0) (2026-07-06)
 
 ### Ajouté
+
 - Spawn du monde et strongholds (positions exactes vérifiées par biomes,
   moteur cubiomes recompilé) : couches activables sur la carte (Overworld) et
   critères de recherche « à moins de N blocs du spawn / d'un stronghold »
@@ -87,6 +69,29 @@ et la release GitHub.
 - `CHANGELOG.md` au format Keep a Changelog, avec la règle de mise à jour par
   merge request ([#40](https://github.com/akwawa/Seedcartographer/issues/40)).
 
+### Modifié
+
+- La recherche tourne dans un second Web Worker avec sa propre instance du
+  moteur WASM : les rendus de tuiles et les sondes de biome ne partagent plus
+  sa file de messages — la carte reste totalement fluide pendant une longue
+  recherche ([#50](https://github.com/akwawa/Seedcartographer/issues/50)).
+- La version du cache du service worker n'est plus incrémentée à la main :
+  les déploiements Pages et Docker l'estampillent avec un hash de contenu des
+  assets (`scripts/sw-version.js`), invalidant le cache à chaque changement
+  ([#51](https://github.com/akwawa/Seedcartographer/issues/51)).
+
+### Corrigé
+
+- Le job CI `sonar` n'échoue plus sur les MR Dependabot : le scan est sauté
+  quand le secret `SONAR_TOKEN` n'est pas disponible, comme documenté
+  ([#89](https://github.com/akwawa/Seedcartographer/issues/89)).
+- Démo GitHub Pages et image Docker réparées : les modules récents
+  (`coords.js`, `slime.js`, `presets.js`, `favorites.js`, `legend.js`,
+  `theme.js`, et côté Docker aussi `biomes.js`, `export.js`, `sw.js`,
+  manifest, icône) manquaient dans les listes de déploiement ; un test de
+  non-régression aligne désormais ces listes sur `sw.js`
+  ([#79](https://github.com/akwawa/Seedcartographer/issues/79)).
+
 ## [0.1.0] — 2026-07-06
 
 Première version publiée. Contenu du jalon
@@ -131,5 +136,5 @@ Première version publiée. Contenu du jalon
 - Workflows durcis : token en moindre privilège, actions épinglées par SHA,
   `npm ci --ignore-scripts` (#35).
 
-[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.1.0...HEAD
+[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.2.0...HEAD
 [0.1.0]: https://github.com/akwawa/Seedcartographer/releases/tag/v0.1.0
