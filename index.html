@@ -72,8 +72,8 @@
       </div>
 
       <button id="searchBtn" class="btn primary" data-i18n="searchBtn">Search this area</button>
-      <div id="searchProgress" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="searching" hidden><div id="searchProgressBar" class="bar"></div></div>
-      <div id="searchInfo" class="info" role="status"></div>
+      <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
+      <output id="searchInfo" class="info"></output>
     </section>
 
     <section class="card">
@@ -102,9 +102,9 @@
   </aside>
 
   <div class="mapwrap">
-    <canvas id="map" tabindex="0" role="application" aria-label="Interactive map" data-i18n-aria="mapAria"></canvas>
+    <canvas id="map" tabindex="0" aria-label="Interactive map" data-i18n-aria="mapAria"></canvas>
     <div id="hud" class="hud" aria-hidden="true"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
-    <div id="popup" class="popup" role="dialog"></div>
+    <dialog id="popup" class="popup"></dialog>
     <details id="legend" class="legend">
       <summary data-i18n="legend">Legend</summary>
       <div id="legendList" class="legend-list"></div>

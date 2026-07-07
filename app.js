@@ -49,10 +49,7 @@ searchWorker.onmessage = (e) => {
   if (d.type === 'fatal') { showFatal(d.message); return; }
   if (d.type === 'ready') { engineUp(searchWorker); return; }
   if (d.type === 'searchProgress') {
-    if (d.reqId === searchReq) {
-      $('#searchProgressBar').style.width = d.pct + '%';
-      $('#searchProgress').setAttribute('aria-valuenow', String(Math.round(d.pct)));
-    }
+    if (d.reqId === searchReq) $('#searchProgress').value = d.pct;
     return;
   }
   if (d.type === 'search') onSearchResult(d);
@@ -108,8 +105,7 @@ function setSearchBusy(on) {
   btn.textContent = t(btn.dataset.i18n);
   const prog = $('#searchProgress');
   prog.hidden = !on;
-  prog.setAttribute('aria-valuenow', '0');
-  $('#searchProgressBar').style.width = '0%';
+  prog.value = 0;
 }
 
 // Unrecoverable worker/WASM failure: tell the user instead of hanging silently.
@@ -607,7 +603,7 @@ function showPopup(p) {
     wireCopyButton(row, `${conv.x} ~ ${conv.z}`, () => label);
     pop.append(row);
   }
-  pop.style.display = 'block';
+  if (!pop.open) pop.show();   // non-modal: the map stays usable
 }
 // ---------- favorites ----------
 let favorites = parseFavorites((() => {
@@ -677,7 +673,8 @@ function hidePopup() {
     [...resultsEl.children].forEach((c) => c.classList.remove('sel'));
     draw();
   }
-  $('#popup').style.display = 'none';
+  const pop = $('#popup');
+  if (pop.open) pop.close();
 }
 
 // ---------- biome legend ----------

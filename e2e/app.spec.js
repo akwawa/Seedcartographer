@@ -58,7 +58,7 @@ test('a long search shows progress and can be cancelled', async ({ page }) => {
   await expect(page.locator('#searchProgress')).toBeVisible();
   await expect(page.locator('#searchBtn')).toHaveText(/Cancel/);
   // wait for some progress, then cancel
-  await page.waitForFunction(() => parseInt(document.querySelector('#searchProgressBar').style.width, 10) > 0, { timeout: 60000 });
+  await page.waitForFunction(() => document.querySelector('#searchProgress').value > 0, { timeout: 60000 });
   await page.click('#searchBtn');
   await waitForSearchDone(page);
   await expect(page.locator('#searchInfo')).toHaveText(/cancelled/i);
@@ -316,7 +316,7 @@ test('tiles keep rendering while a long search runs on its own worker', async ({
   await waitForApp(page);
   await page.fill('#range', '60000');
   await page.click('#searchBtn');
-  await page.waitForFunction(() => parseInt(document.querySelector('#searchProgressBar').style.width, 10) > 0, { timeout: 60000 });
+  await page.waitForFunction(() => document.querySelector('#searchProgress').value > 0, { timeout: 60000 });
   // zoom out: a fresh tile must arrive while the search is still running
   const before = await page.evaluate(() => {
     const c = document.querySelector('#map');
