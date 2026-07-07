@@ -588,6 +588,12 @@ function runSearch() {
       radius: parseInt(ins[1].value, 10) || 0
     };
   }).filter((c) => Number.isFinite(c.type) && c.min > 0 && c.radius > 0);
+  const intOrNull = (sel) => {
+    const v = $(sel).value.trim();
+    const n = Number.parseInt(v, 10);
+    return v !== '' && Number.isFinite(n) ? n : null;
+  };
+  const surfMin = intOrNull('#surfMin'), surfMax = intOrNull('#surfMax');
   const range = parseInt($('#range').value, 10) || 4000;
   const step = parseInt($('#step').value, 10) || 48;
   searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
@@ -599,6 +605,7 @@ function runSearch() {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
     structMode: $('#structMode').value, structClauses,
+    surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null,
     cx: Math.round(view.cx), cz: Math.round(view.cz), range, step, mergeDist: Math.max(256, step * 6)
   });
 }
@@ -889,7 +896,8 @@ function readCriteria() {
         r: parseInt(ins[1].value, 10) || 0
       };
     }),
-    rg: $('#range').value, sp: $('#step').value
+    rg: $('#range').value, sp: $('#step').value,
+    s0: $('#surfMin').value, s1: $('#surfMax').value
   };
 }
 
@@ -941,7 +949,9 @@ function exportResults(fmt) {
       structureMode: c.sm,
       structures: c.sc.map((s) => ({ type: s.t, atLeast: s.mn, within: s.r })),
       searchRadius: parseInt(c.rg, 10) || 0,
-      step: parseInt(c.sp, 10) || 0
+      step: parseInt(c.sp, 10) || 0,
+      surfaceMin: c.s0 === '' ? null : parseInt(c.s0, 10),
+      surfaceMax: c.s1 === '' ? null : parseInt(c.s1, 10)
     }
   };
   const base = `seedcartographer-${String(world.seed).replace(/[^\w-]+/g, '_')}`;
@@ -968,6 +978,7 @@ function applyCriteria(c) {
   const int = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
   const rows = (v) => (Array.isArray(v) ? v : []).slice(0, MAX_CRIT_ROWS);
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  $('#surfMin').value = ''; $('#surfMax').value = '';
   if (!c) return;
   rows(c.mb).forEach((b) => { b = int(b); if (b !== null) addMainBiomeRow(b); });
   $('#adjMode').value = c.am === 'or' ? 'or' : 'and';
@@ -983,6 +994,9 @@ function applyCriteria(c) {
   const rg = int(c.rg), sp = int(c.sp);
   if (rg !== null) $('#range').value = rg;
   if (sp !== null) $('#step').value = sp;
+  const s0 = int(c.s0), s1 = int(c.s1);
+  if (s0 !== null) $('#surfMin').value = s0;
+  if (s1 !== null) $('#surfMax').value = s1;
 }
 
 let hashState = null;

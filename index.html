@@ -72,6 +72,11 @@
         <div><label for="step"><span data-i18n="resolution">Resolution</span> <span class="opt" data-i18n="step">step</span></label><input id="step" class="num" type="number" min="16" step="8" value="16"></div>
       </div>
 
+      <div class="field two">
+        <div><label for="surfMin"><span data-i18n="surfaceMin">Surface Y min</span> <span class="opt" data-i18n="optional">optional</span></label><input id="surfMin" class="num" type="number" step="1" min="-64" max="320"></div>
+        <div><label for="surfMax"><span data-i18n="surfaceMax">Surface Y max</span> <span class="opt" data-i18n="optional">optional</span></label><input id="surfMax" class="num" type="number" step="1" min="-64" max="320"></div>
+      </div>
+
       <button id="searchBtn" class="btn primary" data-i18n="searchBtn">Search this area</button>
       <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="searchInfo" class="info"></output>

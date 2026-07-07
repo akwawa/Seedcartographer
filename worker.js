@@ -190,6 +190,10 @@ async function runSearchJob(d) {
       mainSet: new Set(d.mainBiomes),
       adjMode: d.adjMode, adjClauses,
       structMode: d.structMode, structClauses,
+      // surface height is Overworld-only; heightAt calls into the engine
+      surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
+        ? { min: d.surface.min, max: d.surface.max, heightAt: (x, z) => M._approxSurfaceY(x, z) }
+        : null,
       hits: []
     };
     for (let j = 0; j < rows; j += SCAN_BAND) {

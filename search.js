@@ -20,6 +20,10 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?}]
 //                                      (negate: the biome must be ABSENT within dist)
 //   structMode, structClauses        — 'and'|'or', [{points:[[x,z]], min, radius}]
+//   surface (optional)               — {min?, max?, heightAt(x,z)} surface-
+//                                      height clause; heightAt is an engine
+//                                      callback, so it only runs on cells that
+//                                      already passed every other criterion
 //   rowStart, rowEnd (optional)      — restrict the scan to grid rows
 //                                      [rowStart, rowEnd]; combined with the
 //                                      `hits` accumulator this lets a caller
@@ -30,6 +34,8 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
  * @typedef {{biomes: Set<number>, dist: number, negate?: boolean}} AdjClause
  * @typedef {{points: Array<[number, number]>, min: number, radius: number}} StructClause
  * @typedef {{x: number, z: number, count: number}} SearchHit
+ * @typedef {{min?: number|null, max?: number|null,
+ *            heightAt: (x: number, z: number) => number}} SurfaceClause
  */
 /**
  * @param {{grid: Int32Array|number[], cols: number, rows: number,
@@ -38,6 +44,7 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
  *          mergeDist: number, mainSet: Set<number>,
  *          adjMode?: string, adjClauses?: AdjClause[],
  *          structMode?: string, structClauses?: StructClause[],
+ *          surface?: SurfaceClause|null,
  *          rowStart?: number, rowEnd?: number, hits?: SearchHit[]}} p
  * @returns {SearchHit[]|null} hits, or null when the request is malformed
  */
@@ -62,6 +69,9 @@ function scanGrid(p) {
     };
   });
   const structs = structClauses.map((c) => ({ points: c.points, min: c.min, r2: c.radius * c.radius }));
+  const surf = p.surface && typeof p.surface.heightAt === 'function'
+    ? { min: p.surface.min ?? -Infinity, max: p.surface.max ?? Infinity, heightAt: p.surface.heightAt }
+    : null;
 
   let stride = Math.floor(p.step / SC); if (stride < 1) stride = 1;
   const merge2 = mergeDist * mergeDist;
@@ -123,6 +133,13 @@ function scanGrid(p) {
         }
         if (!pass) continue;
         count = total;
+      }
+
+      // surface-height clause: the engine callback is the most expensive
+      // check, so it only runs on cells that passed everything else
+      if (surf) {
+        const y = surf.heightAt(wx, wz);
+        if (!(y >= surf.min && y <= surf.max)) continue;
       }
 
       // duplicate merge

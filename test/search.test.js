@@ -124,3 +124,27 @@ test('nearby hits are merged by mergeDist', () => {
   assert.equal(merged.length, 1);
   assert.equal(split.length, 2);
 });
+
+test('surface clause filters candidates and only samples passing cells', () => {
+  const grid = makeGrid(8, 8, 1);
+  const sampled = [];
+  const heightAt = (x, z) => { sampled.push([x, z]); return x >= 64 ? 200 : 70; };
+  // min only
+  let hits = scanGrid(makeParams(grid, 8, 8, { surface: { min: 150, heightAt } }));
+  assert.ok(hits.length > 0);
+  for (const h of hits) assert.ok(h.x >= 64);
+  // every candidate cell passed the biome criterion, so all were sampled
+  assert.equal(sampled.length, 64);
+  // min+max band excludes the peaks
+  hits = scanGrid(makeParams(grid, 8, 8, { surface: { min: 60, max: 100, heightAt } }));
+  for (const h of hits) assert.ok(h.x < 64);
+  // the callback never runs for cells that fail the biome criterion
+  sampled.length = 0;
+  const sparse = makeGrid(8, 8, 2, [{ i: 3, j: 3, id: 1 }]);
+  hits = scanGrid(makeParams(sparse, 8, 8, { surface: { min: 0, heightAt } }));
+  assert.deepEqual(sampled, [[48, 48]]);
+  assert.equal(hits.length, 1);
+  // no heightAt -> clause ignored
+  hits = scanGrid(makeParams(grid, 8, 8, { surface: { min: 9999 } }));
+  assert.ok(hits.length > 0);
+});

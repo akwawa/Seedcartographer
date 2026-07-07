@@ -96,6 +96,24 @@ int genBiomeArea(int *out, int x, int z, int sx, int sz, int scale, int y){
     return err ? 0 : 1;
 }
 
+// Approximate Overworld surface height (blocks) at block (bx,bz); requires an
+// Overworld generator. Returns -9999 on error. The surface noise is derived
+// from the seed only, so it is (re)initialized lazily when the seed changes.
+static SurfaceNoise SN;
+static uint64_t snSeed = 0;
+static int snReady = 0;
+EMSCRIPTEN_KEEPALIVE
+int approxSurfaceY(int bx, int bz){
+    if(!snReady || snSeed != SEED){
+        initSurfaceNoise(&SN, DIM_OVERWORLD, SEED);
+        snSeed = SEED;
+        snReady = 1;
+    }
+    float y;
+    if(mapApproxHeight(&y, NULL, &G, &SN, bx >> 2, bz >> 2, 1, 1)) return -9999;
+    return (int)lroundf(y);
+}
+
 // World spawn point (requires an Overworld generator). Writes x,z into `out`.
 EMSCRIPTEN_KEEPALIVE
 void getSpawnPos(int *out /* [2] */){

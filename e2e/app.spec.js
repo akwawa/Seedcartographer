@@ -459,3 +459,26 @@ test('the Y slider reveals underground biomes and survives the share link', asyn
   const s = await p2.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
   expect(s.y).toBe(-52);
 });
+
+test('surface-height criterion finds peaks and rejects impossible bands', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // widen to any common biome so the surface clause does the filtering
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'plains').value;
+  });
+  await page.click('#adjClauses .row .rm');
+  await page.click('#structClauses .row .rm');
+  await page.fill('#range', '3000');
+  // plains sit near sea level: an impossible band must yield no match
+  await page.fill('#surfMin', '250');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/empty/);
+  // a sane band matches
+  await page.fill('#surfMin', '60');
+  await page.fill('#surfMax', '90');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+});

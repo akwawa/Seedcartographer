@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Critère d'altitude de surface (Overworld) : « surface entre Y min et Y max »
+  via `approxSurfaceY` (mapApproxHeight de cubiomes, recompilation WASM) —
+  trouver des pics > 150 ou des plaines basses ; la hauteur n'est
+  échantillonnée que sur les cellules déjà candidates (#59).
 - Curseur d'altitude (couche Y, −64 à 320) : le rendu de la carte, la sonde
   de biome du HUD et la recherche utilisent l'altitude choisie — un Y bas
   révèle les biomes souterrains (lush caves, deep dark…) ; l'altitude est
