@@ -543,3 +543,33 @@ test('in-main-biome flag and quad hut layer work without errors', async ({ page 
   await quadLayer.locator('input').check();
   await expect(quadLayer.locator('input')).toBeChecked();
 });
+
+test('multi-seed search finds candidate seeds and loads one', async ({ page }) => {
+  test.setTimeout(180000);
+  await page.goto('/');
+  await waitForApp(page);
+  // very common criteria so a few sequential seeds are enough: plains OR forest
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'plains').value;
+  });
+  await page.click('#addMainBiome');
+  await page.$eval('#mainBiomes .row:nth-child(2) select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'forest').value;
+  });
+  await page.click('#adjClauses .row .rm');
+  await page.click('#structClauses .row .rm');
+  await page.selectOption('#seedMode', 'seq');
+  await page.fill('#seedCount', '8');
+  await page.fill('#seedRadius', '1500');
+  await page.click('#seedSearchBtn');
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#seedInfo');
+    return el.textContent.length > 0 && !el.classList.contains('busy');
+  }, { timeout: 120000 });
+  await expect(page.locator('#seedInfo')).toHaveClass(/ok/);
+  const first = page.locator('#seedResults .result').first();
+  await expect(first).toBeVisible();
+  const seed = await first.locator('.rx').textContent();
+  await first.click();
+  await expect(page.locator('#seed')).toHaveValue(seed);
+});

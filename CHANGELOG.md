@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Recherche multi-seeds : le panneau « Chercher une seed » balaye des seeds
+  aléatoires ou séquentielles et teste les critères courants autour de
+  l'origine du monde sur un pool de workers (progression, annulation, liste
+  cliquable des seeds candidates) (#56).
 - Critères de structures avancés : paires de structures (« un T1 et un T2 à
   moins de N blocs l'un de l'autre »), option « dans le biome principal » par
   clause de structure, et détection des quad witch huts (filtre quad-base de

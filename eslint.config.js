@@ -40,6 +40,9 @@ module.exports = [
         scaleBarSpec: 'readonly', gridSpec: 'readonly', gridLines: 'readonly',
         MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly',
         tileWorldKey: 'readonly', tileKey: 'readonly', createTileCache: 'readonly', tilesInView: 'readonly',
+        seedToBigInt: 'readonly',
+        SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
+        sequentialSeeds: 'readonly', randomSeeds: 'readonly', planBatches: 'readonly',
         encodeShareState: 'readonly', decodeShareState: 'readonly', normalizeLegacyCriteria: 'readonly',
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
@@ -65,6 +68,11 @@ module.exports = [
   {
     files: ['biomes.js'],
     languageOptions: { globals: { currentLang: 'readonly' } }
+  },
+  {
+    // seedsearch.js consumes seedToBigInt (seed.js in the browser, require in Node)
+    files: ['seedsearch.js'],
+    languageOptions: { globals: { seedToBigInt: 'readonly', require: 'readonly', globalThis: 'readonly' } }
   },
   {
     // sharestate.js runs in the browser (btoa/atob) and in Node tests (Buffer)
@@ -99,7 +107,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
