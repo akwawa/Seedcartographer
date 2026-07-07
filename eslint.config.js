@@ -35,8 +35,10 @@ module.exports = [
         // provided by favorites.js, loaded first
         parseFavorites: 'readonly', addFavorite: 'readonly', findFavorite: 'readonly',
         removeFavorite: 'readonly', updateFavoriteNote: 'readonly', favoritesFor: 'readonly',
-        // provided by legend.js / theme.js, loaded first
+        // provided by legend.js / theme.js / maptools.js, loaded first
         legendEntries: 'readonly',
+        scaleBarSpec: 'readonly', gridSpec: 'readonly', gridLines: 'readonly',
+        MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
       }
     }
@@ -87,7 +89,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

@@ -420,3 +420,19 @@ test.describe('mobile', () => {
     expect(zoomed).toBeLessThan(before);
   });
 });
+
+test('minimap recenters the map and the grid toggle draws the overlay', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await expect(page.locator('#minimap')).toBeVisible();
+  // click right of the minimap center: the view center must move east
+  await page.click('#minimap', { position: { x: 128, y: 66 } });
+  const s = await page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  expect(s.x).toBeGreaterThan(-392);
+  expect(s.z).toBe(56);
+  // grid overlay toggles without breaking rendering
+  await page.check('#gridChk');
+  await expect(page.locator('#gridChk')).toBeChecked();
+  await page.uncheck('#gridChk');
+  await expect(page.locator('#gridChk')).not.toBeChecked();
+});
