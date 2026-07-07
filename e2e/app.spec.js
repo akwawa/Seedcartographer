@@ -639,5 +639,5 @@ test('the ruler measures a distance between two clicks', async ({ page }) => {
   await expect(page.locator('#rulerBtn')).not.toHaveClass(/on/);
   const r2 = await page.evaluate(() => ruler);
   expect(r2.on).toBe(false);
-  expect(r2.a).toBe(null);
+  expect(r2.a).toBeNull();
 });

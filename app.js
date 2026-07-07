@@ -538,7 +538,7 @@ canvas.addEventListener('keydown', (e) => {
     draw(); requestRender(); syncHash();
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
-  else if (e.key === 'Escape') { if (ruler.on) setRulerOn(false); hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
