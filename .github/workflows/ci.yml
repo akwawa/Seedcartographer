@@ -76,7 +76,9 @@ jobs:
       # the secrets context is not allowed in a step `if`: the token is
       # exposed as job-level env and tested through the env context instead
       - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
-        if: env.SONAR_TOKEN != ''  # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
+        if: env.SONAR_TOKEN != ''
+
+  # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
   wasm:
     runs-on: ubuntu-latest
