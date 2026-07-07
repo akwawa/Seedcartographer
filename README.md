@@ -158,6 +158,9 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   au premier lancement, ou `CHROMIUM_PATH=/chemin/vers/chromium` pour utiliser un
   navigateur déjà installé).
 - **Couverture** : `npm run coverage` génère `coverage/lcov.info` (node:test).
+- **Benchmark** : `node scripts/bench-scan.js` mesure `scanGrid` sur une grille
+  synthétique réaliste ; la CI échoue si la durée dépasse le budget
+  (`BENCH_BUDGET_MS`, 2 s).
 - **Lint** : `npm run lint` (ESLint) et `npm run lint:css` (stylelint) ; la CI vérifie aussi le `Dockerfile` (hadolint), les workflows (actionlint) et `build.sh` (shellcheck).
 - **Qualité** : chaque push/PR est analysé par
   [SonarQube Cloud](https://sonarcloud.io/project/overview?id=akwawa_Seedcartographer)

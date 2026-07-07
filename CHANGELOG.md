@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Micro-benchmark de performance de `scanGrid` exécuté en CI (grille
+  synthétique déterministe, meilleur temps sur 5 exécutions) : le job `test`
+  échoue si le budget de temps est dépassé, les durées sont journalisées
+  ([#67](https://github.com/akwawa/Seedcartographer/issues/67)).
 - Deux nouvelles langues d'interface : italien et portugais brésilien —
   interface complète et noms de biomes traduits, vérifiés par les tests de
   parité ([#63](https://github.com/akwawa/Seedcartographer/issues/63)).
