@@ -37,14 +37,14 @@ pull request passe un scan de vulnérabilités Trivy (échec sur CVE critiques
 corrigeables) :
 
 ```bash
-docker run --rm -p 8080:80 ghcr.io/akwawa/seedcartographer:latest
+docker run --rm -p 8080:8080 ghcr.io/akwawa/seedcartographer:latest
 ```
 
 Puis ouvre http://localhost:8080. Pour construire l'image localement :
 
 ```bash
 docker build -t seedcartographer .
-docker run --rm -p 8080:80 seedcartographer
+docker run --rm -p 8080:8080 seedcartographer
 ```
 
 ## Utilisation

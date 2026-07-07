@@ -775,7 +775,7 @@ let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
 
 // Translate a key in the current language; {placeholders} are filled from params.
 function t(key, params) {
-  let s = (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.en[key] ?? key;
+  let s = I18N[currentLang]?.[key] ?? I18N.en[key] ?? key;
   if (params) for (const k of Object.keys(params)) s = s.replaceAll('{' + k + '}', params[k]);
   return s;
 }

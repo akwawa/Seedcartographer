@@ -10,7 +10,7 @@ if ! command -v emcc >/dev/null; then
   echo "emcc not found — install and activate emsdk first" >&2
   exit 1
 fi
-if [ ! -f cubiomes/generator.h ]; then
+if [[ ! -f cubiomes/generator.h ]]; then
   echo "cubiomes submodule missing — run: git submodule update --init" >&2
   exit 1
 fi

@@ -40,6 +40,99 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
  * @typedef {{min?: number|null, max?: number|null,
  *            heightAt: (x: number, z: number) => number}} SurfaceClause
  */
+// ---- scanGrid helpers (extracted to keep each function readable) ----
+
+// per-clause cell radii and sub-steps (same speedup as the old C scan)
+/** @param {AdjClause[]} clauses @param {number} SC @returns {object[]} */
+function prepAdjClauses(clauses, SC) {
+  return clauses.map((c) => {
+    const cells = Math.floor(c.dist / SC);
+    return {
+      biomes: c.biomes, negate: !!c.negate,
+      dist2: c.dist * c.dist, cells,
+      // negated clauses must scan every cell: sub-stepping could miss the
+      // one occurrence that should disqualify the spot
+      sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
+    };
+  });
+}
+
+// "in main biome" restricts a clause to structures standing on a cell of the
+// main-biome set; the grid covers box+pad, so out-of-grid points drop
+/**
+ * @typedef {{grid: Int32Array|number[], cols: number, rows: number,
+ *            gx0: number, gz0: number, SC: number, mainSet: Set<number>}} GridCtx
+ */
+/** @param {StructClause[]} clauses @param {GridCtx} g @returns {object[]} */
+function prepStructClauses(clauses, g) {
+  return clauses.map((c) => ({
+    points: c.inMain
+      ? c.points.filter(([sx, sz]) => {
+          const ci = Math.floor((sx - g.gx0 * g.SC) / g.SC), cj = Math.floor((sz - g.gz0 * g.SC) / g.SC);
+          return ci >= 0 && cj >= 0 && ci < g.cols && cj < g.rows && g.mainSet.has(g.grid[cj * g.cols + ci]);
+        })
+      : c.points,
+    min: c.min, r2: c.radius * c.radius
+  }));
+}
+
+// is one of the clause's biomes present within its distance of cell (ci, cj)?
+/** @param {any} c @param {GridCtx} g @param {number} ci @param {number} cj @returns {boolean} */
+function adjClauseFound(c, g, ci, cj) {
+  for (let dj = -c.cells; dj <= c.cells; dj += c.sub) {
+    const nj = cj + dj;
+    if (nj < 0 || nj >= g.rows) continue;
+    for (let di = -c.cells; di <= c.cells; di += c.sub) {
+      const ni = ci + di;
+      if (ni < 0 || ni >= g.cols) continue;
+      if ((di * g.SC) * (di * g.SC) + (dj * g.SC) * (dj * g.SC) > c.dist2) continue;
+      if (c.biomes.has(g.grid[nj * g.cols + ni])) return true;
+    }
+  }
+  return false;
+}
+
+// AND/OR combination of the adjacency clauses for one cell
+/** @param {any[]} adj @param {boolean} adjAll @param {GridCtx} g @param {number} ci @param {number} cj @returns {boolean} */
+function adjPass(adj, adjAll, g, ci, cj) {
+  let pass = adjAll;
+  for (const c of adj) {
+    const ok = c.negate ? !adjClauseFound(c, g, ci, cj) : adjClauseFound(c, g, ci, cj);
+    if (adjAll && !ok) return false;
+    if (!adjAll && ok) return true;
+  }
+  return pass;
+}
+
+// AND/OR combination of the structure clauses; returns the total count of
+// nearby structures, or null when the cell fails
+/** @param {any[]} structs @param {boolean} structAll @param {number} wx @param {number} wz @returns {number|null} */
+function structCount(structs, structAll, wx, wz) {
+  let pass = structAll;
+  let total = 0;
+  for (const c of structs) {
+    let n = 0;
+    for (const [sx, sz] of c.points) {
+      const dx = sx - wx, dz = sz - wz;
+      if (dx * dx + dz * dz <= c.r2) n++;
+    }
+    total += n;
+    const ok = n >= c.min;
+    if (structAll && !ok) return null;
+    if (!structAll && ok) pass = true;
+  }
+  return pass ? total : null;
+}
+
+/** @param {SearchHit[]} hits @param {number} wx @param {number} wz @param {number} merge2 @returns {boolean} */
+function isDuplicate(hits, wx, wz, merge2) {
+  for (const h of hits) {
+    const dx = h.x - wx, dz = h.z - wz;
+    if (dx * dx + dz * dz <= merge2) return true;
+  }
+  return false;
+}
+
 /**
  * @param {{grid: Int32Array|number[], cols: number, rows: number,
  *          gx0: number, gz0: number, SC: number,
@@ -54,46 +147,26 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 function scanGrid(p) {
   const { grid, cols, rows, gx0, gz0, SC, cx, cz, range, mergeDist } = p;
   const mainSet = p.mainSet;
-  const adjClauses = p.adjClauses || [];
-  const structClauses = p.structClauses || [];
   const adjAll = p.adjMode !== 'or';
   const structAll = p.structMode !== 'or';
   if (!mainSet || !mainSet.size) return null;
 
-  // pre-compute per-clause cell radii and sub-steps (same speedup as the C scan)
-  const adj = adjClauses.map((c) => {
-    const cells = Math.floor(c.dist / SC);
-    return {
-      biomes: c.biomes, negate: !!c.negate,
-      dist2: c.dist * c.dist, cells,
-      // negated clauses must scan every cell: sub-stepping could miss the
-      // one occurrence that should disqualify the spot
-      sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
-    };
-  });
-  const structs = structClauses.map((c) => ({
-    // "in main biome" restricts a clause to structures standing on a cell of
-    // the main-biome set; the grid covers box+pad, so out-of-grid points drop
-    points: c.inMain
-      ? c.points.filter(([sx, sz]) => {
-          const ci = Math.floor((sx - gx0 * SC) / SC), cj = Math.floor((sz - gz0 * SC) / SC);
-          return ci >= 0 && cj >= 0 && ci < cols && cj < rows && mainSet.has(grid[cj * cols + ci]);
-        })
-      : c.points,
-    min: c.min, r2: c.radius * c.radius
-  }));
-  const surf = p.surface && typeof p.surface.heightAt === 'function'
+  const g = { grid, cols, rows, gx0, gz0, SC, mainSet };
+  const adj = prepAdjClauses(p.adjClauses || [], SC);
+  const structs = prepStructClauses(p.structClauses || [], g);
+  const surf = typeof p.surface?.heightAt === 'function'
     ? { min: p.surface.min ?? -Infinity, max: p.surface.max ?? Infinity, heightAt: p.surface.heightAt }
     : null;
 
-  let stride = Math.floor(p.step / SC); if (stride < 1) stride = 1;
+  let stride = Math.floor(p.step / SC);
+  if (stride < 1) stride = 1;
   const merge2 = mergeDist * mergeDist;
 
   // cell-index bounds of the (unpadded) search box within the grid
-  let bi0 = Math.floor((cx - range - gx0 * SC) / SC), bi1 = Math.floor((cx + range - gx0 * SC) / SC);
-  let bj0 = Math.floor((cz - range - gz0 * SC) / SC), bj1 = Math.floor((cz + range - gz0 * SC) / SC);
-  if (bi0 < 0) bi0 = 0; if (bj0 < 0) bj0 = 0;
-  if (bi1 > cols - 1) bi1 = cols - 1; if (bj1 > rows - 1) bj1 = rows - 1;
+  const bi0 = Math.max(0, Math.floor((cx - range - gx0 * SC) / SC));
+  const bi1 = Math.min(cols - 1, Math.floor((cx + range - gx0 * SC) / SC));
+  const bj0 = Math.max(0, Math.floor((cz - range - gz0 * SC) / SC));
+  const bj1 = Math.min(rows - 1, Math.floor((cz + range - gz0 * SC) / SC));
 
   // optional row-slice restriction; iteration still starts at bj0 so the
   // stride alignment is identical to a full scan
@@ -108,43 +181,12 @@ function scanGrid(p) {
       const wx = gx0 * SC + ci * SC;
       const wz = gz0 * SC + cj * SC;
 
-      // adjacency clauses
-      if (adj.length) {
-        let pass = adjAll;
-        for (const c of adj) {
-          let found = false;
-          for (let dj = -c.cells; dj <= c.cells && !found; dj += c.sub) {
-            const nj = cj + dj; if (nj < 0 || nj >= rows) continue;
-            for (let di = -c.cells; di <= c.cells; di += c.sub) {
-              const ni = ci + di; if (ni < 0 || ni >= cols) continue;
-              if ((di * SC) * (di * SC) + (dj * SC) * (dj * SC) > c.dist2) continue;
-              if (c.biomes.has(grid[nj * cols + ni])) { found = true; break; }
-            }
-          }
-          const ok = c.negate ? !found : found;
-          if (adjAll && !ok) { pass = false; break; }
-          if (!adjAll && ok) { pass = true; break; }
-        }
-        if (!pass) continue;
-      }
+      if (adj.length && !adjPass(adj, adjAll, g, ci, cj)) continue;
 
-      // structure clauses
       let count = 0;
       if (structs.length) {
-        let pass = structAll;
-        let total = 0;
-        for (const c of structs) {
-          let n = 0;
-          for (const [sx, sz] of c.points) {
-            const dx = sx - wx, dz = sz - wz;
-            if (dx * dx + dz * dz <= c.r2) n++;
-          }
-          total += n;
-          const ok = n >= c.min;
-          if (structAll && !ok) { pass = false; break; }
-          if (!structAll && ok) { pass = true; }
-        }
-        if (!pass) continue;
+        const total = structCount(structs, structAll, wx, wz);
+        if (total === null) continue;
         count = total;
       }
 
@@ -155,13 +197,7 @@ function scanGrid(p) {
         if (!(y >= surf.min && y <= surf.max)) continue;
       }
 
-      // duplicate merge
-      let dup = false;
-      for (const h of hits) {
-        const dx = h.x - wx, dz = h.z - wz;
-        if (dx * dx + dz * dz <= merge2) { dup = true; break; }
-      }
-      if (dup) continue;
+      if (isDuplicate(hits, wx, wz, merge2)) continue;
 
       hits.push({ x: wx, z: wz, count });
       if (hits.length >= SEARCH_MAX_HITS) return hits;

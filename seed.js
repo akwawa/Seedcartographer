@@ -11,7 +11,13 @@ function seedToBigInt(s) {
   s = String(s).trim();
   if (/^-?\d+$/.test(s)) return BigInt.asIntN(64, BigInt(s));
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  for (let i = 0; i < s.length; i++) {
+    // Java hashes UTF-16 code units, so charCodeAt (not codePointAt) is
+    // required for Minecraft parity. NOSONAR javascript:S7758
+    h = Math.imul(31, h) + s.charCodeAt(i); // NOSONAR
+    // explicit signed 32-bit overflow wrap, like Java int arithmetic
+    if (h > 0x7FFFFFFF) h -= 0x100000000;
+  }
   return BigInt(h); // signed 32-bit -> BigInt is already sign-correct
 }
 
