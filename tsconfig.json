@@ -11,7 +11,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "seed.js", "search.js", "export.js", "coords.js", "slime.js", "maptools.js",
+    "seed.js", "search.js", "export.js", "coords.js", "slime.js", "maptools.js", "tilecache.js",
     "markers.js", "presets.js", "favorites.js", "legend.js", "theme.js",
     "scripts/*.js"
   ]

@@ -17,6 +17,9 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Cache LRU des tuiles rendues (par seed/version/dimension/altitude/échelle) :
+  les zones déjà connues se redessinent instantanément pendant le pan/zoom,
+  la nouvelle tuile venant les recouvrir à son arrivée (#61).
 - Critère d'altitude de surface (Overworld) : « surface entre Y min et Y max »
   via `approxSurfaceY` (mapApproxHeight de cubiomes, recompilation WASM) —
   trouver des pics > 150 ou des plaines basses ; la hauteur n'est

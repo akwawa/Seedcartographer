@@ -39,6 +39,7 @@ module.exports = [
         legendEntries: 'readonly',
         scaleBarSpec: 'readonly', gridSpec: 'readonly', gridLines: 'readonly',
         MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly',
+        tileWorldKey: 'readonly', tileKey: 'readonly', createTileCache: 'readonly', tilesInView: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
       }
     }
@@ -89,7 +90,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
