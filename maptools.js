@@ -96,7 +96,9 @@ const GOTO_LIMIT = 29999984;
  * @returns {{x: number, z: number}|null} world point, or null when invalid
  */
 function parseGotoInput(str) {
-  const m = /^\s*(-?\d+)\s*(?:[,;]|\s)\s*(-?\d+)\s*$/.exec(String(str ?? ''));
+  // the separator alternation is unambiguous (comma/semicolon vs pure
+  // whitespace), so the regex cannot backtrack super-linearly
+  const m = /^\s*(-?\d+)(?:\s*[,;]\s*|\s+)(-?\d+)\s*$/.exec(String(str ?? ''));
   if (!m) return null;
   const x = Number.parseInt(m[1], 10), z = Number.parseInt(m[2], 10);
   if (Math.abs(x) > GOTO_LIMIT || Math.abs(z) > GOTO_LIMIT) return null;
