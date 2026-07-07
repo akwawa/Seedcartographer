@@ -14,6 +14,44 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.3.0](https://github.com/akwawa/Seedcartographer/compare/v0.2.0...v0.3.0) (2026-07-07)
+
+
+### Ajouté
+
+* add Italian and Brazilian Portuguese UI languages ([28d3258](https://github.com/akwawa/Seedcartographer/commit/28d3258bb6d7dad6f41e9755e8b8a6d8c39c147b)), closes [#63](https://github.com/akwawa/Seedcartographer/issues/63)
+* extract share-state logic into a tested pure module ([a169203](https://github.com/akwawa/Seedcartographer/commit/a169203556b6067f73edb9d6df933f2c2aae6d8d)), closes [#66](https://github.com/akwawa/Seedcartographer/issues/66)
+* full mobile and touch support ([6a89366](https://github.com/akwawa/Seedcartographer/commit/6a8936613fd7a030b188d5d4cd9c56cc167ede02)), closes [#62](https://github.com/akwawa/Seedcartographer/issues/62)
+* gate CI on a scanGrid performance benchmark ([245194c](https://github.com/akwawa/Seedcartographer/commit/245194c3b626fc31614497ffc0127a76c356a4d9)), closes [#67](https://github.com/akwawa/Seedcartographer/issues/67)
+* keyboard navigation, ARIA labels and WCAG AA contrast ([f69f303](https://github.com/akwawa/Seedcartographer/commit/f69f3039f5a6ba60dd7ad1732e019073716f9602)), closes [#64](https://github.com/akwawa/Seedcartographer/issues/64)
+* LRU tile cache for smooth pan/zoom ([f0c8f4a](https://github.com/akwawa/Seedcartographer/commit/f0c8f4a934b7d1f12c79fadc4df80c9dbdc50cb2)), closes [#61](https://github.com/akwawa/Seedcartographer/issues/61)
+* multi-seed search with a worker pool ([e100adb](https://github.com/akwawa/Seedcartographer/commit/e100adbbb3912cd200d3a55d254acb6639e70c97)), closes [#56](https://github.com/akwawa/Seedcartographer/issues/56)
+* progressive typing with JSDoc and checkJs ([a463128](https://github.com/akwawa/Seedcartographer/commit/a46312867bd5cba1596160287d890e8076b944e0)), closes [#65](https://github.com/akwawa/Seedcartographer/issues/65)
+* scale bar, adaptive coordinate grid and clickable minimap ([f1ac7b7](https://github.com/akwawa/Seedcartographer/commit/f1ac7b741612eac4c243bb5500e95fb967604491)), closes [#60](https://github.com/akwawa/Seedcartographer/issues/60)
+* structure pairs, in-main-biome flag and quad witch hut detection ([59568d5](https://github.com/akwawa/Seedcartographer/commit/59568d53a260acd5eee025324ac8a5b988592e34)), closes [#57](https://github.com/akwawa/Seedcartographer/issues/57)
+* surface-height search criterion ([8b25c84](https://github.com/akwawa/Seedcartographer/commit/8b25c84dd0ec4778fff6d03008d28e41f151c1d2)), closes [#59](https://github.com/akwawa/Seedcartographer/issues/59)
+* Y-layer slider for 3D biomes ([975a8ea](https://github.com/akwawa/Seedcartographer/commit/975a8ead383ea787e6669fc90d9b7c9d59112848)), closes [#58](https://github.com/akwawa/Seedcartographer/issues/58)
+
+
+### Corrigé
+
+* address Sonar findings on advanced structure criteria ([c7d79f3](https://github.com/akwawa/Seedcartographer/commit/c7d79f32bee797954b5147595e86edd0a666e22d))
+* assert pinch-zoom result explicitly per S2699 and drop temp debug step ([65052f4](https://github.com/akwawa/Seedcartographer/commit/65052f4b36bcce775299bdc172f59801e82b031a))
+* Number.parseInt in export meta and node:assert import per Sonar ([91af2c2](https://github.com/akwawa/Seedcartographer/commit/91af2c2b064ad77cae6503cb4b4cb08ab6b4f043))
+* Number.parseInt per S7773 and drop temp debug step ([c28d950](https://github.com/akwawa/Seedcartographer/commit/c28d950d2b982771dbc8772117a2335914fd7864))
+* optional chaining per S6582 and drop temp debug step ([26a2e59](https://github.com/akwawa/Seedcartographer/commit/26a2e59ee6e1c81548af8df3d02dc96e740f529c))
+* optional chaining per S6582 and drop temp debug step ([8059db6](https://github.com/akwawa/Seedcartographer/commit/8059db6733f3b42c343e75b65bab7858daeb74eb))
+* plain expect assertion in pinch test for S2699 ([f06be82](https://github.com/akwawa/Seedcartographer/commit/f06be8248387dd0c55eeb12107904813498aaa1d))
+* restore ci.yml formatting after debug-step removal ([c45ae03](https://github.com/akwawa/Seedcartographer/commit/c45ae03d36f603dd5f04f7fa6f5db701f462e02d))
+* use Array.at(-1) per S7755 and drop temp debug step ([3bafd4c](https://github.com/akwawa/Seedcartographer/commit/3bafd4c0008dc98d56263b8c73bc8a8340c44edc))
+* use native progress, output and dialog elements per Sonar a11y rules ([4ec40c1](https://github.com/akwawa/Seedcartographer/commit/4ec40c17b2c2636e670c2f4a24fd89215200b888))
+* use RegExp.exec per S6594 and drop temp debug step ([0b3e5bd](https://github.com/akwawa/Seedcartographer/commit/0b3e5bd752c815b4bf1cf6887eb3c33db69017eb))
+
+
+### Modifié
+
+* address Sonar findings on the benchmark script ([1511140](https://github.com/akwawa/Seedcartographer/commit/1511140db38264abc818751b3568273ca590e274))
+
 ## [Non publié]
 
 ### Ajouté
