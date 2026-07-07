@@ -1,4 +1,5 @@
 'use strict';
+/* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
 const { test, expect } = require('@playwright/test');
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
