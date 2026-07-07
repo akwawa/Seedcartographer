@@ -100,6 +100,12 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosquet de cerisiers');
   await page.selectOption('#langSel', 'de');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Kirschhain');
+  await page.selectOption('#langSel', 'it');
+  await expect(page.locator('#searchBtn')).toHaveText('Cerca in questa area');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosco di ciliegi');
+  await page.selectOption('#langSel', 'pt');
+  await expect(page.locator('#searchBtn')).toHaveText('Buscar nesta área');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosque de cerejeiras');
 });
 
 test('Nether dimension: biome list, map, search and share link work', async ({ page, context }) => {

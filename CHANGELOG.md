@@ -16,6 +16,11 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Ajouté
+- Deux nouvelles langues d'interface : italien et portugais brésilien —
+  interface complète et noms de biomes traduits, vérifiés par les tests de
+  parité ([#63](https://github.com/akwawa/Seedcartographer/issues/63)).
+
 ## [0.2.0](https://github.com/akwawa/Seedcartographer/compare/v0.1.0...v0.2.0) (2026-07-06)
 
 ### Ajouté
