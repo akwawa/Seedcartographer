@@ -107,6 +107,10 @@
     <div id="hud" class="hud" aria-hidden="true"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
     <dialog id="popup" class="popup"></dialog>
     <label class="gridtoggle"><input type="checkbox" id="gridChk"> <span data-i18n="gridToggle">Grid</span></label>
+    <label class="ycontrol"><span>Y</span>
+      <input type="range" id="ySlider" min="-64" max="320" step="1" value="60" data-i18n-aria="yLayerAria" aria-label="Altitude (Y layer)">
+      <span id="yVal" class="mono yval">60</span>
+    </label>
     <canvas id="minimap" width="176" height="132" aria-label="Overview minimap" data-i18n-aria="minimapAria"></canvas>
     <details id="legend" class="legend">
       <summary data-i18n="legend">Legend</summary>
