@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Accessibilité : navigation clavier de la carte (flèches, +/-, Échap),
+  labels ARIA sur les contrôles dynamiques et la carte (traduits), focus
+  visibles, contrastes conformes WCAG AA et audit axe-core dans les tests
+  e2e sur les deux thèmes (#64).
 - Typage progressif : les modules purs (seed, search, export, coords, slime,
   markers, presets, favoris, légende, thème, scripts) sont annotés en JSDoc et
   vérifiés par `tsc --noEmit` (`checkJs`) dans le job CI `test`

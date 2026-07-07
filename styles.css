@@ -1,8 +1,9 @@
 :root{
   --ink:#0c1016; --panel:#151b24; --panel2:#1b2430; --raise:#212c3a;
   --line:#2a3543; --line-soft:#202a37;
-  --text:#e7edf3; --muted:#8694a5; --faint:#5c6a7c;
-  --lapis:#3f72e6; --lapis-hi:#5b88f5; --amber:#f2a73b; --grass:#6fae4f;
+  /* --faint and --lapis are tuned for a >=4.5:1 contrast ratio (WCAG AA) */
+  --text:#e7edf3; --muted:#8694a5; --faint:#8090a2;
+  --lapis:#3465d6; --lapis-hi:#5b88f5; --amber:#f2a73b; --grass:#6fae4f;
   --map-bg:#0c1016; --hover:#26323f; --hover-line:#3a485a;
   --top1:#131922; --top2:#10151d;
   --overlay:rgba(12,16,22,.85); --overlay-soft:rgba(12,16,22,.7); --popup-bg:rgba(20,26,34,.96);
@@ -14,7 +15,7 @@
 :root[data-theme="light"]{
   --ink:#eef1f5; --panel:#ffffff; --panel2:#f3f5f9; --raise:#e6ebf2;
   --line:#c3cdd9; --line-soft:#d6dde6;
-  --text:#1c2530; --muted:#5b6b7e; --faint:#8595a6;
+  --text:#1c2530; --muted:#5b6b7e; --faint:#5f6f82; --grass:#3e7d2a;
   --map-bg:#c6d0db; --hover:#d9e1ea; --hover-line:#9fb0c2;
   --top1:#ffffff; --top2:#f0f3f7;
   --overlay:rgba(246,248,251,.88); --overlay-soft:rgba(246,248,251,.75); --popup-bg:rgba(255,255,255,.96);
@@ -26,6 +27,9 @@ body{
   font-size:14px;line-height:1.45;display:flex;flex-direction:column;height:100vh;overflow:hidden;
 }
 button,input,select{font:inherit;color:inherit}
+/* visible keyboard focus everywhere, including the map canvas */
+:focus-visible{outline:2px solid var(--lapis-hi);outline-offset:2px}
+#map:focus-visible{outline-offset:-3px}
 
 /* ---------- topbar ---------- */
 .topbar{
@@ -97,10 +101,15 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .btn.tiny{padding:3px 9px;font-size:12px;font-weight:500}
 .mode{margin-left:6px;font-size:11.5px;padding:2px 6px;text-transform:none;letter-spacing:0}
 
-.progress{height:4px;background:var(--line);border-radius:2px;margin-top:10px;overflow:hidden}
-.progress .bar{height:100%;width:0;background:var(--lapis);border-radius:2px;transition:width .2s}
+/* native <progress>, restyled to the 4px bar */
+.progress{appearance:none;display:block;width:100%;height:4px;border:none;
+  background:var(--line);border-radius:2px;margin-top:10px;overflow:hidden}
+.progress[hidden]{display:none}
+.progress::-webkit-progress-bar{background:var(--line);border-radius:2px}
+.progress::-webkit-progress-value{background:var(--lapis);border-radius:2px}
+.progress::-moz-progress-bar{background:var(--lapis);border-radius:2px}
 
-.info{margin-top:11px;font-size:12.5px;min-height:1.2em;color:var(--muted)}
+.info{display:block;margin-top:11px;font-size:12.5px;min-height:1.2em;color:var(--muted)}
 .info.busy{color:var(--lapis-hi)}
 .info.ok{color:var(--grass)}
 .info.empty{color:var(--amber)}
@@ -138,8 +147,9 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .hud .coords{color:var(--text)} .hud .sep{color:var(--faint)} .hud .biome{color:var(--grass);font-weight:600}
 .maphelp{position:absolute;right:14px;bottom:14px;color:var(--faint);font-size:11px;
   background:var(--overlay-soft);border:1px solid var(--line-soft);padding:5px 10px;border-radius:7px}
-.popup{position:absolute;left:50%;top:50%;transform:translate(-50%,-150%);display:none;
-  background:var(--popup-bg);border:1px solid var(--amber);border-radius:9px;padding:9px 22px 9px 11px;
+/* native non-modal <dialog>, anchored above the selected pin */
+.popup{position:absolute;left:50%;top:50%;margin:0;transform:translate(-50%,-150%);
+  color:var(--text);background:var(--popup-bg);border:1px solid var(--amber);border-radius:9px;padding:9px 22px 9px 11px;
   text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .popup .pop-close{position:absolute;top:1px;right:1px;background:none;border:none;color:var(--muted);
   cursor:pointer;font-size:14px;line-height:1;padding:3px 6px}
