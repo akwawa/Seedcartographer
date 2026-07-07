@@ -167,7 +167,12 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 - **Qualité** : chaque push/PR est analysé par
   [SonarQube Cloud](https://sonarcloud.io/project/overview?id=akwawa_Seedcartographer)
   (job CI `sonar`, secret `SONAR_TOKEN` requis ; l'analyse doit être en mode
-  « CI-based », pas « Automatic Analysis »).
+  « CI-based », pas « Automatic Analysis »). La Quality Gate exige sur le
+  nouveau code : **couverture ≥ 80 %**, duplication ≤ 3 % et notes
+  Fiabilité/Sécurité/Maintenabilité A — la logique applicative doit donc
+  vivre dans des modules purs testés (`sharestate.js`, `search.js`,
+  `maptools.js`…), `app.js`/`worker.js` restant de la colle exclue de la
+  couverture.
 - Une CI GitHub Actions lance lint, tests unitaires et e2e sur chaque push et
   pull request.
 - **Dépendances** : Dependabot ouvre chaque semaine des MR groupées (actions,

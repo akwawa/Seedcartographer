@@ -204,10 +204,11 @@ function setDimension(dim) {
 }
 
 // ---------- coordinate transforms ----------
-function w2sx(wx) { return (wx - view.cx) / view.bpp + canvas.width / (2 * dpr); }
-function w2sy(wz) { return (wz - view.cz) / view.bpp + canvas.height / (2 * dpr); }
-function s2wx(px) { return view.cx + (px - canvas.width / (2 * dpr)) * view.bpp; }
-function s2wz(py) { return view.cz + (py - canvas.height / (2 * dpr)) * view.bpp; }
+// thin wrappers over the pure transforms (sharestate.js), bound to the canvas
+function w2sx(wx) { return worldToScreen(view, canvas.width / dpr, canvas.height / dpr, wx, 0).x; }
+function w2sy(wz) { return worldToScreen(view, canvas.width / dpr, canvas.height / dpr, 0, wz).y; }
+function s2wx(px) { return screenToWorld(view, canvas.width / dpr, canvas.height / dpr, px, 0).x; }
+function s2wz(py) { return screenToWorld(view, canvas.width / dpr, canvas.height / dpr, 0, py).z; }
 
 // ---------- rendering ----------
 let dpr = window.devicePixelRatio || 1;
@@ -981,54 +982,36 @@ function syncHash() {
     x: Math.round(view.cx), z: Math.round(view.cz), b: +view.bpp.toFixed(2),
     c: readCriteria()
   };
-  history.replaceState(null, '', '#' + btoa(encodeURIComponent(JSON.stringify(state))));
+  history.replaceState(null, '', '#' + encodeShareState(state));
 }
 function readHash() {
-  try { return JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))); } catch { return null; }
+  return decodeShareState(location.hash.slice(1));
 }
 // Rebuild the criteria rows from a share-link-shaped `c` object. Values may
 // be attacker-controlled (share links): coerce everything to integers and cap
 // list sizes before building any DOM from them.
-function applyCriteria(c) {
-  const int = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
-  const rows = (v) => (Array.isArray(v) ? v : []).slice(0, MAX_CRIT_ROWS);
+function applyCriteria(raw) {
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
   $('#surfMin').value = ''; $('#surfMax').value = '';
+  const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
   if (!c) return;
-  rows(c.mb).forEach((b) => { b = int(b); if (b !== null) addMainBiomeRow(b); });
-  $('#adjMode').value = c.am === 'or' ? 'or' : 'and';
-  rows(c.ac).forEach((r) => {
-    const b = int(r && r.b), d = int(r && r.d);
-    if (b !== null && d !== null && d >= 0) addAdjRow(b, d, int(r && r.n) === 1);
-  });
-  $('#structMode').value = c.sm === 'or' ? 'or' : 'and';
-  rows(c.sc).forEach((r) => {
-    const ty = int(r && r.t), mn = int(r && r.mn), rr = int(r && r.r);
-    if (ty !== null && mn !== null && rr !== null && mn >= 0 && rr >= 0) addStructRow(ty, mn, rr);
-  });
-  const rg = int(c.rg), sp = int(c.sp);
-  if (rg !== null) $('#range').value = rg;
-  if (sp !== null) $('#step').value = sp;
-  const s0 = int(c.s0), s1 = int(c.s1);
-  if (s0 !== null) $('#surfMin').value = s0;
-  if (s1 !== null) $('#surfMax').value = s1;
+  c.mb.forEach((b) => addMainBiomeRow(b));
+  $('#adjMode').value = c.am;
+  c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n));
+  $('#structMode').value = c.sm;
+  c.sc.forEach((r) => addStructRow(r.t, r.mn, r.r));
+  if (c.rg !== null) $('#range').value = c.rg;
+  if (c.sp !== null) $('#step').value = c.sp;
+  if (c.s0 !== null) $('#surfMin').value = c.s0;
+  if (c.s1 !== null) $('#surfMax').value = c.s1;
 }
 
 let hashState = null;
 function applyHashCriteria() {
   // called once biome/structure lists exist; builds the criteria rows from
   // the hash, or falls back to sensible demo defaults
-  let c = hashState && hashState.c;
-  // legacy single-criteria share links (c.a = main biome id)
-  if (c && c.a !== undefined) {
-    c = {
-      mb: [c.a], am: 'and',
-      ac: c.ba ? [{ b: c.ba, d: c.ad }] : [],
-      sm: 'and',
-      sc: c.st ? [{ t: c.st, mn: c.mn, r: c.sr }] : [],
-      rg: c.rg, sp: c.sp
-    };
-  }
+  // legacy single-criteria share links (c.a = main biome id) are migrated
+  const c = normalizeLegacyCriteria(hashState?.c);
   applyCriteria(c);
   if (!rowsOf('#mainBiomes').length) {
     // demo: cherry grove + warm ocean + >=2 villages (matches built-in seed 141)
@@ -1086,15 +1069,16 @@ function initTheme() {
 // ---------- init ----------
 function init() {
   hashState = readHash();
-  if (hashState) {
-    world.seed = hashState.s;
-    world.mc = Number.isInteger(hashState.m) ? hashState.m : parseInt(hashState.m, 10);
-    world.large = !!hashState.l;
-    const d = parseInt(hashState.d, 10);
-    world.dim = (d === -1 || d === 1) ? d : 0;
-    view.cx = hashState.x; view.cz = hashState.z; view.bpp = hashState.b;
-    const y = Number.parseInt(hashState.y, 10);
-    if (Number.isFinite(y)) yLayer = Math.min(320, Math.max(-64, y));
+  const wv = sanitizeWorldView(hashState);
+  if (wv) {
+    world.seed = wv.seed;
+    world.mc = wv.mc;
+    world.large = wv.large;
+    world.dim = wv.dim;
+    if (wv.cx !== null) view.cx = wv.cx;
+    if (wv.cz !== null) view.cz = wv.cz;
+    if (wv.bpp !== null) view.bpp = wv.bpp;
+    if (wv.y !== null) yLayer = wv.y;
   }
   $('#seed').value = world.seed;
   $('#large').checked = world.large;

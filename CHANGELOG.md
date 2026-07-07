@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Couverture de tests étendue : la logique du lien de partage (sérialisation
+  du hash, assainissement des valeurs non fiables, migration des anciens
+  liens) et les transformations écran⇄monde sont extraites d'`app.js` dans le
+  module pur `sharestate.js`, testé unitairement ; le seuil de couverture
+  (≥ 80 % sur le nouveau code) exigé par la Quality Gate est documenté (#66).
 - Cache LRU des tuiles rendues (par seed/version/dimension/altitude/échelle) :
   les zones déjà connues se redessinent instantanément pendant le pan/zoom,
   la nouvelle tuile venant les recouvrir à son arrivée (#61).
