@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Corrigé
+- Réactivité du rendu restaurée : la minimap se régénère sur son propre
+  débounce (400 ms) au lieu de doubler chaque rendu moteur, la peinture du
+  cache de tuiles est bornée aux 8 tuiles les plus utiles, et la minimap
+  n'est plus redessinée à chaque frame de déplacement (#106).
 - La minimap couvre désormais toute sa surface : la tuile grossière rendue
   par le worker était dessinée en 1:1 dans le coin (zones noires) au lieu
   d'être cadrée sur le canvas via la transformation vue→minimap (#105).

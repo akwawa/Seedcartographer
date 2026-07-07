@@ -61,16 +61,19 @@ function createTileCache(max = TILE_CACHE_MAX) {
  *        cache entries in LRU order (oldest first)
  * @param {string} worldKey current world identity
  * @param {{x0: number, z0: number, x1: number, z1: number}} rect view (blocks)
+ * @param {number} [max] cap on tiles to paint (keeps the last, i.e. finest
+ *        and freshest, of the painting order — overdraw costs frame time)
  * @returns {object[]} tiles to draw, in painting order
  */
-function tilesInView(entries, worldKey, rect) {
-  return entries
+function tilesInView(entries, worldKey, rect, max = Infinity) {
+  const picked = entries
     .map((e, i) => ({ e, i }))
     .filter(({ e }) => e.worldKey === worldKey
       && e.originX < rect.x1 && e.originX + e.cols * e.scale > rect.x0
       && e.originZ < rect.z1 && e.originZ + e.rows * e.scale > rect.z0)
     .sort((a, b) => (b.e.scale - a.e.scale) || (a.i - b.i))
     .map(({ e }) => e);
+  return picked.length > max ? picked.slice(picked.length - max) : picked;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

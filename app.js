@@ -237,7 +237,8 @@ function draw() {
     // paint every cached tile of this world under the view: known areas render
     // instantly while the fresh tile is being computed (coarse first, then fine)
     const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
-    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect)) drawTile(e);
+    // bounded: overdrawing the whole LRU every drag frame costs frame time
+    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect, 8)) drawTile(e);
   }
 
   // structure / slime layers (only points in view)
@@ -264,7 +265,6 @@ function draw() {
   ctx.beginPath(); ctx.moveTo(W / 2 - 7, H / 2); ctx.lineTo(W / 2 + 7, H / 2);
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
-  drawMinimap();
 }
 
 function drawTile(e) {
@@ -381,7 +381,16 @@ function requestRender(delay = 90) {
       cx: view.cx, cz: view.cz, bpp: view.bpp,
       w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
     });
-    // the overview minimap re-renders with the main tile, at a fixed zoom-out
+    requestMinimap();
+    requestStructures();
+  }, delay);
+}
+// The minimap barely changes while panning: it re-renders on its own longer
+// debounce so it never doubles the engine work of the main tile.
+let minimapTimer = null;
+function requestMinimap(delay = 400) {
+  clearTimeout(minimapTimer);
+  minimapTimer = setTimeout(() => {
     const mm = $('#minimap');
     minimapReq = reqSeq++;
     send({
@@ -391,7 +400,6 @@ function requestRender(delay = 90) {
       cx: view.cx, cz: view.cz, bpp: view.bpp * MINIMAP_ZOOM_OUT,
       w: mm.width, h: mm.height
     });
-    requestStructures();
   }, delay);
 }
 function requestStructures() {
