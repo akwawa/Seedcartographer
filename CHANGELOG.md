@@ -17,6 +17,9 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Repères de navigation : échelle graphique (longueurs « rondes » adaptées au
+  zoom), grille de coordonnées adaptative (chunks/régions selon le zoom,
+  optionnelle) et minimap d'ensemble cliquable pour recentrer la carte (#60).
 - Support mobile et tactile : pinch-zoom à deux doigts sur la carte, panneau
   de critères repliable en tiroir sur petit écran, cibles tactiles agrandies
   sur les appareils à pointeur grossier (#62).

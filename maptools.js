@@ -1,0 +1,90 @@
+// maptools.js — pure helpers for the map navigation aids: graphic scale bar,
+// adaptive coordinate grid and overview minimap. Shared between app.js
+// (script tag) and the Node test suite (require).
+'use strict';
+
+// Longest "nice" length (1, 2 or 5 × 10^n blocks) that fits in maxPx screen
+// pixels at bpp blocks-per-pixel.
+/**
+ * @param {number} bpp blocks per screen pixel
+ * @param {number} [maxPx] maximum bar length in screen pixels
+ * @returns {{blocks: number, px: number}} bar length in blocks and pixels
+ */
+function scaleBarSpec(bpp, maxPx = 140) {
+  const maxBlocks = Math.max(1, maxPx * bpp);
+  let best = 1;
+  for (let pow = 1; pow <= 1e8; pow *= 10) {
+    for (const m of [1, 2, 5]) {
+      if (m * pow <= maxBlocks) best = m * pow;
+    }
+  }
+  return { blocks: best, px: best / bpp };
+}
+
+// Adaptive grid spacing: chunks (16) when they are readable, otherwise
+// regions (512) or coarser powers, so lines never crowd the map.
+/** @type {Array<[number, string]>} */
+const GRID_STEPS = [
+  [16, 'chunk'], [128, 'octochunk'], [512, 'region'],
+  [4096, 'coarse'], [32768, 'coarse'], [262144, 'coarse']
+];
+/**
+ * @param {number} bpp blocks per screen pixel
+ * @param {number} [minPx] minimum spacing between lines in screen pixels
+ * @returns {{step: number, kind: string}} grid spacing in blocks
+ */
+function gridSpec(bpp, minPx = 24) {
+  for (const [step, kind] of GRID_STEPS) {
+    if (step / bpp >= minPx) return { step, kind };
+  }
+  const [step, kind] = GRID_STEPS.at(-1);
+  return { step, kind };
+}
+
+// All multiples of `step` within [w0, w1] (world coordinates, inclusive).
+/**
+ * @param {number} w0 range start
+ * @param {number} w1 range end
+ * @param {number} step grid spacing
+ * @returns {number[]} grid line coordinates
+ */
+function gridLines(w0, w1, step) {
+  const out = [];
+  for (let v = Math.ceil(w0 / step) * step; v <= w1; v += step) out.push(v);
+  return out;
+}
+
+// The minimap shows the same center at a fixed zoom-out factor.
+const MINIMAP_ZOOM_OUT = 8;
+
+// World coordinates of a click at (px, py) on a w×h minimap.
+/**
+ * @param {number} px click x on the minimap
+ * @param {number} py click y on the minimap
+ * @param {number} w minimap width in pixels
+ * @param {number} h minimap height in pixels
+ * @param {{cx: number, cz: number, bpp: number}} view the main view
+ * @returns {{x: number, z: number}} world point to recenter on
+ */
+function minimapClickToWorld(px, py, w, h, view) {
+  const bpp = view.bpp * MINIMAP_ZOOM_OUT;
+  return { x: Math.round(view.cx + (px - w / 2) * bpp), z: Math.round(view.cz + (py - h / 2) * bpp) };
+}
+
+// The main viewport (mainW×mainH screen pixels) as a rectangle on the
+// minimap; both share the same center, so the rectangle is centered too.
+/**
+ * @param {number} mainW main canvas width in screen pixels
+ * @param {number} mainH main canvas height in screen pixels
+ * @param {number} mmW minimap width in pixels
+ * @param {number} mmH minimap height in pixels
+ * @returns {{x: number, y: number, w: number, h: number}}
+ */
+function viewportRectOnMinimap(mainW, mainH, mmW, mmH) {
+  const w = mainW / MINIMAP_ZOOM_OUT, h = mainH / MINIMAP_ZOOM_OUT;
+  return { x: mmW / 2 - w / 2, y: mmH / 2 - h / 2, w, h };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap };
+}

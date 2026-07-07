@@ -24,6 +24,8 @@ let selected = -1;
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
+let showGrid = false;                           // coordinate-grid overlay toggle
+let minimapReq = 0, minimapTile = null;         // overview minimap tile
 
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
@@ -70,6 +72,15 @@ worker.onmessage = (e) => {
   }
   if (d.type === 'biomeList') { onBiomeList(d.list); return; }
   if (d.type === 'tile') {
+    if (d.reqId === minimapReq) {
+      if (!d.ok) return;
+      const tmp = document.createElement('canvas');
+      tmp.width = d.cols; tmp.height = d.rows;
+      tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.rgba), d.cols, d.rows), 0, 0);
+      minimapTile = tmp;
+      drawMinimap();
+      return;
+    }
     if (d.reqId !== renderReq) return;            // stale
     if (!d.ok) {
       searchInfo.textContent = t('tileFailed');
@@ -231,12 +242,61 @@ function draw() {
     drawPin(sx, sy, i === selected);
   });
 
+  if (showGrid) drawGrid(W, H);
+  drawScaleBar(H);
+
   // center crosshair
   ctx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(W / 2 - 7, H / 2); ctx.lineTo(W / 2 + 7, H / 2);
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
+  drawMinimap();
+}
+
+// adaptive coordinate grid: chunk/region multiples with edge labels
+function drawGrid(W, H) {
+  const { step } = gridSpec(view.bpp);
+  const line = curTheme === 'light' ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.13)';
+  const label = curTheme === 'light' ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.5)';
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  ctx.fillStyle = label; ctx.font = '10px monospace';
+  ctx.beginPath();
+  for (const wx of gridLines(s2wx(0), s2wx(W), step)) {
+    const px = w2sx(wx);
+    ctx.moveTo(px, 0); ctx.lineTo(px, H);
+  }
+  for (const wz of gridLines(s2wz(0), s2wz(H), step)) {
+    const py = w2sy(wz);
+    ctx.moveTo(0, py); ctx.lineTo(W, py);
+  }
+  ctx.stroke();
+  for (const wx of gridLines(s2wx(0), s2wx(W), step)) ctx.fillText(String(wx), w2sx(wx) + 3, 11);
+  for (const wz of gridLines(s2wz(0), s2wz(H), step)) ctx.fillText(String(wz), 3, w2sy(wz) - 3);
+}
+
+// graphic scale bar, bottom-left above the HUD
+function drawScaleBar(H) {
+  const { blocks, px } = scaleBarSpec(view.bpp);
+  const x = 15, y = H - 56;
+  ctx.strokeStyle = mapText; ctx.fillStyle = mapText; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 4); ctx.lineTo(x, y); ctx.lineTo(x + px, y); ctx.lineTo(x + px, y - 4);
+  ctx.stroke();
+  ctx.font = '11px monospace';
+  ctx.fillText(`${blocks} ${t('blocks')}`, x, y - 7);
+}
+
+// overview minimap: same center, fixed zoom-out, viewport rectangle on top
+function drawMinimap() {
+  const mm = $('#minimap');
+  const c = mm.getContext('2d');
+  c.clearRect(0, 0, mm.width, mm.height);
+  c.fillStyle = mapBg; c.fillRect(0, 0, mm.width, mm.height);
+  if (minimapTile) c.drawImage(minimapTile, 0, 0);
+  const r = viewportRectOnMinimap(canvas.width / dpr, canvas.height / dpr, mm.width, mm.height);
+  c.strokeStyle = '#f2a73b'; c.lineWidth = 1.5;
+  c.strokeRect(r.x, r.y, r.w, r.h);
 }
 
 function drawStructMarkers(t, W, H) {
@@ -292,6 +352,15 @@ function requestRender(delay = 90) {
       highlight: highlightBiome,
       cx: view.cx, cz: view.cz, bpp: view.bpp,
       w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
+    });
+    // the overview minimap re-renders with the main tile, at a fixed zoom-out
+    const mm = $('#minimap');
+    minimapReq = reqSeq++;
+    send({
+      type: 'render', reqId: minimapReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+      highlight: null,
+      cx: view.cx, cz: view.cz, bpp: view.bpp * MINIMAP_ZOOM_OUT,
+      w: mm.width, h: mm.height
     });
     requestStructures();
   }, delay);
@@ -1031,6 +1100,17 @@ function init() {
   langSel.value = currentLang;
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
+  $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
+  $('#minimap').addEventListener('click', (e) => {
+    const mm = e.currentTarget;
+    const r = mm.getBoundingClientRect();
+    // border excluded: map the click onto the canvas pixel grid
+    const px = (e.clientX - r.left - mm.clientLeft) * (mm.width / mm.clientWidth);
+    const py = (e.clientY - r.top - mm.clientTop) * (mm.height / mm.clientHeight);
+    const p = minimapClickToWorld(px, py, mm.width, mm.height, view);
+    view.cx = p.x; view.cz = p.z;
+    draw(); requestRender(0); syncHash();
+  });
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {
     const collapsed = document.body.classList.toggle('panel-collapsed');

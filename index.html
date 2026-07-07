@@ -106,6 +106,8 @@
     <canvas id="map" tabindex="0" aria-label="Interactive map" data-i18n-aria="mapAria"></canvas>
     <div id="hud" class="hud" aria-hidden="true"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
     <dialog id="popup" class="popup"></dialog>
+    <label class="gridtoggle"><input type="checkbox" id="gridChk"> <span data-i18n="gridToggle">Grid</span></label>
+    <canvas id="minimap" width="176" height="132" aria-label="Overview minimap" data-i18n-aria="minimapAria"></canvas>
     <details id="legend" class="legend">
       <summary data-i18n="legend">Legend</summary>
       <div id="legendList" class="legend-list"></div>
@@ -140,6 +142,7 @@
 <script src="./presets.js"></script>
 <script src="./favorites.js"></script>
 <script src="./legend.js"></script>
+<script src="./maptools.js"></script>
 <script src="./theme.js"></script>
 <script src="./export.js"></script>
 <script src="./app.js"></script>
