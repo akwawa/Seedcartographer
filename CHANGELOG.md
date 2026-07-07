@@ -16,6 +16,8 @@ et la release GitHub.
 
 ## [Non publié]
 
+## [0.3.0](https://github.com/akwawa/Seedcartographer/compare/v0.2.0...v0.3.0) (2026-07-07)
+
 ### Ajouté
 - Recherche multi-seeds : le panneau « Chercher une seed » balaye des seeds
   aléatoires ou séquentielles et teste les critères courants autour de
@@ -184,5 +186,5 @@ Première version publiée. Contenu du jalon
 - Workflows durcis : token en moindre privilège, actions épinglées par SHA,
   `npm ci --ignore-scripts` (#35).
 
-[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.2.0...HEAD
+[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.3.0...HEAD
 [0.1.0]: https://github.com/akwawa/Seedcartographer/releases/tag/v0.1.0
