@@ -577,15 +577,24 @@ test('multi-seed search finds candidate seeds and loads one', async ({ page }) =
 test('the minimap is painted across its whole surface', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
-  // wait for a minimap tile, then measure how much of the canvas is painted
+  // wait for a minimap tile, then assert how much of the canvas is painted
   // (before the fix, the tile sat unscaled in the corner: ~12% covered)
-  await page.waitForFunction(() => {
+  const paintedRatio = () => page.evaluate(() => {
     const mm = document.querySelector('#minimap');
     const d = mm.getContext('2d').getImageData(0, 0, mm.width, mm.height).data;
     let painted = 0;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i] !== 12 || d[i + 1] !== 16 || d[i + 2] !== 22) painted++;
     }
-    return painted / (mm.width * mm.height) > 0.9;
+    return painted / (mm.width * mm.height);
+  });
+  await page.waitForFunction(() => {
+    const mm = document.querySelector('#minimap');
+    const d = mm.getContext('2d').getImageData(0, 0, mm.width, 1).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] !== 12 || d[i + 1] !== 16 || d[i + 2] !== 22) return true;
+    }
+    return false;
   }, { timeout: 15000 });
+  expect(await paintedRatio()).toBeGreaterThan(0.9);
 });
