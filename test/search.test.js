@@ -1,6 +1,6 @@
 'use strict';
 const test = require('node:test');
-const assert = require('node:assert/strict');
+const assert = require('node:assert');
 const { scanGrid } = require('../search.js');
 
 // Small synthetic world: SC=16, grid origin at 0/0, scan the whole grid.
@@ -24,16 +24,16 @@ function makeGrid(cols, rows, fill, cells = []) {
 }
 
 test('empty main biome set is rejected', () => {
-  assert.equal(scanGrid(makeParams(makeGrid(4, 4, 0), 4, 4, { mainSet: new Set() })), null);
+  assert.strictEqual(scanGrid(makeParams(makeGrid(4, 4, 0), 4, 4, { mainSet: new Set() })), null);
 });
 
 test('main biome is an OR over several ids', () => {
   const grid = makeGrid(8, 8, 0, [{ i: 2, j: 2, id: 1 }, { i: 5, j: 5, id: 7 }]);
   const one = scanGrid(makeParams(grid, 8, 8, { mainSet: new Set([1]) }));
   const both = scanGrid(makeParams(grid, 8, 8, { mainSet: new Set([1, 7]) }));
-  assert.equal(one.length, 1);
-  assert.equal(both.length, 2);
-  assert.deepEqual(both.map((h) => [h.x, h.z]), [[2 * SC, 2 * SC], [5 * SC, 5 * SC]]);
+  assert.strictEqual(one.length, 1);
+  assert.strictEqual(both.length, 2);
+  assert.deepStrictEqual(both.map((h) => [h.x, h.z]), [[2 * SC, 2 * SC], [5 * SC, 5 * SC]]);
 });
 
 test('adjacency AND requires every clause, OR requires one', () => {
@@ -45,8 +45,8 @@ test('adjacency AND requires every clause, OR requires one', () => {
   ];
   const and = scanGrid(makeParams(grid, 16, 16, { adjMode: 'and', adjClauses: clauses }));
   const or = scanGrid(makeParams(grid, 16, 16, { adjMode: 'or', adjClauses: clauses }));
-  assert.equal(and.length, 0, 'AND must fail: biome 3 is absent');
-  assert.equal(or.length, 1, 'OR must pass: biome 2 is adjacent');
+  assert.strictEqual(and.length, 0, 'AND must fail: biome 3 is absent');
+  assert.strictEqual(or.length, 1, 'OR must pass: biome 2 is adjacent');
 });
 
 test('adjacency respects the distance limit', () => {
@@ -54,8 +54,8 @@ test('adjacency respects the distance limit', () => {
   const grid = makeGrid(16, 16, 0, [{ i: 4, j: 4, id: 1 }, { i: 10, j: 4, id: 2 }]);
   const near = scanGrid(makeParams(grid, 16, 16, { adjClauses: [{ biomes: new Set([2]), dist: 100 }] }));
   const far = scanGrid(makeParams(grid, 16, 16, { adjClauses: [{ biomes: new Set([2]), dist: 50 }] }));
-  assert.equal(near.length, 1);
-  assert.equal(far.length, 0);
+  assert.strictEqual(near.length, 1);
+  assert.strictEqual(far.length, 0);
 });
 
 test('negated adjacency requires the biome to be absent', () => {
@@ -63,8 +63,8 @@ test('negated adjacency requires the biome to be absent', () => {
   const grid = makeGrid(16, 16, 0, [{ i: 4, j: 4, id: 1 }, { i: 5, j: 4, id: 2 }]);
   const without2 = scanGrid(makeParams(grid, 16, 16, { adjClauses: [{ biomes: new Set([2]), dist: 64, negate: true }] }));
   const without3 = scanGrid(makeParams(grid, 16, 16, { adjClauses: [{ biomes: new Set([3]), dist: 64, negate: true }] }));
-  assert.equal(without2.length, 0, 'biome 2 is nearby, spot must be rejected');
-  assert.equal(without3.length, 1, 'biome 3 is absent, spot must pass');
+  assert.strictEqual(without2.length, 0, 'biome 2 is nearby, spot must be rejected');
+  assert.strictEqual(without3.length, 1, 'biome 3 is absent, spot must pass');
 });
 
 test('negated clauses combine with positive ones in AND mode', () => {
@@ -78,8 +78,8 @@ test('negated clauses combine with positive ones in AND mode', () => {
     adjClauses: [...wanted, { biomes: new Set([3]), dist: 64, negate: true }]
   }));
   const positiveOnly = scanGrid(makeParams(grid, 16, 16, { adjMode: 'and', adjClauses: wanted }));
-  assert.equal(positiveOnly.length, 1);
-  assert.equal(both.length, 0, 'unwanted biome 3 nearby must disqualify the spot');
+  assert.strictEqual(positiveOnly.length, 1);
+  assert.strictEqual(both.length, 0, 'unwanted biome 3 nearby must disqualify the spot');
 });
 
 test('structure clauses: min count, AND/OR, and total count in hits', () => {
@@ -97,9 +97,9 @@ test('structure clauses: min count, AND/OR, and total count in hits', () => {
     cx: spot[0], cz: spot[1], range: 0,
     structMode: 'or', structClauses: [villages, monuments]
   }));
-  assert.equal(and.length, 0, 'AND must fail: no monument');
-  assert.equal(or.length, 1, 'OR must pass: 2 villages');
-  assert.equal(or[0].count, 2);
+  assert.strictEqual(and.length, 0, 'AND must fail: no monument');
+  assert.strictEqual(or.length, 1, 'OR must pass: 2 villages');
+  assert.strictEqual(or[0].count, 2);
 });
 
 test('sliced row-band scan gives the same result as a full scan', () => {
@@ -113,7 +113,7 @@ test('sliced row-band scan gives the same result as a full scan', () => {
   for (let j = 0; j < 32; j += 5) {
     acc = scanGrid(Object.assign({}, base, { rowStart: j, rowEnd: Math.min(j + 4, 31), hits: acc }));
   }
-  assert.deepEqual(acc, full);
+  assert.deepStrictEqual(acc, full);
 });
 
 test('nearby hits are merged by mergeDist', () => {
@@ -121,8 +121,8 @@ test('nearby hits are merged by mergeDist', () => {
   const grid = makeGrid(8, 8, 0, [{ i: 3, j: 3, id: 1 }, { i: 4, j: 3, id: 1 }]);
   const merged = scanGrid(makeParams(grid, 8, 8, { mergeDist: 2 * SC }));
   const split = scanGrid(makeParams(grid, 8, 8, { mergeDist: 0 }));
-  assert.equal(merged.length, 1);
-  assert.equal(split.length, 2);
+  assert.strictEqual(merged.length, 1);
+  assert.strictEqual(split.length, 2);
 });
 
 test('surface clause filters candidates and only samples passing cells', () => {
@@ -134,7 +134,7 @@ test('surface clause filters candidates and only samples passing cells', () => {
   assert.ok(hits.length > 0);
   for (const h of hits) assert.ok(h.x >= 64);
   // every candidate cell passed the biome criterion, so all were sampled
-  assert.equal(sampled.length, 64);
+  assert.strictEqual(sampled.length, 64);
   // min+max band excludes the peaks
   hits = scanGrid(makeParams(grid, 8, 8, { surface: { min: 60, max: 100, heightAt } }));
   for (const h of hits) assert.ok(h.x < 64);
@@ -142,8 +142,8 @@ test('surface clause filters candidates and only samples passing cells', () => {
   sampled.length = 0;
   const sparse = makeGrid(8, 8, 2, [{ i: 3, j: 3, id: 1 }]);
   hits = scanGrid(makeParams(sparse, 8, 8, { surface: { min: 0, heightAt } }));
-  assert.deepEqual(sampled, [[48, 48]]);
-  assert.equal(hits.length, 1);
+  assert.deepStrictEqual(sampled, [[48, 48]]);
+  assert.strictEqual(hits.length, 1);
   // no heightAt -> clause ignored
   hits = scanGrid(makeParams(grid, 8, 8, { surface: { min: 9999 } }));
   assert.ok(hits.length > 0);

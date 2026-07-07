@@ -948,10 +948,10 @@ function exportResults(fmt) {
       adjacent: c.ac.map((a) => ({ biome: a.b, within: a.d, absent: !!a.n })),
       structureMode: c.sm,
       structures: c.sc.map((s) => ({ type: s.t, atLeast: s.mn, within: s.r })),
-      searchRadius: parseInt(c.rg, 10) || 0,
-      step: parseInt(c.sp, 10) || 0,
-      surfaceMin: c.s0 === '' ? null : parseInt(c.s0, 10),
-      surfaceMax: c.s1 === '' ? null : parseInt(c.s1, 10)
+      searchRadius: Number.parseInt(c.rg, 10) || 0,
+      step: Number.parseInt(c.sp, 10) || 0,
+      surfaceMin: c.s0 === '' ? null : Number.parseInt(c.s0, 10),
+      surfaceMax: c.s1 === '' ? null : Number.parseInt(c.s1, 10)
     }
   };
   const base = `seedcartographer-${String(world.seed).replace(/[^\w-]+/g, '_')}`;
