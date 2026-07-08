@@ -726,6 +726,7 @@ function runSearch() {
 const seedPool = [];
 let seedReq = 0, seedBusy = false;
 let seedBatches = [], seedFoundCount = 0, seedScannedCount = 0, seedTotal = 0;
+let seedCandidates = [];   // sorted by score (more places, then closest)
 let seedMsgBase = null, seedStart = '0', seedMode = 'random';
 
 function getSeedPool() {
@@ -766,7 +767,7 @@ function startSeedSearch() {
   // seeds are only probed: a coarse stride keeps the per-seed cost low
   const step = Math.max(32, Number.parseInt($('#step').value, 10) || 32);
   seedReq = reqSeq++;
-  seedFoundCount = 0; seedScannedCount = 0;
+  seedFoundCount = 0; seedScannedCount = 0; seedCandidates = [];
   seedBatches = planBatches(seedTotal, 8);
   seedStart = $('#seed').value || '0';
   seedMode = $('#seedMode').value;
@@ -802,7 +803,9 @@ function onSeedScanned(d) {
   $('#seedProgress').value = Math.round(100 * seedScannedCount / seedTotal);
   if (d.hit && seedFoundCount < SEED_SEARCH_MAX_FOUND) {
     seedFoundCount++;
-    $('#seedResults').appendChild(seedResultRow(d.seed, d.hit));
+    seedCandidates = insertCandidate(seedCandidates,
+      { seed: d.seed, hit: d.hit, count: d.count || 1, dist: originDist(d.hit) });
+    renderSeedResults();
     if (seedFoundCount >= SEED_SEARCH_MAX_FOUND) cancelSeedSearch();
   }
 }
@@ -828,18 +831,25 @@ function cancelSeedSearch() {
   for (const w of seedPool) post(w, { type: 'cancelSeedSearch', reqId: seedReq });
 }
 // clicking a candidate loads the seed and centers the map on its first hit
-function seedResultRow(seed, hit) {
+function renderSeedResults() {
+  const box = $('#seedResults');
+  box.textContent = '';
+  for (const c of seedCandidates) box.appendChild(seedResultRow(c));
+}
+function seedResultRow(cand) {
   const li = document.createElement('button');
   li.className = 'result';
   const rx = document.createElement('span');
-  rx.className = 'rx'; rx.textContent = seed;
+  rx.className = 'rx'; rx.textContent = cand.seed;
   const rc = document.createElement('span');
-  rc.className = 'rc'; rc.textContent = `${hit.x}, ${hit.z}`;
+  rc.className = 'rc';
+  rc.textContent = `${cand.count} ⚑ · ${cand.dist} ${t('blocks')}`;
+  rc.title = `${cand.hit.x}, ${cand.hit.z}`;
   li.append(rx, rc);
   li.onclick = () => {
-    $('#seed').value = seed;
-    world.seed = seed;
-    view.cx = hit.x; view.cz = hit.z;
+    $('#seed').value = cand.seed;
+    world.seed = cand.seed;
+    view.cx = cand.hit.x; view.cz = cand.hit.z;
     curReset(); draw(); requestRender(0); syncHash();
   };
   return li;

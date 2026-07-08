@@ -2,7 +2,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const {
-  SEED_SEARCH_MAX_TOTAL, sequentialSeeds, randomSeeds, planBatches
+  SEED_SEARCH_MAX_TOTAL, sequentialSeeds, randomSeeds, planBatches,
+  originDist, compareCandidates, insertCandidate
 } = require('../seedsearch.js');
 
 test('sequentialSeeds counts from the start seed with 64-bit wraparound', () => {
@@ -37,4 +38,31 @@ test('planBatches splits the total and clamps to the sanity cap', () => {
   assert.strictEqual(capped.reduce((s, b) => s + b.count, 0), SEED_SEARCH_MAX_TOTAL);
   // batch size floor
   assert.deepStrictEqual(planBatches(2, 0.5), [{ offset: 0, count: 1 }, { offset: 1, count: 1 }]);
+});
+
+test('originDist is the rounded euclidean distance to the origin', () => {
+  assert.strictEqual(originDist({ x: 3, z: 4 }), 5);
+  assert.strictEqual(originDist({ x: 0, z: 0 }), 0);
+  assert.strictEqual(originDist({ x: -300, z: 400 }), 500);
+});
+
+test('candidates rank by place count, then closest best place', () => {
+  const a = { seed: 'a', count: 3, dist: 900 };
+  const b = { seed: 'b', count: 1, dist: 10 };
+  const c = { seed: 'c', count: 3, dist: 100 };
+  assert.ok(compareCandidates(c, a) < 0);   // same count, closer wins
+  assert.ok(compareCandidates(a, b) < 0);   // more places wins over distance
+  // deterministic tie-break on the seed string
+  assert.ok(compareCandidates({ seed: '1', count: 1, dist: 5 }, { seed: '2', count: 1, dist: 5 }) < 0);
+});
+
+test('insertCandidate keeps the list sorted and capped', () => {
+  let list = [];
+  list = insertCandidate(list, { seed: 'far', count: 1, dist: 1000 });
+  list = insertCandidate(list, { seed: 'best', count: 2, dist: 500 });
+  list = insertCandidate(list, { seed: 'near', count: 1, dist: 50 });
+  assert.deepStrictEqual(list.map((c) => c.seed), ['best', 'near', 'far']);
+  // the cap drops the worst-ranked candidate
+  const capped = insertCandidate(list, { seed: 'mid', count: 1, dist: 200 }, 3);
+  assert.deepStrictEqual(capped.map((c) => c.seed), ['best', 'near', 'mid']);
 });

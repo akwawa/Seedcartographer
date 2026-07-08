@@ -58,9 +58,44 @@ function planBatches(total, batchSize) {
   return out;
 }
 
+// Distance (blocks, rounded) of a hit to the world origin the multi-seed
+// scan is centered on.
+/**
+ * @param {{x: number, z: number}} hit
+ * @returns {number}
+ */
+function originDist(hit) {
+  return Math.round(Math.hypot(hit.x, hit.z));
+}
+
+// Candidate ordering: more places found first, then closest best place, then
+// the seed string as a deterministic tie-break.
+/**
+ * @typedef {{seed: string, count: number, dist: number}} SeedCandidate
+ * @param {SeedCandidate} a
+ * @param {SeedCandidate} b
+ * @returns {number}
+ */
+function compareCandidates(a, b) {
+  return (b.count - a.count) || (a.dist - b.dist) || a.seed.localeCompare(b.seed);
+}
+
+// Sorted insert with a size cap; returns a new list (input untouched).
+/**
+ * @template {SeedCandidate} T
+ * @param {T[]} list current candidates, already sorted
+ * @param {T} cand new candidate
+ * @param {number} [cap] list cap
+ * @returns {T[]}
+ */
+function insertCandidate(list, cand, cap = SEED_SEARCH_MAX_FOUND) {
+  return [...list, cand].sort(compareCandidates).slice(0, cap);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND,
-    sequentialSeeds, randomSeeds, planBatches
+    sequentialSeeds, randomSeeds, planBatches,
+    originDist, compareCandidates, insertCandidate
   };
 }
