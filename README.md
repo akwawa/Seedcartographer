@@ -3,9 +3,10 @@
 Cherche, dans une seed Minecraft **Java** donnée, des endroits qui réunissent
 plusieurs critères en même temps : un biome principal, collé à un biome voisin,
 avec un certain nombre de structures à proximité. Tout le calcul de génération du
-monde tourne dans le navigateur (cubiomes compilé en WebAssembly) — aucune donnée
-n'est envoyée à un serveur : les polices sont auto-hébergées et l'application ne
-fait aucune requête externe.
+monde tourne dans le navigateur (cubiomes compilé en WebAssembly) et les polices
+sont auto-hébergées : les seeds, favoris et réglages ne quittent jamais la machine.
+Seule exception : le site déployé collecte des statistiques d'usage anonymes
+(pages visitées, type de navigateur) via [Umami](https://umami.is/), sans cookies.
 
 ## Démo en ligne
 
