@@ -54,6 +54,11 @@ et la release GitHub.
   partage reflète la nouvelle position (#108).
 
 ### Corrigé
+- Les 4 Maintainability Issues SonarCloud restantes sont corrigées : le
+  dispatch de messages du worker passe par une table de handlers et la
+  boucle de `scanGrid` délègue les critères par cellule à un helper
+  (complexité cognitive sous le seuil), plus un paramètre par défaut et un
+  optional chaining — le stock projet retombe à 0 (#126).
 - Stock SonarCloud ramené à zéro (41 issues ouvertes, dont la seule
   vulnérabilité : l'image Docker tournait en root — remplacée par
   `nginx-unprivileged` sur le port 8080) : refactors de complexité
