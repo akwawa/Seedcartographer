@@ -174,7 +174,7 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   les modules purs — typage statique sans migration TypeScript).
 - **Lint** : `npm run lint` (ESLint) et `npm run lint:css` (stylelint) ; la CI vérifie aussi le `Dockerfile` (hadolint), les workflows (actionlint) et `build.sh` (shellcheck).
 - **Lighthouse** : le job CI `lighthouse` audite la page servie et échoue
-  sous les planchers de `lighthouserc.json` (performance ≥ 0,8,
+  sous les planchers de `lighthouserc.json` (performance ≥ 0,6 — les runners CI sont plus lents qu'en local,
   accessibilité ≥ 0,9, bonnes pratiques ≥ 0,9, SEO ≥ 0,8) ; en local :
   `CHROME_PATH=/chemin/vers/chromium npx @lhci/cli autorun`.
 - **Qualité** : chaque push/PR est analysé par

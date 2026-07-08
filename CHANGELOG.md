@@ -18,7 +18,7 @@ et la release GitHub.
 
 ### Ajouté
 - Audit Lighthouse en CI : la page servie est auditée à chaque MR et le
-  pipeline échoue sous les planchers configurés (performance ≥ 0,8,
+  pipeline échoue sous les planchers configurés (performance ≥ 0,6,
   accessibilité ≥ 0,9, bonnes pratiques ≥ 0,9, SEO ≥ 0,8) (#130).
 
 ## [0.4.0](https://github.com/akwawa/Seedcartographer/compare/v0.3.0...v0.4.0) (2026-07-08)
