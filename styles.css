@@ -208,6 +208,9 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .help .help-close:hover{color:var(--text)}
 
 /* ---------- favorites ---------- */
+.presetsave{margin-top:6px}
+.presetsave input{flex:1 1 auto;min-width:0;font-size:12px;padding:5px 8px}
+.presetsave input.bad{border-color:#c0392b;outline:1px solid #c0392b}
 .hist{background:var(--raise);border:1px solid var(--line-soft);border-radius:7px;
   color:var(--text);padding:6px 8px;cursor:pointer;font-size:12px;text-align:left;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

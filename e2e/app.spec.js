@@ -662,3 +662,24 @@ test('a finished search lands in the history and replays on click', async ({ pag
   await waitForApp(page);
   await expect(page.locator('#histList .hist')).toHaveCount(1);
 });
+
+test('custom presets save, replay and delete', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // save the demo criteria under a custom name
+  await page.fill('#presetName', 'Mon spot');
+  await page.click('#presetSave');
+  await expect(page.locator('#presetSel option')).toContainText(['Mon spot']);
+  // the freshly saved preset is selected and deletable
+  await expect(page.locator('#presetDel')).toBeVisible();
+  // survives a reload and replays the criteria
+  await page.reload();
+  await waitForApp(page);
+  await page.selectOption('#presetSel', { label: 'Mon spot' });
+  const rows = await page.locator('#mainBiomes .row').count();
+  expect(rows).toBeGreaterThan(0);
+  // delete removes it from the select
+  await page.click('#presetDel');
+  await expect(page.locator('#presetSel')).not.toContainText('Mon spot');
+  await expect(page.locator('#presetDel')).toBeHidden();
+});
