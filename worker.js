@@ -179,6 +179,26 @@ function adjLayerYs(d) {
   return [...ys];
 }
 
+// Generate one banded, cancellable biome grid per requested altitude into
+// the search buffer, after the main grid. Returns true, or the failure kind.
+async function genExtraLayers(layerYs, ctx) {
+  const { cols, rows, gx0, gz0, SC } = ctx;
+  const GEN_BAND = 512;
+  for (let li = 0; li < layerYs.length; li++) {
+    const base = searchPtr + (li + 1) * cols * rows * 4;
+    for (let j = 0; j < rows; j += GEN_BAND) {
+      if (ctx.cancelled()) return 'cancelled';
+      const h = Math.min(GEN_BAND, rows - j);
+      if (!M._genBiomeArea(base + j * cols * 4, gx0, gz0 + j, cols, h, SC, scaledY(layerYs[li]))) {
+        return 'area-too-large';
+      }
+      await yieldToQueue();
+    }
+    ctx.progress(80 + Math.round(5 * (li + 1) / layerYs.length));
+  }
+  return true;
+}
+
 // ---- sliced, cancellable search ----
 let searchBusy = false;
 let searchCancelId = 0;
@@ -222,18 +242,8 @@ async function runSearchJob(d) {
 
     // 1b) extra biome layers for the multi-Y adjacency clauses, same box
     const cells = cols * rows;
-    for (let li = 0; li < layerYs.length; li++) {
-      const base = searchPtr + (li + 1) * cells * 4;
-      for (let j = 0; j < rows; j += GEN_BAND) {
-        if (cancelled()) { fail('cancelled'); return; }
-        const h = Math.min(GEN_BAND, rows - j);
-        if (!M._genBiomeArea(base + j * cols * 4, gx0, gz0 + j, cols, h, SC, scaledY(layerYs[li]))) {
-          fail('area-too-large'); return;
-        }
-        await yieldToQueue();
-      }
-      progress(80 + Math.round(5 * (li + 1) / layerYs.length));
-    }
+    const layersOk = await genExtraLayers(layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
+    if (layersOk !== true) { fail(layersOk); return; }
 
     // 2) structure positions per clause (fast)
     const structClauses = buildStructClauses(d);
@@ -325,12 +335,7 @@ async function runSeedSearchJob(d) {
   for (const seedStr of d.seeds) {
     if (cancelled()) break;
     applyWorld(seedStr, d.mc, d.large, d.dim);
-    let genOk = !!M._genBiomeArea(searchPtr, gx0, gz0, cols, cols, SC, scaledY(d.y));
-    for (let li = 0; genOk && li < layerYs.length; li++) {
-      genOk = !!M._genBiomeArea(searchPtr + (li + 1) * cols * cols * 4,
-        gx0, gz0, cols, cols, SC, scaledY(layerYs[li]));
-    }
-    if (!genOk) {
+    if (!genSeedGrids(d.y, layerYs, cols, gx0, gz0, SC)) {
       postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
       return;
     }
@@ -349,6 +354,16 @@ async function runSeedSearchJob(d) {
     await yieldToQueue();
   }
   postMessage({ type: 'seedBatchDone', reqId: d.reqId });
+}
+
+// main grid + one grid per extra altitude for a single probed seed
+function genSeedGrids(y, layerYs, cols, gx0, gz0, SC) {
+  if (!M._genBiomeArea(searchPtr, gx0, gz0, cols, cols, SC, scaledY(y))) return false;
+  for (let li = 0; li < layerYs.length; li++) {
+    if (!M._genBiomeArea(searchPtr + (li + 1) * cols * cols * 4,
+      gx0, gz0, cols, cols, SC, scaledY(layerYs[li]))) return false;
+  }
+  return true;
 }
 
 // checkerboard render: one fixed world-aligned tile of the progressive grid.

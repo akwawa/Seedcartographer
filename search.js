@@ -57,6 +57,17 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 // each clause resolves the grid it reads: the main one, or the extra layer
 // generated at its altitude. A clause asking for a missing layer makes the
 // whole request malformed (null), like an empty main-biome set.
+/** @param {AdjClause} c @param {number} SC @param {Int32Array|number[]} grid */
+function prepOneAdjClause(c, SC, grid) {
+  const cells = Math.floor(c.dist / SC);
+  return {
+    biomes: c.biomes, negate: !!c.negate, grid,
+    dist2: c.dist * c.dist, cells,
+    // negated clauses must scan every cell: sub-stepping could miss the
+    // one occurrence that should disqualify the spot
+    sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
+  };
+}
 /**
  * @param {AdjClause[]} clauses
  * @param {number} SC
@@ -65,19 +76,12 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
  * @returns {object[]|null}
  */
 function prepAdjClauses(clauses, SC, mainGrid, layers) {
-  const byY = new Map((layers || []).map((l) => [l.y, l.grid]));
+  const byY = new Map((layers || []).map((/** @type {{y: number, grid: any}} */ l) => [l.y, l.grid]));
   const out = [];
   for (const c of clauses) {
     const grid = c.y === undefined || c.y === null ? mainGrid : byY.get(c.y);
     if (!grid) return null;
-    const cells = Math.floor(c.dist / SC);
-    out.push({
-      biomes: c.biomes, negate: !!c.negate, grid,
-      dist2: c.dist * c.dist, cells,
-      // negated clauses must scan every cell: sub-stepping could miss the
-      // one occurrence that should disqualify the spot
-      sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
-    });
+    out.push(prepOneAdjClause(c, SC, grid));
   }
   return out;
 }
