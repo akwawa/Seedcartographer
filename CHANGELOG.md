@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Critères multi-Y : chaque clause de biome adjacent peut préciser sa propre
+  altitude (champ « à Y » optionnel) — la recherche génère une grille de
+  biomes par couche demandée et combine les critères entre couches, pour
+  trouver des spots où sous-sol et surface coïncident (ex. lush caves à
+  Y=-40 sous un village en surface) ; fonctionne aussi dans la recherche
+  multi-seeds et le lien de partage transporte l'altitude (#145).
 - Galerie de seeds : une page statique embarquée (`gallery.html`, lien
   « Galerie » dans la barre du haut) liste des lieux remarquables édités
   dans `gallery.json` (versionné, validé par test — chaque entrée a été

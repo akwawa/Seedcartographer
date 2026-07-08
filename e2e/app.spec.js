@@ -856,6 +856,23 @@ test('an interrupted seed search survives a reload and resumes', async ({ page }
   await expect(page.locator('#seedResumeBtn')).toBeVisible();
 });
 
+test('an adjacency clause with its own Y layer searches and shares', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // pin the demo's warm-ocean clause to Y=63 (sea level): the worker must
+  // generate the extra layer and the search still finds the demo spot
+  await page.fill('#adjClauses .row input.yopt', '63');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  // the share link carries the clause altitude
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#adjClauses .row input.yopt')).toHaveValue('63');
+});
+
 test('the seed gallery renders cards that open the app on the spot', async ({ page }) => {
   await page.goto('/gallery.html');
   await expect(page.locator('.gallerycard')).toHaveCount(4);
