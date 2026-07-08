@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Palette haute lisibilité : le bouton 🎨 bascule la carte et la légende sur
+  des couleurs adaptées au daltonisme (teintes sûres Okabe–Ito cyclées par
+  biome, ombrées par la luminance d'origine pour préserver le relief
+  terre/mer) ; le remappage est une table 256×3 côté worker (gratuit au
+  rendu) et le choix est mémorisé comme le thème (#112).
 - Presets personnalisés : « Enregistrer » sauvegarde les critères courants
   sous un nom libre (avec la dimension) dans le navigateur (`localStorage`,
   parsing défensif, plafond 30) ; ils apparaissent dans le sélecteur de

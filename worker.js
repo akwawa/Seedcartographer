@@ -1,9 +1,11 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js');
+importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js', './palette.js');
 
 let M = null;            // the WASM module
-let colors = null;       // Uint8Array[256*3] biome colors
+let colors = null;       // Uint8Array[256*3] biome colors (active table)
+let baseColors = null;   // default engine colors
+let altColors = null;    // high-visibility table, built lazily
 let ready = false;
 const DEFAULT_Y = 60;    // surface-ish default altitude
 // biomes are sampled at 1:4 vertically: block y -> scaled y
@@ -20,7 +22,8 @@ createMcFinder().then((mod) => {
   M = mod;
   const cp = M._malloc(256 * 3);
   M._fillBiomeColors(cp);
-  colors = M.HEAPU8.slice(cp, cp + 256 * 3);
+  baseColors = M.HEAPU8.slice(cp, cp + 256 * 3);
+  colors = baseColors;
   M._free(cp);
   ready = true;
   postMessage({ type: 'ready', mcNewest: M._c_mc_newest() });
@@ -386,6 +389,13 @@ onmessage = (e) => {
       return;
     }
     runSearchJob(d); // async: runs in slices so tiles/cancel stay responsive
+    return;
+  }
+
+  if (d.type === 'palette') {
+    // swap the active color table; tiles rendered after this repaint with it
+    if (d.alt && !altColors) altColors = altBiomeColors(baseColors);
+    colors = d.alt ? altColors : baseColors;
     return;
   }
 
