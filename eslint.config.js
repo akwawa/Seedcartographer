@@ -92,9 +92,10 @@ module.exports = [
     }
   },
   {
-    // sharestate.js runs in the browser (btoa/atob) and in Node tests (Buffer)
+    // sharestate.js runs in the browser (btoa/atob) and in Node tests
+    // (Buffer); the compression codec uses WHATWG globals present in both
     files: ['sharestate.js'],
-    languageOptions: { globals: { btoa: 'readonly', atob: 'readonly', Buffer: 'readonly' } }
+    languageOptions: { globals: { btoa: 'readonly', atob: 'readonly', Buffer: 'readonly', Blob: 'readonly', Response: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly' } }
   },
   {
     files: ['sw.js'],
