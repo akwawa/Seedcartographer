@@ -735,3 +735,31 @@ test('the tile checkerboard reuses cached tiles when panning back', async ({ pag
   const sizeAfterBack = await page.evaluate(() => tileCache.size());
   expect(sizeAfterBack).toBe(sizeAfterPan);
 });
+
+test('the A/B version compare swaps the generation and keeps the view', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  const state = () => page.evaluate(() => {
+    syncHash();
+    return JSON.parse(decodeURIComponent(atob(location.hash.slice(1))));
+  });
+  await expect(page.locator('#cmpSwap')).toBeHidden();
+  const mainVer = await page.locator('#mcver').inputValue();
+  // arm a compare version different from the current one
+  const other = await page.$eval('#cmpVer', (sel, cur) =>
+    [...sel.options].map((o) => o.value).find((v) => v && v !== cur), mainVer);
+  await page.selectOption('#cmpVer', other);
+  await expect(page.locator('#cmpSwap')).toBeVisible();
+  const before = await state();
+  await page.click('#cmpSwap');
+  const s1 = await state();
+  expect(String(s1.m)).toBe(other);          // generation swapped
+  expect(s1.x).toBe(before.x);               // view preserved
+  expect(s1.z).toBe(before.z);
+  await expect(page.locator('#cmpVer')).toHaveValue(mainVer);
+  // the V key swaps back
+  await page.focus('#map');
+  await page.keyboard.press('v');
+  const s2 = await state();
+  expect(String(s2.m)).toBe(mainVer);
+});
