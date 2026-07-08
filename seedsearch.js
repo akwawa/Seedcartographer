@@ -133,7 +133,7 @@ function parseSeedRun(json) {
   if (typeof r.crit !== 'object' || r.crit === null) return null;
   const total = seedRunInt(r.total), radius = seedRunInt(r.radius), step = seedRunInt(r.step);
   const mc = seedRunInt(r.mc), dim = seedRunInt(r.dim), y = seedRunInt(r.y), scanned = seedRunInt(r.scanned);
-  if ([total, radius, step, mc, dim, y, scanned].some((n) => n === null)) return null;
+  if ([total, radius, step, mc, dim, y, scanned].includes(null)) return null;
   if (total < 1 || total > SEED_SEARCH_MAX_TOTAL || scanned < 0 || ![0, -1, 1].includes(dim)) return null;
   const batches = (Array.isArray(r.batches) ? r.batches : [])
     .map((/** @type {any} */ b) => ({ offset: seedRunInt(b?.offset), count: seedRunInt(b?.count) }))
