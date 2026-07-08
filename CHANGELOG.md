@@ -16,41 +16,70 @@ et la release GitHub.
 
 ## [0.4.0](https://github.com/akwawa/Seedcartographer/compare/v0.3.0...v0.4.0) (2026-07-08)
 
-
 ### Ajouté
-
-* add a go-to-coordinates control on the map ([9b41551](https://github.com/akwawa/Seedcartographer/commit/9b41551d6b256ae74f4b7107193824c217d96b94)), closes [#108](https://github.com/akwawa/Seedcartographer/issues/108)
-* add a high-visibility (colorblind-friendly) map palette ([37ecca1](https://github.com/akwawa/Seedcartographer/commit/37ecca1ede4a992a0781648db47147fc542203d1)), closes [#112](https://github.com/akwawa/Seedcartographer/issues/112)
-* add a ruler tool to measure map distances ([9da5d82](https://github.com/akwawa/Seedcartographer/commit/9da5d822b4bae6cb251bac274fba8ab50bbcb48e)), closes [#109](https://github.com/akwawa/Seedcartographer/issues/109)
-* contrôle « aller aux coordonnées » sur la carte ([30d816b](https://github.com/akwawa/Seedcartographer/commit/30d816b725abddef4deb768949b09dfcb4a80140))
-* couverture par branche à 100 % sur les modules purs ([bc27ce4](https://github.com/akwawa/Seedcartographer/commit/bc27ce486e9d9cc9ad1c6332eef55c9c4aef4619))
-* historique des recherches récentes rejouables ([ccdcad3](https://github.com/akwawa/Seedcartographer/commit/ccdcad3279043a68425e4b6eb93b9fd397392661))
-* keep a replayable history of recent searches ([cf66ca3](https://github.com/akwawa/Seedcartographer/commit/cf66ca378cd68668a606f47f4341af3d5ce1dae6)), closes [#110](https://github.com/akwawa/Seedcartographer/issues/110)
-* outil règle pour mesurer une distance sur la carte ([7af23f6](https://github.com/akwawa/Seedcartographer/commit/7af23f6ff727959e5fb74b97e401583a7ef7c119))
-* palette haute lisibilité (daltonisme) pour la carte ([f446e1d](https://github.com/akwawa/Seedcartographer/commit/f446e1da2a9154365ae248dbb6034481425a9e86))
-* presets personnalisés — sauvegarder ses jeux de critères ([f10aebd](https://github.com/akwawa/Seedcartographer/commit/f10aebda1ddd2a8f128c4560cbea9b7c0d427a7c))
-* render the map as a progressive checkerboard of fixed tiles ([f48261f](https://github.com/akwawa/Seedcartographer/commit/f48261f44510417086ebbaa009593e8c36247e63)), closes [#114](https://github.com/akwawa/Seedcartographer/issues/114)
-* rendu en damier progressif de tuiles fixes 256 px ([b19e3a0](https://github.com/akwawa/Seedcartographer/commit/b19e3a0665ba040506e6604f2bab3a5c4e3640db))
-* require full branch coverage on the shared pure modules ([ca2f3b5](https://github.com/akwawa/Seedcartographer/commit/ca2f3b57d9f92b418e55e5c9ebff2c393bbc5b6a)), closes [#128](https://github.com/akwawa/Seedcartographer/issues/128)
-* save custom criteria presets ([ea74499](https://github.com/akwawa/Seedcartographer/commit/ea74499c253947ab8546f0e67347514eb1dfe759)), closes [#111](https://github.com/akwawa/Seedcartographer/issues/111)
-* score and sort the multi-seed candidates ([e440ef9](https://github.com/akwawa/Seedcartographer/commit/e440ef93a47976a51a21d9d1b9e8b50567583f15)), closes [#113](https://github.com/akwawa/Seedcartographer/issues/113)
-* score et tri des seeds candidates (multi-seeds) ([c30eb7b](https://github.com/akwawa/Seedcartographer/commit/c30eb7b1033087178a34e17b5ccc0ae709ad08e8))
-
+- Couverture par branche exigée : tous les chemins des modules purs partagés
+  sont testés (11 nouveaux tests — cap de résultats de `scanGrid`, wrap 32
+  bits du hash Java, modes OU, entrées dégénérées des parseurs…) et le job CI
+  `test` échoue sous 100 % de branches (`--test-coverage-branches`) ; la
+  colle spécifique au navigateur est exclue explicitement avec justification
+  (#128).
+- Rendu en damier progressif : la carte est composée de tuiles fixes de
+  256 cellules alignées monde, demandées séparément au worker (les plus
+  proches du centre d'abord) — le cache LRU devient vraiment réutilisable au
+  pan (une zone déjà vue n'est jamais régénérée), le rendu arrive tuile par
+  tuile, et changer de vue annule les tuiles hors écran encore en file
+  (génération côté worker) ; la légende agrège les biomes des tuiles
+  visibles (#114).
+- Recherche multi-seeds : les seeds candidates sont notées et triées — nombre
+  de lieux trouvés puis distance du meilleur lieu à l'origine, affichés dans
+  la liste (« N ⚑ · D blocs ») ; le clic charge toujours la seed centrée sur
+  son meilleur lieu (désormais le plus proche de l'origine, pas le premier
+  balayé) (#113).
+- Palette haute lisibilité : le bouton 🎨 bascule la carte et la légende sur
+  des couleurs adaptées au daltonisme (teintes sûres Okabe–Ito cyclées par
+  biome, ombrées par la luminance d'origine pour préserver le relief
+  terre/mer) ; le remappage est une table 256×3 côté worker (gratuit au
+  rendu) et le choix est mémorisé comme le thème (#112).
+- Presets personnalisés : « Enregistrer » sauvegarde les critères courants
+  sous un nom libre (avec la dimension) dans le navigateur (`localStorage`,
+  parsing défensif, plafond 30) ; ils apparaissent dans le sélecteur de
+  presets sous un groupe dédié, se rejouent d'un clic et se suppriment
+  (réenregistrer sous le même nom remplace) (#111).
+- Historique des recherches : les 10 dernières recherches (monde, critères,
+  zone) sont conservées dans le navigateur (`localStorage`) et listées dans
+  le panneau « Recherches récentes » — un clic restaure la seed, la version,
+  la dimension et les critères puis relance la recherche ; relancer une
+  recherche identique la remonte en tête sans doublon (#110).
+- Outil règle : le bouton 📏 sur la carte active un mode mesure — deux clics
+  tracent un segment et affichent la distance en blocs (euclidienne et par
+  axes, aperçu en direct au survol), Échap ou re-clic sur le bouton pour
+  sortir ; logique de mesure en module pur testé (#109).
+- Contrôle « aller à » sur la carte : un champ « x, z » (Entrée ou bouton)
+  recentre la vue sur les coordonnées saisies, avec validation (deux entiers,
+  bordure du monde) et signalement visuel des entrées invalides ; le lien de
+  partage reflète la nouvelle position (#108).
 
 ### Corrigé
+- Les 4 Maintainability Issues SonarCloud restantes sont corrigées : le
+  dispatch de messages du worker passe par une table de handlers et la
+  boucle de `scanGrid` délègue les critères par cellule à un helper
+  (complexité cognitive sous le seuil), plus un paramètre par défaut et un
+  optional chaining — le stock projet retombe à 0 (#126).
+- Stock SonarCloud ramené à zéro (41 issues ouvertes, dont la seule
+  vulnérabilité : l'image Docker tournait en root — remplacée par
+  `nginx-unprivileged` sur le port 8080) : refactors de complexité
+  (`scanGrid`, `worker.js`, `app.js`), assertions de tests reconnues par
+  l'analyse, `Number.parseInt`, optional chaining, et deux suppressions
+  justifiées `NOSONAR` (fallback `execCommand` en http, parité Java de
+  `charCodeAt`) (#107).
+- Réactivité du rendu restaurée : la minimap se régénère sur son propre
+  débounce (400 ms) au lieu de doubler chaque rendu moteur, la peinture du
+  cache de tuiles est bornée aux 8 tuiles les plus utiles, et la minimap
+  n'est plus redessinée à chaque frame de déplacement (#106).
+- La minimap couvre désormais toute sa surface : la tuile grossière rendue
+  par le worker était dessinée en 1:1 dans le coin (zones noires) au lieu
+  d'être cadrée sur le canvas via la transformation vue→minimap (#105).
 
-* address the Sonar findings on the ruler change ([cf9435e](https://github.com/akwawa/Seedcartographer/commit/cf9435ebd1f0feaf64811be01e8503aea527f9af))
-* assert minimap paint coverage explicitly per S2699 ([35fc96d](https://github.com/akwawa/Seedcartographer/commit/35fc96d652880482728e674656def4e4310b8c08))
-* bring the SonarCloud project stock to zero ([62a4752](https://github.com/akwawa/Seedcartographer/commit/62a47529a48cb479a36fd2e64e3b1667c78fcc2b)), closes [#107](https://github.com/akwawa/Seedcartographer/issues/107)
-* clear the remaining Sonar maintainability issues ([89f23ce](https://github.com/akwawa/Seedcartographer/commit/89f23cef03a604489449ce1222f45d5bd1636182)), closes [#126](https://github.com/akwawa/Seedcartographer/issues/126)
-* deduplicate in-flight tile requests ([fa05de1](https://github.com/akwawa/Seedcartographer/commit/fa05de17442eda540de8f293798799d0af555b61))
-* make the go-to parser regex linear-time ([c9cfcc8](https://github.com/akwawa/Seedcartographer/commit/c9cfcc89ea66bc95300f262f3a8ca3db7b71613c))
-* map the minimap tile onto the whole canvas ([a5239eb](https://github.com/akwawa/Seedcartographer/commit/a5239eba003baef49180f31eb9528cb8cb3c4e09)), closes [#105](https://github.com/akwawa/Seedcartographer/issues/105)
-* ramener le stock SonarCloud à zéro ([3268318](https://github.com/akwawa/Seedcartographer/commit/32683186860d50d5d9e66d914a6498615ecd57a6))
-* restore render responsiveness ([f945b90](https://github.com/akwawa/Seedcartographer/commit/f945b9091bbe710570a7f57e92363b725224f4dd)), closes [#106](https://github.com/akwawa/Seedcartographer/issues/106)
-* traiter les Maintainability Issues Sonar restantes ([0079cf2](https://github.com/akwawa/Seedcartographer/commit/0079cf29bbb5af16c4a304fd1fa8146df5759eaf))
-
-## [Non publié]
 
 ### Ajouté
 - Couverture par branche exigée : tous les chemins des modules purs partagés
