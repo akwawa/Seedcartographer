@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Galerie de seeds : une page statique embarquée (`gallery.html`, lien
+  « Galerie » dans la barre du haut) liste des lieux remarquables édités
+  dans `gallery.json` (versionné, validé par test — chaque entrée a été
+  vérifiée avec l'application) ; chaque carte ouvre l'app via un lien de
+  partage pré-rempli (seed, vue et critères le cas échéant), avec titres et
+  descriptions localisés en/fr (#144).
 - Recherche multi-seeds reprenable : l'état d'une recherche (mode, seed de
   départ, lots restants, seeds testées, candidates trouvées) est sauvegardé
   dans le navigateur à chaque lot terminé — après une annulation ou un

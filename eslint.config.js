@@ -93,6 +93,12 @@ module.exports = [
     }
   },
   {
+    // gallery.js consumes sharestate.js (script tag in the browser, require
+    // in Node)
+    files: ['gallery.js'],
+    languageOptions: { globals: { require: 'readonly', encodeShareState: 'readonly' } }
+  },
+  {
     // sharestate.js runs in the browser (btoa/atob) and in Node tests
     // (Buffer); the compression codec uses WHATWG globals present in both
     files: ['sharestate.js'],
@@ -131,7 +137,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

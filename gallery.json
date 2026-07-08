@@ -1,0 +1,56 @@
+[
+  {
+    "id": "cherry-grove-warm-ocean",
+    "seed": "141", "mc": 28, "large": false, "dim": 0,
+    "x": -384, "z": 0, "b": 2, "y": 60,
+    "title": {
+      "en": "Cherry grove on a warm ocean",
+      "fr": "Bosquet de cerisiers en bord d'océan chaud"
+    },
+    "desc": {
+      "en": "The demo spot: a cherry grove touching a warm ocean, two villages within 800 blocks of the coast.",
+      "fr": "Le lieu de la démo : un bosquet de cerisiers qui touche un océan chaud, deux villages à moins de 800 blocs de la côte."
+    },
+    "c": { "mb": [185], "am": "and", "ac": [{ "b": 44, "d": 400, "n": 0 }], "rg": 5000, "sp": 16 }
+  },
+  {
+    "id": "slime-farm-24-chunks",
+    "seed": "141", "mc": 28, "large": false, "dim": 0,
+    "x": 160, "z": -3952, "b": 2, "y": 60,
+    "title": {
+      "en": "Slime-farm spot (24 slime chunks nearby)",
+      "fr": "Emplacement de ferme à slimes (24 slime chunks à proximité)"
+    },
+    "desc": {
+      "en": "Flat plains with two dozen slime chunks within despawn-sphere reach — turn on the slime-chunk layer to plan the farm.",
+      "fr": "Des plaines avec deux douzaines de slime chunks à portée de sphère de despawn — activez la couche slime chunks pour planifier la ferme."
+    }
+  },
+  {
+    "id": "village-next-to-outpost",
+    "seed": "141", "mc": 28, "large": false, "dim": 0,
+    "x": 3600, "z": -7728, "b": 2, "y": 60,
+    "title": {
+      "en": "Village with a pillager outpost",
+      "fr": "Village avec avant-poste de pillards"
+    },
+    "desc": {
+      "en": "A village and a pillager outpost stand within raid-farm distance of each other, north-east of spawn.",
+      "fr": "Un village et un avant-poste de pillards à distance de ferme à raids l'un de l'autre, au nord-est du spawn."
+    }
+  },
+  {
+    "id": "mushroom-fields",
+    "seed": "141", "mc": 28, "large": false, "dim": 0,
+    "x": 4240, "z": -24688, "b": 3, "y": 60,
+    "title": {
+      "en": "Mushroom fields island",
+      "fr": "Île de champignons (mushroom fields)"
+    },
+    "desc": {
+      "en": "The closest mushroom fields to spawn on this seed — a long trip north, no hostile mobs once you get there.",
+      "fr": "Les mushroom fields les plus proches du spawn sur cette seed — un long voyage vers le nord, aucun monstre hostile une fois sur place."
+    },
+    "c": { "mb": [14], "am": "and", "ac": [], "rg": 10000, "sp": 64 }
+  }
+]
