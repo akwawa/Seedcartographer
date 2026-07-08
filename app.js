@@ -711,6 +711,7 @@ function runSearch() {
   const range = Number.parseInt($('#range').value, 10) || 4000;
   const step = Number.parseInt($('#step').value, 10) || 48;
   searchInfo.textContent = t('searching'); searchInfo.className = 'info busy';
+  pushSearchHistory();
   searchReq = reqSeq;
   setSearchBusy(true);
   sendSearch({
@@ -953,6 +954,47 @@ function showPopup(p) {
   if (!pop.open) pop.show();   // non-modal: the map stays usable
 }
 // ---------- favorites ----------
+let searchHistory = parseHistory((() => {
+  try { return localStorage.getItem('searchHistory'); } catch { return null; }
+})());
+function pushSearchHistory() {
+  searchHistory = addHistoryEntry(searchHistory, {
+    seed: String(world.seed), mc: world.mc, large: world.large, dim: world.dim,
+    cx: Math.round(view.cx), cz: Math.round(view.cz), crit: readCriteria(), at: Date.now()
+  });
+  try { localStorage.setItem('searchHistory', JSON.stringify(searchHistory)); } catch { /* ignore */ }
+  buildHistList();
+}
+function replayHistory(h) {
+  $('#seed').value = h.seed; $('#large').checked = h.large;
+  world.seed = h.seed; world.large = h.large;
+  world.mc = h.mc; $('#mcver').value = String(h.mc);
+  if (world.dim !== h.dim) { setDimension(h.dim); $('#dimSel').value = String(h.dim); }
+  applyCriteria(h.crit);
+  view.cx = h.cx; view.cz = h.cz;
+  curReset(); draw(); requestRender(0); syncHash();
+  runSearch();
+}
+function buildHistList() {
+  const box = $('#histList');
+  box.textContent = '';
+  if (!searchHistory.length) {
+    const p = document.createElement('p');
+    p.className = 'muted small'; p.dataset.i18n = 'historyEmpty'; p.textContent = t('historyEmpty');
+    box.appendChild(p);
+    return;
+  }
+  for (const h of searchHistory) {
+    const dimName = (DIMENSIONS.find(([v]) => v === h.dim) || [0, 'Overworld'])[1];
+    const btn = document.createElement('button');
+    btn.className = 'hist mono';
+    btn.textContent = `${h.seed} · ${dimName} · ${h.cx}, ${h.cz}`;
+    btn.title = t('historyReplay');
+    btn.dataset.i18nTitle = 'historyReplay';
+    btn.onclick = () => replayHistory(h);
+    box.appendChild(btn);
+  }
+}
 let favorites = parseFavorites((() => {
   try { return localStorage.getItem('favorites'); } catch { return null; }
 })());
@@ -1394,6 +1436,7 @@ function init() {
   buildDimSelect();
   buildFavList();
   initTheme();
+  buildHistList();
   applyI18n();
   resize();
   // offline support (PWA); requires a secure context, harmless otherwise

@@ -641,3 +641,24 @@ test('the ruler measures a distance between two clicks', async ({ page }) => {
   expect(r2.on).toBe(false);
   expect(r2.a).toBeNull();
 });
+
+test('a finished search lands in the history and replays on click', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await expect(page.locator('#histList .hist')).toHaveCount(0);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#histList .hist')).toHaveCount(1);
+  await expect(page.locator('#histList .hist').first()).toContainText('141');
+  // replaying restores the criteria and re-runs the same search
+  await page.click('#histList .hist');
+  await waitForSearchDone(page);
+  const rows = await page.locator('#mainBiomes .row').count();
+  expect(rows).toBeGreaterThan(0);
+  // still a single entry: the identical search must not duplicate
+  await expect(page.locator('#histList .hist')).toHaveCount(1);
+  // the history survives a reload (localStorage)
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator('#histList .hist')).toHaveCount(1);
+});

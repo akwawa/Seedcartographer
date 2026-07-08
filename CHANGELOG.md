@@ -17,12 +17,15 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Historique des recherches : les 10 dernières recherches (monde, critères,
+  zone) sont conservées dans le navigateur (`localStorage`) et listées dans
+  le panneau « Recherches récentes » — un clic restaure la seed, la version,
+  la dimension et les critères puis relance la recherche ; relancer une
+  recherche identique la remonte en tête sans doublon (#110).
 - Outil règle : le bouton 📏 sur la carte active un mode mesure — deux clics
   tracent un segment et affichent la distance en blocs (euclidienne et par
   axes, aperçu en direct au survol), Échap ou re-clic sur le bouton pour
   sortir ; logique de mesure en module pur testé (#109).
-
-### Ajouté
 - Contrôle « aller à » sur la carte : un champ « x, z » (Entrée ou bouton)
   recentre la vue sur les coordonnées saisies, avec validation (deux entiers,
   bordure du monde) et signalement visuel des entrées invalides ; le lien de
