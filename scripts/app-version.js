@@ -11,6 +11,21 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
+// The tool only ever works below the invoking process's working directory
+// (the CI workspace / staging dir): the CLI argument is canonicalized and
+// validated against that untainted base before any filesystem access.
+/**
+ * @param {string} abs canonicalized absolute path
+ * @returns {string} the same path, validated below process.cwd()
+ */
+function insideCwd(abs) {
+  const base = fs.realpathSync(process.cwd());
+  if (abs !== base && !abs.startsWith(base + path.sep)) {
+    throw new Error(`path escapes the working directory: ${abs}`);
+  }
+  return abs;
+}
+
 // rewrite the APP_VERSION line of a version.js source
 /**
  * @param {string} source version.js source text
@@ -36,7 +51,8 @@ function stampDir(dir) {
   try {
     commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
   } catch { /* not a git checkout (e.g. exported archive): version only */ }
-  const file = path.resolve(dir, 'version.js');
+  const root = insideCwd(fs.realpathSync(path.resolve(dir)));
+  const file = insideCwd(path.resolve(root, 'version.js'));
   fs.writeFileSync(file, stampAppVersion(fs.readFileSync(file, 'utf8'), pkg.version, commit));
   return { version: pkg.version, commit };
 }

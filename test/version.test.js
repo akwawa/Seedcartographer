@@ -4,7 +4,6 @@ const assert = require('node:assert');
 const { APP_VERSION } = require('../version.js');
 const { stampAppVersion, stampDir } = require('../scripts/app-version.js');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 
 test('the checked-in version.js is the dev placeholder', () => {
@@ -19,7 +18,8 @@ test('stampAppVersion rewrites the APP_VERSION line', () => {
 });
 
 test('stampDir stamps a copy of version.js from package.json', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'swv-'));
+  // the tool refuses to write outside its working directory: stage under it
+  const dir = fs.mkdtempSync(path.resolve(__dirname, '..', '.tmp-swv-'));
   fs.copyFileSync(path.resolve(__dirname, '../version.js'), path.join(dir, 'version.js'));
   const { version } = stampDir(dir);
   const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
