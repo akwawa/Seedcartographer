@@ -80,7 +80,9 @@ function compareCandidates(a, b) {
   return (b.count - a.count) || (a.dist - b.dist) || a.seed.localeCompare(b.seed);
 }
 
-// Sorted insert with a size cap; returns a new list (input untouched).
+// Sorted insert with a size cap; returns a new list (input untouched). A
+// candidate for an already-listed seed replaces it (a resumed run may
+// re-scan a few seeds around the interruption point).
 /**
  * @template {SeedCandidate} T
  * @param {T[]} list current candidates, already sorted
@@ -89,13 +91,75 @@ function compareCandidates(a, b) {
  * @returns {T[]}
  */
 function insertCandidate(list, cand, cap = SEED_SEARCH_MAX_FOUND) {
-  return [...list, cand].sort(compareCandidates).slice(0, cap);
+  return [...list.filter((c) => c.seed !== cand.seed), cand].sort(compareCandidates).slice(0, cap);
+}
+
+// ---- resumable runs ----
+// Snapshot of an interrupted multi-seed search: enough to pick it up after a
+// cancel or a page reload. Batches not yet completed (queued or in flight
+// when the run stopped) are re-scanned on resume; insertCandidate dedups.
+/**
+ * @typedef {{v: number, mode: string, start: string, total: number,
+ *            radius: number, step: number, mc: number, large: boolean,
+ *            dim: number, y: number, crit: object, scanned: number,
+ *            batches: Array<{offset: number, count: number}>,
+ *            candidates: Array<{seed: string, hit: {x: number, z: number},
+ *                               count: number, dist: number}>}} SeedRun
+ */
+
+/** @param {SeedRun} run @returns {string} JSON payload for localStorage */
+function serializeSeedRun(run) {
+  return JSON.stringify({ ...run, v: 1 });
+}
+
+/** @param {any} v @returns {number|null} */
+function seedRunInt(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.floor(n) : null;
+}
+
+// localStorage contents are outside the app's control: reject anything that
+// is not a complete, well-formed interrupted run.
+/**
+ * @param {string|null} json raw localStorage payload
+ * @returns {SeedRun|null} the run, or null when absent/malformed/finished
+ */
+function parseSeedRun(json) {
+  let r;
+  try { r = JSON.parse(String(json)); } catch { return null; }
+  if (!r || typeof r !== 'object' || r.v !== 1) return null;
+  if (r.mode !== 'seq' && r.mode !== 'random') return null;
+  if (typeof r.start !== 'string' && typeof r.start !== 'number') return null;
+  if (typeof r.crit !== 'object' || r.crit === null) return null;
+  const total = seedRunInt(r.total), radius = seedRunInt(r.radius), step = seedRunInt(r.step);
+  const mc = seedRunInt(r.mc), dim = seedRunInt(r.dim), y = seedRunInt(r.y), scanned = seedRunInt(r.scanned);
+  if ([total, radius, step, mc, dim, y, scanned].includes(null)) return null;
+  if (total < 1 || total > SEED_SEARCH_MAX_TOTAL || scanned < 0 || ![0, -1, 1].includes(dim)) return null;
+  const batches = (Array.isArray(r.batches) ? r.batches : [])
+    .map((/** @type {any} */ b) => ({ offset: seedRunInt(b?.offset), count: seedRunInt(b?.count) }))
+    .filter((/** @type {{offset: number|null, count: number|null}} */ b) => b.offset !== null && b.count !== null && b.offset >= 0 && b.count > 0);
+  if (!batches.length) return null;   // nothing left to do: not resumable
+  const candidates = (Array.isArray(r.candidates) ? r.candidates : [])
+    .map((/** @type {any} */ c) => {
+      const x = seedRunInt(c?.hit?.x), z = seedRunInt(c?.hit?.z);
+      const count = seedRunInt(c?.count), dist = seedRunInt(c?.dist);
+      if (typeof c?.seed !== 'string' || x === null || z === null || count === null || dist === null) return null;
+      return { seed: c.seed, hit: { x, z }, count, dist };
+    })
+    .filter((/** @type {any} */ c) => c !== null)
+    .slice(0, SEED_SEARCH_MAX_FOUND);
+  return {
+    v: 1, mode: r.mode, start: String(r.start), total, radius, step,
+    mc, large: !!r.large, dim, y, crit: r.crit, scanned,
+    batches: /** @type {Array<{offset: number, count: number}>} */ (batches), candidates
+  };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND,
     sequentialSeeds, randomSeeds, planBatches,
-    originDist, compareCandidates, insertCandidate
+    originDist, compareCandidates, insertCandidate,
+    serializeSeedRun, parseSeedRun
   };
 }

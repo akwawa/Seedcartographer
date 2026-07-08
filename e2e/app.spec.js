@@ -832,6 +832,30 @@ test('a biome-share criterion filters results and survives the share link', asyn
   await expect(p2.locator('#pctClauses .row input.num').first()).toHaveValue('100');
 });
 
+test('an interrupted seed search survives a reload and resumes', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.fill('#seedCount', '20000');
+  await page.click('#seedSearchBtn');   // the button flips to Cancel
+  await page.waitForFunction(() => document.querySelector('#seedProgress').value > 0, { timeout: 60000 });
+  await page.click('#seedSearchBtn');   // cancel mid-run
+  await expect(page.locator('#seedResumeBtn')).toBeVisible();
+  await expect(page.locator('#seedResumeBtn')).toContainText('/20000');
+  // the run state survives a full page reload
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator('#seedResumeBtn')).toBeVisible();
+  await expect(page.locator('#seedResumeBtn')).toContainText('/20000');
+  // resuming picks the scan back up where it stopped
+  await page.click('#seedResumeBtn');
+  await expect(page.locator('#seedResumeBtn')).toBeHidden();
+  await expect(page.locator('#seedInfo')).toHaveClass(/busy/);
+  await page.waitForFunction(() => document.querySelector('#seedProgress').value > 0, { timeout: 60000 });
+  // cancel again: the snapshot is refreshed, not lost
+  await page.click('#seedSearchBtn');
+  await expect(page.locator('#seedResumeBtn')).toBeVisible();
+});
+
 test('the profile round-trips through export and import', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

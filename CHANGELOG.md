@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Recherche multi-seeds reprenable : l'état d'une recherche (mode, seed de
+  départ, lots restants, seeds testées, candidates trouvées) est sauvegardé
+  dans le navigateur à chaque lot terminé — après une annulation ou un
+  rechargement de page, un bouton « Reprendre (n/total) » relance la
+  recherche là où elle s'était arrêtée en conservant les candidates (les
+  quelques seeds re-testées sont dédupliquées) ; sérialisation défensive en
+  module pur (seedsearch.js) (#143).
 - Critères en pourcentage de zone : un bloc « Part de biome » accepte des
   clauses « au moins N % du biome X dans un rayon R » (combinables ET/OU),
   évaluées statistiquement sur la grille de biomes existante (sous-

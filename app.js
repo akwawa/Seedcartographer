@@ -975,6 +975,30 @@ function setSeedBusy(on) {
   const prog = $('#seedProgress');
   prog.hidden = !on;
   prog.value = 0;
+  updateSeedResumeBtn();
+}
+// ---- resumable run: the queue state survives a cancel or a page reload ----
+let seedRunMeta = null;   // static fields of the running search, or null
+function savedSeedRun() {
+  try { return parseSeedRun(localStorage.getItem('seedRun')); } catch { return null; }
+}
+function saveSeedRun() {
+  if (!seedRunMeta) return;
+  const inflight = seedPool.filter((w) => w.batch).map((w) => w.batch);
+  const batches = [...inflight, ...seedBatches];
+  if (!batches.length) return;
+  const run = { ...seedRunMeta, scanned: seedScannedCount, batches, candidates: seedCandidates };
+  try { localStorage.setItem('seedRun', serializeSeedRun(run)); } catch { /* ignore */ }
+}
+function clearSeedRun() {
+  seedRunMeta = null;
+  try { localStorage.removeItem('seedRun'); } catch { /* ignore */ }
+}
+function updateSeedResumeBtn() {
+  const b = $('#seedResumeBtn');
+  const run = seedBusy ? null : savedSeedRun();
+  b.hidden = !run;
+  if (run) b.textContent = t('seedResume', { n: run.scanned, t: run.total });
 }
 function startSeedSearch() {
   const crit = collectCriteria();
@@ -997,26 +1021,27 @@ function startSeedSearch() {
     type: 'seedSearch', reqId: seedReq, mc: world.mc, large: world.large, dim: world.dim,
     y: yLayer, range: radius, step, ...crit
   };
+  seedRunMeta = {
+    v: 1, mode: seedMode, start: seedStart, total: seedTotal, radius, step,
+    mc: world.mc, large: world.large, dim: world.dim, y: yLayer, crit: readCriteria()
+  };
+  saveSeedRun();
   $('#seedResults').textContent = '';
   seedInfo.textContent = t('searching'); seedInfo.className = 'info busy';
   setSeedBusy(true);
   getSeedPool().forEach(dispatchSeedBatch);
 }
-function nextSeedBatch() {
-  const b = seedBatches.shift();
-  if (!b) return null;
-  return seedMode === 'seq'
-    ? sequentialSeeds(seedStart, b.offset, b.count)
-    : randomSeeds(b.count, Math.random);
-}
 function dispatchSeedBatch(w) {
-  const seeds = nextSeedBatch();
-  if (!seeds) {
-    w.idle = true;
+  const b = seedBatches.shift();
+  if (!b) {
+    w.batch = null; w.idle = true;
     finishSeedSearchIfIdle();
     return;
   }
-  w.idle = false;
+  w.batch = b; w.idle = false;
+  const seeds = seedMode === 'seq'
+    ? sequentialSeeds(seedStart, b.offset, b.count)
+    : randomSeeds(b.count, Math.random);
   post(w, { ...seedMsgBase, seeds });
 }
 function onSeedScanned(d) {
@@ -1028,17 +1053,21 @@ function onSeedScanned(d) {
     seedCandidates = insertCandidate(seedCandidates,
       { seed: d.seed, hit: d.hit, count: d.count || 1, dist: originDist(d.hit) });
     renderSeedResults();
-    if (seedFoundCount >= SEED_SEARCH_MAX_FOUND) cancelSeedSearch();
+    if (seedFoundCount >= SEED_SEARCH_MAX_FOUND) { cancelSeedSearch(); clearSeedRun(); }
   }
 }
 function onSeedBatchDone(w, d) {
   if (d.reqId !== seedReq) return;
-  if (d.error) seedBatches = [];
+  w.batch = null;
+  if (d.error) { seedBatches = []; clearSeedRun(); }
+  else saveSeedRun();   // checkpoint: this batch is done for good
   dispatchSeedBatch(w);
 }
 function finishSeedSearchIfIdle() {
   if (!seedBusy || !seedPool.every((w) => w.idle)) return;
   setSeedBusy(false);
+  if (seedRunMeta) clearSeedRun();   // ran to completion: nothing to resume
+  updateSeedResumeBtn();
   const seedInfo = $('#seedInfo');
   if (seedFoundCount) {
     seedInfo.textContent = t('seedDone', { f: seedFoundCount, n: seedScannedCount });
@@ -1049,8 +1078,50 @@ function finishSeedSearchIfIdle() {
   }
 }
 function cancelSeedSearch() {
+  // in-flight batches are lost mid-scan: put them back before the snapshot
+  for (const w of seedPool) {
+    if (w.batch) { seedBatches.unshift(w.batch); w.batch = null; }
+  }
+  saveSeedRun();
+  seedRunMeta = null;   // the snapshot is final until a resume/restart
   seedBatches = [];
   for (const w of seedPool) post(w, { type: 'cancelSeedSearch', reqId: seedReq });
+}
+// Resume an interrupted run: restore its world/criteria, requeue what was
+// left and keep the candidates found so far (re-scanned seeds dedup).
+function resumeSeedSearch() {
+  const run = savedSeedRun();
+  if (!run || seedBusy) return;
+  world.mc = run.mc; $('#mcver').value = String(run.mc);
+  world.large = run.large; $('#large').checked = run.large;
+  if (world.dim !== run.dim) { setDimension(run.dim); $('#dimSel').value = String(run.dim); }
+  applyCriteria(run.crit);
+  const crit = collectCriteria();
+  if (!crit) { clearSeedRun(); updateSeedResumeBtn(); return; }
+  seedTotal = run.total;
+  seedReq = reqSeq++;
+  seedFoundCount = run.candidates.length; seedScannedCount = run.scanned;
+  seedCandidates = run.candidates;
+  seedBatches = run.batches.slice();
+  seedStart = run.start; seedMode = run.mode;
+  $('#seedMode').value = run.mode;
+  $('#seedCount').value = String(run.total);
+  $('#seedRadius').value = String(run.radius);
+  seedRunMeta = {
+    v: 1, mode: run.mode, start: run.start, total: run.total, radius: run.radius,
+    step: run.step, mc: run.mc, large: run.large, dim: run.dim, y: run.y, crit: run.crit
+  };
+  seedMsgBase = {
+    type: 'seedSearch', reqId: seedReq, mc: run.mc, large: run.large, dim: run.dim,
+    y: run.y, range: run.radius, step: run.step, ...crit
+  };
+  updateSeedResumeBtn();
+  renderSeedResults();
+  $('#seedProgress').value = Math.round(100 * seedScannedCount / seedTotal);
+  const seedInfo = $('#seedInfo');
+  seedInfo.textContent = t('searching'); seedInfo.className = 'info busy';
+  setSeedBusy(true);
+  getSeedPool().forEach(dispatchSeedBatch);
 }
 // clicking a candidate loads the seed and centers the map on its first hit
 function renderSeedResults() {
@@ -1765,6 +1836,8 @@ async function init() {
     if (searchBusy) sendSearch({ type: 'cancelSearch', reqId: searchReq });
     else runSearch();
   };
+  $('#seedResumeBtn').onclick = resumeSeedSearch;
+  updateSeedResumeBtn();
   $('#seedSearchBtn').onclick = () => {
     if (seedBusy) cancelSeedSearch();
     else startSeedSearch();

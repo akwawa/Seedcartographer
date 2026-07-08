@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   SEED_SEARCH_MAX_TOTAL, sequentialSeeds, randomSeeds, planBatches,
-  originDist, compareCandidates, insertCandidate
+  originDist, compareCandidates, insertCandidate, serializeSeedRun, parseSeedRun
 } = require('../seedsearch.js');
 
 test('sequentialSeeds counts from the start seed with 64-bit wraparound', () => {
@@ -65,4 +65,76 @@ test('insertCandidate keeps the list sorted and capped', () => {
   // the cap drops the worst-ranked candidate
   const capped = insertCandidate(list, { seed: 'mid', count: 1, dist: 200 }, 3);
   assert.deepStrictEqual(capped.map((c) => c.seed), ['best', 'near', 'mid']);
+});
+
+test('insertCandidate replaces an already-listed seed instead of duplicating', () => {
+  const a = { seed: '10', count: 1, dist: 500 };
+  const list = insertCandidate([], a);
+  const updated = insertCandidate(list, { seed: '10', count: 3, dist: 200 });
+  assert.strictEqual(updated.length, 1);
+  assert.strictEqual(updated[0].count, 3);
+});
+
+test('a seed run round-trips through serialize/parse', () => {
+  const run = {
+    v: 1, mode: 'seq', start: '141', total: 2000, radius: 1500, step: 32,
+    mc: 22, large: false, dim: 0, y: 60, crit: { mb: [5] }, scanned: 512,
+    batches: [{ offset: 512, count: 8 }, { offset: 520, count: 8 }],
+    candidates: [{ seed: '150', hit: { x: 10, z: -20 }, count: 2, dist: 22 }]
+  };
+  assert.deepStrictEqual(parseSeedRun(serializeSeedRun(run)), run);
+});
+
+test('parseSeedRun rejects malformed or finished runs', () => {
+  const base = {
+    v: 1, mode: 'random', start: '0', total: 100, radius: 1500, step: 32,
+    mc: 22, large: true, dim: -1, y: 60, crit: {}, scanned: 10,
+    batches: [{ offset: 10, count: 8 }], candidates: []
+  };
+  assert.notStrictEqual(parseSeedRun(JSON.stringify(base)), null);
+  assert.strictEqual(parseSeedRun(null), null);
+  assert.strictEqual(parseSeedRun('junk'), null);
+  assert.strictEqual(parseSeedRun('[1]'), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, v: 2 })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, mode: 'other' })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, start: {} })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, crit: 'x' })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, total: 'x' })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, total: 0 })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, total: 1e9 })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, scanned: -1 })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, dim: 5 })), null);
+  // an empty batch queue means the run finished: nothing to resume
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, batches: [] })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, batches: [{ offset: -1, count: 8 }] })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, batches: [{ offset: 0, count: 0 }] })), null);
+  assert.strictEqual(parseSeedRun(JSON.stringify({ ...base, batches: 'x' })), null);
+});
+
+test('parseSeedRun scrubs candidates and coerces a numeric start seed', () => {
+  const run = parseSeedRun(JSON.stringify({
+    v: 1, mode: 'seq', start: 141, total: 100, radius: 1500, step: 32,
+    mc: 22, large: 0, dim: 0, y: 60, crit: {}, scanned: 10,
+    batches: [{ offset: 10, count: 8 }, 'junk', { offset: 'x', count: 8 }],
+    candidates: [
+      { seed: '150', hit: { x: 1, z: 2 }, count: 1, dist: 2 },
+      { seed: 150, hit: { x: 1, z: 2 }, count: 1, dist: 2 },   // non-string seed
+      { seed: '151', hit: { x: 'a', z: 2 }, count: 1, dist: 2 },
+      { seed: '152', hit: { x: 1, z: 'b' }, count: 1, dist: 2 },
+      { seed: '153', hit: { x: 1, z: 2 }, count: 'x', dist: 2 },
+      { seed: '154', hit: { x: 1, z: 2 }, count: 1, dist: {} },
+      { seed: '155', count: 1, dist: 2 },
+      'junk'
+    ]
+  }));
+  assert.strictEqual(run.start, '141');
+  assert.strictEqual(run.large, false);
+  assert.deepStrictEqual(run.batches, [{ offset: 10, count: 8 }]);
+  assert.deepStrictEqual(run.candidates, [{ seed: '150', hit: { x: 1, z: 2 }, count: 1, dist: 2 }]);
+  // a run whose candidates key is not an array still parses
+  assert.notStrictEqual(parseSeedRun(JSON.stringify({
+    v: 1, mode: 'seq', start: '1', total: 100, radius: 1, step: 1, mc: 22,
+    large: false, dim: 0, y: 60, crit: {}, scanned: 0,
+    batches: [{ offset: 0, count: 8 }], candidates: 'x'
+  })), null);
 });
