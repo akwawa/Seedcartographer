@@ -144,6 +144,17 @@
     </section>
 
     <section class="card">
+      <h3 data-i18n="markersTitle">Markers</h3>
+      <div class="export">
+        <button id="markerExport" class="btn tiny" data-i18n="markerExport">Export JSON</button>
+        <button id="markerImport" class="btn tiny" data-i18n="markerImport">Import JSON</button>
+        <label for="markerImportFile" hidden data-i18n="markerImport">Import JSON</label>
+        <input id="markerImportFile" type="file" accept=".json,application/json" title="Import JSON" hidden>
+      </div>
+      <div id="markerList" class="favs"></div>
+    </section>
+
+    <section class="card">
       <h3 data-i18n="showOnMap">Show on map</h3>
       <div id="structLayers" class="layers"></div>
     </section>
@@ -163,6 +174,7 @@
       <button class="btn tiny" data-i18n="gotoBtn" data-i18n-title="gotoAria" title="Go to coordinates">Go</button>
     </form>
     <button id="rulerBtn" class="btn tiny rulerbtn" title="Measure a distance" aria-label="Measure a distance" data-i18n-title="rulerTitle" data-i18n-aria="rulerTitle">📏</button>
+    <button id="markerBtn" class="btn tiny markerbtn" title="Place a marker (click the map)" aria-label="Place a marker" data-i18n-title="markerTitle" data-i18n-aria="markerTitle">📍</button>
     <canvas id="minimap" width="176" height="132" aria-label="Overview minimap" data-i18n-aria="minimapAria"></canvas>
     <details id="legend" class="legend">
       <summary data-i18n="legend">Legend</summary>
@@ -206,6 +218,7 @@
 <script src="./seedsearch.js"></script>
 <script src="./searchhistory.js"></script>
 <script src="./userpresets.js"></script>
+<script src="./usermarkers.js"></script>
 <script src="./palette.js"></script>
 <script src="./theme.js"></script>
 <script src="./export.js"></script>

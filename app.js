@@ -289,6 +289,7 @@ function draw() {
   }
 
   drawFavMarkers(W, H);
+  drawUserMarkers(W, H);
 
   // result pins
   pins.forEach((p, i) => {
@@ -415,6 +416,16 @@ function drawSlimeLayer(points, W, H) {
 }
 
 // favorites of the current world render as gold diamonds, always visible
+function drawUserMarkers(W, H) {
+  ctx.fillStyle = '#b17ee0'; ctx.strokeStyle = 'rgba(30,10,45,.75)'; ctx.lineWidth = 1.2;
+  for (const m of markersFor(userMarkers, world)) {
+    const sx = w2sx(m.x), sy = w2sy(m.z);
+    if (sx < -8 || sy < -8 || sx > W + 8 || sy > H + 8) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx - 5, sy - 5); ctx.lineTo(sx + 5, sy - 5); ctx.lineTo(sx + 5, sy + 5); ctx.lineTo(sx - 5, sy + 5);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
 function drawFavMarkers(W, H) {
   ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = 'rgba(40,28,4,.75)'; ctx.lineWidth = 1.2;
   for (const f of favoritesFor(favorites, world)) {
@@ -609,7 +620,7 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
@@ -617,6 +628,12 @@ canvas.addEventListener('keydown', (e) => {
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
+  if (markerMode) {
+    setUserMarkers(addMarker(userMarkers, {
+      ...world, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my))
+    }));
+    return;
+  }
   if (ruler.on) {
     const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
     if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
@@ -1081,6 +1098,51 @@ let userPresets = parseUserPresets((() => {
 })());
 function saveUserPresets() {
   try { localStorage.setItem('userPresets', JSON.stringify(userPresets)); } catch { /* ignore */ }
+}
+let userMarkers = parseMarkers((() => {
+  try { return localStorage.getItem('markers'); } catch { return null; }
+})());
+function setUserMarkers(list) {
+  userMarkers = list;
+  try { localStorage.setItem('markers', JSON.stringify(userMarkers)); } catch { /* ignore */ }
+  buildMarkerList(); draw();
+}
+let markerMode = false;
+function setMarkerMode(on) {
+  markerMode = on;
+  $('#markerBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+function buildMarkerList() {
+  const box = $('#markerList');
+  box.textContent = '';
+  const list = markersFor(userMarkers, world);
+  if (!list.length) {
+    const p = document.createElement('p');
+    p.className = 'muted small'; p.dataset.i18n = 'markersEmpty'; p.textContent = t('markersEmpty');
+    box.appendChild(p);
+    return;
+  }
+  for (const m of list) box.appendChild(markerRow(m));
+}
+function markerRow(m) {
+  const row = document.createElement('div');
+  row.className = 'fav';
+  const go = document.createElement('button');
+  go.className = 'fav-go mono'; go.textContent = `${m.x}, ${m.z}`;
+  go.onclick = () => {
+    view.cx = m.x; view.cz = m.z;
+    draw(); requestRender(0); syncHash();
+  };
+  const name = document.createElement('input');
+  name.className = 'fav-note'; name.value = m.name;
+  name.maxLength = 60;
+  name.onchange = () => setUserMarkers(renameMarker(userMarkers, m.id, name.value));
+  const rm = document.createElement('button');
+  rm.className = 'rm'; rm.textContent = '×'; rm.title = t('remove'); rm.dataset.i18nTitle = 'remove';
+  rm.onclick = () => setUserMarkers(removeMarker(userMarkers, m.id));
+  row.append(go, name, rm);
+  return row;
 }
 let favorites = parseFavorites((() => {
   try { return localStorage.getItem('favorites'); } catch { return null; }
@@ -1583,6 +1645,19 @@ function init() {
   };
   gotoInput.oninput = () => gotoInput.classList.remove('bad');
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
+  $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
+  $('#markerExport').onclick = () => {
+    downloadFile('seedcartographer-markers.json', JSON.stringify(userMarkers, null, 2), 'application/json');
+  };
+  const markerImportInput = $('#markerImportFile');
+  $('#markerImport').onclick = () => markerImportInput.click();
+  markerImportInput.onchange = () => {
+    const f = markerImportInput.files[0];
+    if (f) {
+      f.text().then((txt) => setUserMarkers(mergeMarkers(userMarkers, parseMarkers(txt))));
+    }
+    markerImportInput.value = '';
+  };
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {
     const collapsed = document.body.classList.toggle('panel-collapsed');
@@ -1595,6 +1670,7 @@ function init() {
   buildFavList();
   initTheme();
   buildHistList();
+  buildMarkerList();
   applyI18n();
   resize();
   // offline support (PWA); requires a secure context, harmless otherwise
@@ -1602,5 +1678,5 @@ function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
 }
-function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); }
+function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); buildMarkerList(); }
 init();

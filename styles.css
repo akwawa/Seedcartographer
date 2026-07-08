@@ -182,6 +182,8 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .goto input.bad{border-color:#c0392b;outline:1px solid #c0392b}
 .rulerbtn{position:absolute;left:14px;top:128px}
 .rulerbtn.on{border-color:#e8b23c;color:#e8b23c;background:var(--raise)}
+.markerbtn{position:absolute;left:56px;top:128px}
+.markerbtn.on{border-color:#b17ee0;background:var(--hover)}
 .palettebtn.on{border-color:var(--lapis);background:var(--hover)}
 
 /* ---------- biome legend ---------- */
