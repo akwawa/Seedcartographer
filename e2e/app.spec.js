@@ -763,3 +763,24 @@ test('the A/B version compare swaps the generation and keeps the view', async ({
   const s2 = await state();
   expect(String(s2.m)).toBe(mainVer);
 });
+
+test('custom markers: place on click, rename, persist, delete', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#markerBtn');
+  await expect(page.locator('#markerBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.click(box.x + 300, box.y + 300);
+  await expect(page.locator('#markerList .fav')).toHaveCount(1);
+  // rename sticks
+  await page.fill('#markerList .fav-note', 'Ma base');
+  await page.press('#markerList .fav-note', 'Enter');
+  // markers survive a reload (localStorage), marker mode does not
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator('#markerList .fav-note')).toHaveValue('Ma base');
+  await expect(page.locator('#markerBtn')).not.toHaveClass(/on/);
+  // delete empties the list
+  await page.click('#markerList .rm');
+  await expect(page.locator('#markerList .fav')).toHaveCount(0);
+});

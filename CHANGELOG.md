@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Marqueurs personnalisés : le bouton 📍 active un mode « poser un
+  marqueur » — chaque clic sur la carte épingle un losange violet nommable,
+  lié à la seed/version/dimension comme les favoris, listé dans un panneau
+  dédié (renommer, recentrer, supprimer), persisté dans le navigateur et
+  exportable/importable en JSON (fusion sans doublons) (#133).
 - Comparaison de versions A/B : un sélecteur « vs » dans la barre du haut
   arme une version de comparaison et le bouton ⇄ (ou la touche V sur la
   carte) permute la génération en conservant la vue — le cache de tuiles
