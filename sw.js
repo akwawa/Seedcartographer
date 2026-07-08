@@ -23,6 +23,7 @@ const ASSETS = [
   './searchhistory.js',
   './userpresets.js',
   './palette.js',
+  './tilegrid.js',
   './legend.js',
   './maptools.js',
   './tilecache.js',

@@ -28,7 +28,7 @@ const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
 let showGrid = false;                           // coordinate-grid overlay toggle
-const tileCache = createTileCache();            // LRU of rendered tiles (pan/zoom reuse)
+const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
 
 // ---------- worker plumbing ----------
@@ -99,12 +99,28 @@ function onTileMessage(d) {
   }
   draw();
 }
+function onGridTile(d) {
+  pendingTiles.delete(d.key);
+  if (d.skipped) return;   // cancelled off-screen tile, acknowledged only
+  if (!d.ok) {
+    searchInfo.textContent = t('tileFailed');
+    searchInfo.className = 'info err';
+    return;
+  }
+  const entry = { ...tileCanvasOf(d), worldKey: d.wk, key: d.key, present: d.present };
+  tileCache.put(entry);
+  // tiles of a previous world/altitude are cached but not drawn
+  if (d.wk !== tileWorldKey(world, yLayer)) return;
+  draw();
+  refreshLegendFromView();
+}
 worker.onmessage = (e) => {
   const d = e.data;
   if (d.type === 'fatal') { showFatal(d.message); return; }
   if (d.type === 'ready') { onEngineReady(d); return; }
   if (d.type === 'biomeList') { onBiomeList(d.list); return; }
   if (d.type === 'tile') { onTileMessage(d); return; }
+  if (d.type === 'gridTile') { onGridTile(d); return; }
   if (d.type === 'structures') {
     d.groups.forEach((g) => { const t = structToggles.find((s) => s.type === g.type); if (t) t.points = g.points; });
     draw();
@@ -242,7 +258,7 @@ function draw() {
     // instantly while the fresh tile is being computed (coarse first, then fine)
     const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
     // bounded: overdrawing the whole LRU every drag frame costs frame time
-    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect, 8)) drawTile(e);
+    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect, TILE_PAINT_MAX)) drawTile(e);
   }
 
   // structure / slime layers (only points in view)
@@ -403,20 +419,54 @@ function drawPin(sx, sy, active) {
 }
 
 let renderTimer = null;
+let renderGen = 0;                    // tile batch generation (worker-side cancel)
+const pendingTiles = new Set();       // tile keys requested and not yet arrived
 function requestRender(delay = 90) {
   clearTimeout(renderTimer);
   renderTimer = setTimeout(() => {
-    renderReq = reqSeq++;
-    send({
-      type: 'render', reqId: renderReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
-      y: yLayer,
-      highlight: highlightBiome,
-      cx: view.cx, cz: view.cz, bpp: view.bpp,
-      w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
-    });
+    if (highlightBiome !== null) {
+      // legend hover: the dimmed view stays a single viewport render
+      renderReq = reqSeq++;
+      send({
+        type: 'render', reqId: renderReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+        y: yLayer, highlight: highlightBiome,
+        cx: view.cx, cz: view.cz, bpp: view.bpp,
+        w: Math.ceil(canvas.width / dpr), h: Math.ceil(canvas.height / dpr)
+      });
+    } else {
+      requestGridTiles();
+    }
     requestMinimap();
     requestStructures();
   }, delay);
+}
+// progressive checkerboard: request every uncached tile of the view,
+// center-first; bumping the generation cancels older off-screen requests
+function requestGridTiles() {
+  renderGen++;
+  send({ type: 'tileGen', gen: renderGen });
+  const W = Math.ceil(canvas.width / dpr), H = Math.ceil(canvas.height / dpr);
+  const scale = renderScaleFor(view.bpp);
+  const wk = tileWorldKey(world, yLayer);
+  const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
+  for (const pos of tilesForView(view, W, H, scale)) {
+    const key = tileKey(wk, scale, pos.originX, pos.originZ);
+    if (cached.has(key)) { tileCache.touch(key); continue; }
+    if (pendingTiles.has(key)) continue;   // already in flight
+    pendingTiles.add(key);
+    send({
+      type: 'renderTile', gen: renderGen, key, wk, scale,
+      originX: pos.originX, originZ: pos.originZ,
+      seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer
+    });
+  }
+  refreshLegendFromView();
+}
+// the stitched view's legend is the union of the visible tiles' biome sets
+function refreshLegendFromView() {
+  const W = canvas.width / dpr, H = canvas.height / dpr;
+  const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
+  buildLegend(unionPresent(tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect)));
 }
 // The minimap barely changes while panning: it re-renders on its own longer
 // debounce so it never doubles the engine work of the main tile.
@@ -1392,8 +1442,8 @@ function applyPalette(alt, persist) {
   $('#paletteBtn').setAttribute('aria-pressed', String(alt));
   if (persist) { try { localStorage.setItem('palette', alt ? 'alt' : 'default'); } catch { /* ignore */ } }
   send({ type: 'palette', alt });
-  // every cached tile was painted with the old table
-  tileCache.clear(); minimapTile = null;
+  // every cached or in-flight tile was painted with the old table
+  tileCache.clear(); pendingTiles.clear(); minimapTile = null;
   draw(); requestRender(0); requestMinimap(0);
   buildLegend(legendPresent);
 }

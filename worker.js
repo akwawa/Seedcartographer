@@ -1,6 +1,6 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js', './palette.js');
+importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js', './palette.js', './tilegrid.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -302,6 +302,32 @@ async function runSeedSearchJob(d) {
   postMessage({ type: 'seedBatchDone', reqId: d.reqId });
 }
 
+// checkerboard render: one fixed world-aligned tile of the progressive grid.
+// A generation bump cancels every queued tile of older batches (off-screen
+// requests are simply skipped instead of computed).
+let tileGen = 0;
+function handleRenderTile(d) {
+  if (d.gen < tileGen) {
+    // cancelled batch: acknowledge without computing so the app can drop
+    // the request from its in-flight bookkeeping
+    postMessage({ type: 'gridTile', key: d.key, wk: d.wk, skipped: true });
+    return;
+  }
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const cells = TILE_CELLS * TILE_CELLS;
+  ensureArea(cells);
+  const ok = M._genBiomeArea(areaPtr, d.originX / d.scale, d.originZ / d.scale,
+    TILE_CELLS, TILE_CELLS, d.scale, scaledY(d.y));
+  const rgba = new Uint8ClampedArray(cells * 4);
+  const present = new Set();
+  if (ok) paintTile(rgba, present, cells, null);
+  postMessage({
+    type: 'gridTile', key: d.key, wk: d.wk, ok: !!ok, rgba: rgba.buffer,
+    cols: TILE_CELLS, rows: TILE_CELLS, scale: d.scale, present: [...present],
+    originX: d.originX, originZ: d.originZ
+  }, [rgba.buffer]);
+}
+
 // render one biome tile (RGBA + present-biome set) for the requested view
 function handleRender(d) {
   applyWorld(d.seed, d.mc, d.large, d.dim);
@@ -356,6 +382,10 @@ function handleStructures(d) {
 onmessage = (e) => {
   if (!ready) { /* messages before ready are re-sent by main */ return; }
   const d = e.data;
+
+  if (d.type === 'tileGen') { tileGen = d.gen; return; }
+
+  if (d.type === 'renderTile') { handleRenderTile(d); return; }
 
   if (d.type === 'render') {
     handleRender(d);

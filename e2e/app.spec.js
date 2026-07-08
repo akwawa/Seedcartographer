@@ -718,3 +718,20 @@ test('the high-visibility palette repaints the map and persists', async ({ page 
   await waitForApp(page);
   await expect(page.locator('#paletteBtn')).toHaveClass(/on/);
 });
+
+/* global tileCache, pendingTiles */
+test('the tile checkerboard reuses cached tiles when panning back', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // initial view fully tiled
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  await page.focus('#map');
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(() => pendingTiles.size === 0);
+  const sizeAfterPan = await page.evaluate(() => tileCache.size());
+  // panning back needs no new tiles: everything is already cached
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(() => pendingTiles.size === 0);
+  const sizeAfterBack = await page.evaluate(() => tileCache.size());
+  expect(sizeAfterBack).toBe(sizeAfterPan);
+});
