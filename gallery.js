@@ -7,7 +7,7 @@
 const galleryGlobals = /** @type {any} */ (globalThis);
 const galleryEncode = galleryGlobals.encodeShareState || require('./sharestate.js').encodeShareState;
 
-const GALLERY_DIMS = [0, -1, 1];
+const GALLERY_DIMS = new Set([0, -1, 1]);
 
 /**
  * @typedef {{id: string, seed: string, mc: number, large: boolean,
@@ -26,7 +26,7 @@ function validateGalleryEntry(e) {
   const mc = Number(e.mc), dim = Number(e.dim), x = Number(e.x), z = Number(e.z);
   const b = Number(e.b), y = Number(e.y);
   if (![mc, dim, x, z, b, y].every(Number.isFinite)) return null;
-  if (!GALLERY_DIMS.includes(dim) || b <= 0) return null;
+  if (!GALLERY_DIMS.has(dim) || b <= 0) return null;
   const lang = (/** @type {any} */ v) => (v && typeof v === 'object' && typeof v.en === 'string' && v.en.trim() ? v : null);
   const title = lang(e.title), desc = lang(e.desc);
   if (!title || !desc) return null;
