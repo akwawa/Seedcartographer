@@ -169,7 +169,9 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   avec justification).
 - **Benchmark** : `node scripts/bench-scan.js` mesure `scanGrid` sur une grille
   synthétique réaliste ; la CI échoue si la durée dépasse le budget
-  (`BENCH_BUDGET_MS`, 2 s).
+  (`BENCH_BUDGET_MS`, 2 s). Côté e2e, `e2e/perf.spec.js` mesure le temps
+  jusqu'au premier rendu de carte et échoue au-delà du budget
+  (`RENDER_BUDGET_MS`, 15 s en CI).
 - **Typage** : `npm run typecheck` (JSDoc + `tsc --noEmit` via `checkJs` sur
   les modules purs — typage statique sans migration TypeScript).
 - **Lint** : `npm run lint` (ESLint) et `npm run lint:css` (stylelint) ; la CI vérifie aussi le `Dockerfile` (hadolint), les workflows (actionlint) et `build.sh` (shellcheck).
