@@ -42,6 +42,7 @@ module.exports = [
         MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly', parseGotoInput: 'readonly', rulerMeasure: 'readonly', linkedGridSpec: 'readonly', normalizeRect: 'readonly', formatRect: 'readonly', HISTORY_MAX: 'readonly', addHistoryEntry: 'readonly', parseHistory: 'readonly', USER_PRESET_NAME_MAX: 'readonly', addUserPreset: 'readonly', removeUserPreset: 'readonly', parseUserPresets: 'readonly', altRgb: 'readonly', originDist: 'readonly', insertCandidate: 'readonly', addMarker: 'readonly', removeMarker: 'readonly', renameMarker: 'readonly', markersFor: 'readonly', parseMarkers: 'readonly', mergeMarkers: 'readonly', TILE_GRID_CACHE_MAX: 'readonly', TILE_PAINT_MAX: 'readonly', renderScaleFor: 'readonly', tilesForView: 'readonly', unionPresent: 'readonly',
         tileWorldKey: 'readonly', tileKey: 'readonly', createTileCache: 'readonly', tilesInView: 'readonly',
         seedToBigInt: 'readonly',
+        sortHitsByDist: 'readonly',
         SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
         sequentialSeeds: 'readonly', randomSeeds: 'readonly', planBatches: 'readonly',
         encodeShareState: 'readonly', decodeShareState: 'readonly', normalizeLegacyCriteria: 'readonly',

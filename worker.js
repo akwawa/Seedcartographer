@@ -239,7 +239,13 @@ async function runSearchJob(d) {
       progress(Math.min(100, 85 + Math.round(15 * (params.rowEnd + 1) / rows)));
       await yieldToQueue();
     }
-    postMessage({ type: 'search', reqId: d.reqId, hits: params.hits, ms: ms() });
+    // the world spawn rides along so the app can offer distance-to-spawn
+    // sorting without a second round-trip (Overworld only, cached per world)
+    const spawn = (d.dim || 0) === 0 ? spawnPoints(0)[0] : null;
+    postMessage({
+      type: 'search', reqId: d.reqId, hits: params.hits, ms: ms(),
+      spawn: spawn ? { x: spawn[0], z: spawn[1] } : null
+    });
   } finally {
     searchBusy = false;
   }

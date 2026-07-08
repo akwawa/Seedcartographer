@@ -242,6 +242,19 @@ function pairMidpoints(pointsA, pointsB, gap, cap = SEARCH_MAX_HITS) {
   return out;
 }
 
+// Results sorted by distance to a reference point (typically the world
+// spawn), closest first; ties keep the incoming order (stable sort). The
+// input list is left untouched.
+/**
+ * @param {Array<{x: number, z: number}>} hits search results
+ * @param {{x: number, z: number}} origin reference point
+ * @returns {Array<{x: number, z: number}>} new sorted array
+ */
+function sortHitsByDist(hits, origin) {
+  const d2 = (/** @type {{x: number, z: number}} */ h) => (h.x - origin.x) ** 2 + (h.z - origin.z) ** 2;
+  return [...hits].sort((a, b) => d2(a) - d2(b));
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scanGrid, pairMidpoints, SEARCH_MAX_HITS, SEARCH_MAX_CELLS };
+  module.exports = { scanGrid, pairMidpoints, SEARCH_MAX_HITS, SEARCH_MAX_CELLS, sortHitsByDist };
 }

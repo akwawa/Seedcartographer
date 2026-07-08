@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Tri des résultats : un sélecteur au-dessus de la liste permet de trier par
+  distance au spawn du monde (le spawn accompagne désormais la réponse de
+  recherche, Overworld uniquement) en plus de l'ordre de recherche ;
+  comparateur pur `sortHitsByDist` testé (#139).
 - Couche relief (Overworld) : une case « Relief » superpose un ombrage type
   hillshade (lumière du nord-ouest) aux couleurs de biomes — la hauteur de
   surface est échantillonnée par le worker sur une grille adaptée au zoom

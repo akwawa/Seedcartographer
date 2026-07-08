@@ -20,7 +20,10 @@ let yLayer = 60;                                // altitude for tiles, probe and
 const DIMENSIONS = [[0, 'Overworld'], [-1, 'Nether'], [1, 'End']];
 const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
-let pins = [];                                  // [{x,z,count}]
+let pins = [];                                  // [{x,z,count}] as displayed (sorted)
+let basePins = [];                              // pins in engine (search) order
+let lastSpawn = null;                           // world spawn of the last search
+let sortMode = 'order';                         // 'order' | 'spawn'
 let selected = -1;
 // ruler tool: a/b world endpoints, b tracks the pointer until the 2nd click
 const ruler = { on: false, a: null, b: null, done: false };
@@ -255,7 +258,7 @@ function setDimension(dim) {
   structToggles.forEach((tg) => { tg.on = false; tg.points = null; });
   buildStructToggleUI();
   hidePopup();
-  pins = []; resultsEl.innerHTML = ''; $('#exportBtns').hidden = true;
+  pins = []; basePins = []; resultsEl.innerHTML = ''; $('#exportBtns').hidden = true; $('#sortCtl').hidden = true;
   curReset(); draw(); requestRender(0); syncHash();
 }
 
@@ -1059,10 +1062,12 @@ function seedResultRow(cand) {
 function onSearchResult(d) {
   if (d.reqId !== searchReq) return;   // stale
   setSearchBusy(false);
-  pins = d.hits; selected = -1;
+  basePins = d.hits; lastSpawn = d.spawn || null; selected = -1;
+  applySort();
   hidePopup();
   resultsEl.innerHTML = '';
   $('#exportBtns').hidden = !pins.length;
+  $('#sortCtl').hidden = !pins.length;
   if (d.error === 'cancelled') {
     searchInfo.textContent = t('searchCancelled');
     searchInfo.className = 'info empty';
@@ -1082,6 +1087,16 @@ function onSearchResult(d) {
   searchInfo.className = 'info ok';
   renderResultsList();
   selectPin(0);
+}
+// displayed order: as searched, or closest-to-spawn first (Overworld only)
+function applySort() {
+  const spawnable = sortMode === 'spawn' && lastSpawn;
+  pins = spawnable ? sortHitsByDist(basePins, lastSpawn) : basePins;
+  const sel = $('#sortSel');
+  if (sel) {
+    sel.querySelector('option[value="spawn"]').disabled = !lastSpawn;
+    if (!lastSpawn && sortMode === 'spawn') { sortMode = 'order'; sel.value = 'order'; }
+  }
 }
 function renderResultsList() {
   resultsEl.innerHTML = '';
@@ -1109,10 +1124,12 @@ function importLocationsCSV(file) {
       searchInfo.className = 'info err';
       return;
     }
-    pins = hits; selected = -1;
+    basePins = hits; selected = -1;
+    applySort();
     hidePopup();
     renderResultsList();
     $('#exportBtns').hidden = false;
+    $('#sortCtl').hidden = false;
     searchInfo.textContent = t('imported', { n: hits.length });
     searchInfo.className = 'info ok';
     selectPin(0);
@@ -1734,6 +1751,10 @@ function init() {
   $('#netherChk').onchange = (e) => { showNetherGrid = e.target.checked; draw(); };
   // relief is baked into the tile pixels: re-request tiles under the new key
   $('#reliefChk').onchange = (e) => { showRelief = e.target.checked; requestRender(0); };
+  $('#sortSel').onchange = (e) => {
+    sortMode = e.target.value;
+    applySort(); selected = -1; hidePopup(); renderResultsList(); draw();
+  };
   const ySlider = $('#ySlider'), yVal = $('#yVal');
   ySlider.value = String(yLayer); yVal.textContent = String(yLayer);
   ySlider.oninput = () => { yVal.textContent = ySlider.value; };

@@ -130,6 +130,12 @@
         <label for="importFile" hidden data-i18n="importCsv">Import CSV</label>
         <input id="importFile" type="file" accept=".csv,text/csv" title="Import CSV" hidden>
       </div>
+      <label id="sortCtl" class="sortctl" hidden><span data-i18n="sortResults">Sort</span>
+        <select id="sortSel">
+          <option value="order" data-i18n="sortOrder">search order</option>
+          <option value="spawn" data-i18n="sortSpawn">distance to spawn</option>
+        </select>
+      </label>
       <div id="results" class="results"><p class="muted small" data-i18n="noSearchYet">No search yet. Pick conditions and hit search.</p></div>
     </section>
 

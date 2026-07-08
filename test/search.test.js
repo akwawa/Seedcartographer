@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { scanGrid } = require('../search.js');
+const { scanGrid, sortHitsByDist } = require('../search.js');
 
 // Small synthetic world: SC=16, grid origin at 0/0, scan the whole grid.
 const SC = 16;
@@ -218,4 +218,19 @@ test('the hit cap stops the scan and short-circuits full accumulators', () => {
   assert.strictEqual(hits.length, SEARCH_MAX_HITS);
   // calling again with a full accumulator returns immediately
   assert.strictEqual(scanGrid({ ...p, hits }), hits);
+});
+
+test('sortHitsByDist orders results closest-to-origin first and is stable', () => {
+  const hits = [
+    { x: 100, z: 0, tag: 'far' },
+    { x: 10, z: 10, tag: 'near-a' },
+    { x: -10, z: -10, tag: 'near-b' },   // same distance as near-a
+    { x: 0, z: 5, tag: 'nearest' }
+  ];
+  const sorted = sortHitsByDist(hits, { x: 0, z: 0 });
+  assert.deepStrictEqual(sorted.map((h) => h.tag), ['nearest', 'near-a', 'near-b', 'far']);
+  // input untouched
+  assert.strictEqual(hits[0].tag, 'far');
+  // non-zero origin changes the winner
+  assert.strictEqual(sortHitsByDist(hits, { x: 100, z: 0 })[0].tag, 'far');
 });
