@@ -188,7 +188,8 @@ async function runSearchJob(d) {
     // biome grid over the search box padded by the largest adjacency distance
     const SC = 16;
     const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
-    const pad = adjClauses.reduce((m, c) => Math.max(m, c.dist), 0);
+    const pctClauses = (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct }));
+    const pad = [...adjClauses, ...pctClauses].reduce((m, c) => Math.max(m, c.dist), 0);
     const gx0 = Math.floor((d.cx - d.range - pad) / SC);
     const gz0 = Math.floor((d.cz - d.range - pad) / SC);
     const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
@@ -221,6 +222,7 @@ async function runSearchJob(d) {
       cx: d.cx, cz: d.cz, range: d.range, step: d.step, mergeDist: d.mergeDist,
       mainSet: new Set(d.mainBiomes),
       adjMode: d.adjMode, adjClauses,
+      pctMode: d.pctMode, pctClauses,
       structMode: d.structMode, structClauses,
       // surface height is Overworld-only; heightAt calls into the engine
       surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -262,6 +264,8 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
     mainSet: new Set(d.mainBiomes),
     adjMode: d.adjMode,
     adjClauses: (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate })),
+    pctMode: d.pctMode,
+    pctClauses: (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct })),
     structMode: d.structMode,
     structClauses: buildStructClauses({ ...d, cx: 0, cz: 0 }),
     surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -274,7 +278,7 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
 async function runSeedSearchJob(d) {
   const cancelled = () => seedCancelId === d.reqId;
   const SC = 16;
-  const pad = (d.adjClauses || []).reduce((m, c) => Math.max(m, c.dist), 0);
+  const pad = [...(d.adjClauses || []), ...(d.pctClauses || [])].reduce((m, c) => Math.max(m, c.dist), 0);
   const gx0 = Math.floor((-d.range - pad) / SC);
   const gz0 = gx0;
   const cols = Math.ceil((d.range + pad) / SC) - gx0 + 2;

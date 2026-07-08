@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Critères en pourcentage de zone : un bloc « Part de biome » accepte des
+  clauses « au moins N % du biome X dans un rayon R » (combinables ET/OU),
+  évaluées statistiquement sur la grille de biomes existante (sous-
+  échantillonnage régulier sur les grands rayons) et incluses dans le lien
+  de partage, les presets et l'historique (#142).
 - Permaliens raccourcis : le hash des liens de partage est compressé
   (deflate via `CompressionStream`, préfixe `z.`) quand le navigateur le
   permet, avec repli sur le format existant sinon — les anciens liens non

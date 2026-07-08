@@ -43,6 +43,7 @@ test('sanitizeCriteria coerces integers, drops junk and caps row counts', () => 
   assert.deepStrictEqual(c, {
     mb: [185, 44], am: 'and',
     ac: [{ b: 44, d: 400, n: true }],
+    qm: 'and', qc: [],
     sm: 'or', sc: [{ t: 7, mn: 2, r: 800, im: false }], pc: [],
     rg: null, sp: 16, s0: 60, s1: null
   });
@@ -114,4 +115,24 @@ test('the codec degrades to the legacy format without CompressionStream', async 
   assert.deepStrictEqual(await decodeShareHash(hash), state);
   // a compressed link cannot be read on such a runtime: null, not a throw
   assert.strictEqual(await decodeShareHash('z.abc'), null);
+});
+
+test('sanitizeCriteria keeps well-formed percentage clauses and drops the rest', () => {
+  const c = sanitizeCriteria({
+    mb: [1], qm: 'or',
+    qc: [
+      { b: 5, p: 30, d: 400 },          // valid
+      { b: 5, p: 0, d: 400 },           // pct out of range
+      { b: 5, p: 101, d: 400 },         // pct out of range
+      { b: 5, p: 30, d: 0 },            // no radius
+      { b: 'x', p: 30, d: 400 },        // malformed biome
+      'junk'
+    ]
+  }, 10);
+  assert.strictEqual(c.qm, 'or');
+  assert.deepStrictEqual(c.qc, [{ b: 5, p: 30, d: 400 }]);
+  // defaults: AND mode and empty list when absent
+  const d = sanitizeCriteria({ mb: [1] }, 10);
+  assert.strictEqual(d.qm, 'and');
+  assert.deepStrictEqual(d.qc, []);
 });
