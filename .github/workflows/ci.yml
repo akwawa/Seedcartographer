@@ -67,7 +67,11 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.0.0
         with:
           node-version: 22
-      - run: npx --yes @lhci/cli@0.15 autorun
+          cache: npm
+      # lhci is a pinned devDependency installed with lifecycle scripts
+      # disabled: no on-demand npx execution (S6505)
+      - run: npm ci --ignore-scripts
+      - run: ./node_modules/.bin/lhci autorun
 
   # SonarQube Cloud analysis (quality gate + unit-test coverage). Requires the
   # SONAR_TOKEN repository secret; the scan step is skipped when it is not
@@ -90,11 +94,6 @@ jobs:
       # the secrets context is not allowed in a step `if`: the token is
       # exposed as job-level env and tested through the env context instead
       - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
-        if: env.SONAR_TOKEN != ''
-      # TEMP debug: dump the new issues reported on this PR
-      - run: |
-          curl -sS -u "$SONAR_TOKEN:" -o /tmp/pr-issues.json "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&pullRequest=147&resolved=false&ps=100"
-          jq -r '.issues[] | "\(.type) \(.severity) \(.rule) \(.component):\(.line // 0) \(.message)"' /tmp/pr-issues.json
         if: env.SONAR_TOKEN != ''
 
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and

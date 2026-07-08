@@ -176,7 +176,7 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 - **Lighthouse** : le job CI `lighthouse` audite la page servie et échoue
   sous les planchers de `lighthouserc.json` (performance ≥ 0,6 — les runners CI sont plus lents qu'en local,
   accessibilité ≥ 0,9, bonnes pratiques ≥ 0,9, SEO ≥ 0,8) ; en local :
-  `CHROME_PATH=/chemin/vers/chromium npx @lhci/cli autorun`.
+  `CHROME_PATH=/chemin/vers/chromium ./node_modules/.bin/lhci autorun`.
 - **Qualité** : chaque push/PR est analysé par
   [SonarQube Cloud](https://sonarcloud.io/project/overview?id=akwawa_Seedcartographer)
   (job CI `sonar`, secret `SONAR_TOKEN` requis ; l'analyse doit être en mode
