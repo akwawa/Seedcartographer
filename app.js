@@ -836,11 +836,14 @@ function addRow(container, parts) {
 function addMainBiomeRow(biome) {
   addRow($('#mainBiomes'), [aria(biomeSelect(biome), 'ariaBiome')]);
 }
-function addAdjRow(biome, dist, negate) {
+function addAdjRow(biome, dist, negate, yl) {
   const neg = critSelect([['0', t('present'), 'present'], ['1', t('absent'), 'absent']], negate ? '1' : '0');
   neg.className = 'neg';
   aria(neg, 'ariaPresence');
-  addRow($('#adjClauses'), [aria(biomeSelect(biome), 'ariaBiome'), neg, subLbl('within'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks')]);
+  // optional per-clause altitude: empty = same layer as the map/search Y
+  const yInp = numInput(yl ?? '', -64, 1, 'sm yopt');
+  yInp.max = 320; yInp.placeholder = 'Y';
+  addRow($('#adjClauses'), [aria(biomeSelect(biome), 'ariaBiome'), neg, subLbl('within'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks'), subLbl('atY'), aria(yInp, 'ariaClauseY')]);
 }
 // "at least pct% of biome B within dist blocks of the spot"
 function addPctRow(biome, pct, dist) {
@@ -877,11 +880,16 @@ function collectCriteria() {
     .map((r) => Number.parseInt(r.querySelector('select').value, 10))
     .filter(Number.isFinite);
   if (!mainBiomes.length) return null;
-  const adjClauses = rowsOf('#adjClauses').map((r) => ({
-    biomes: [Number.parseInt(r.querySelector('select').value, 10)],
-    dist: Number.parseInt(r.querySelector('input').value, 10) || 0,
-    negate: r.querySelector('select.neg').value === '1'
-  })).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
+  const adjClauses = rowsOf('#adjClauses').map((r) => {
+    const ins = r.querySelectorAll('input.num');
+    const y = Number.parseInt(ins[1].value, 10);
+    return {
+      biomes: [Number.parseInt(r.querySelector('select').value, 10)],
+      dist: Number.parseInt(ins[0].value, 10) || 0,
+      negate: r.querySelector('select.neg').value === '1',
+      ...(Number.isFinite(y) ? { y } : {})
+    };
+  }).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
   const pctClauses = rowsOf('#pctClauses').map((r) => {
     const ins = r.querySelectorAll('input.num');
     return {
@@ -1528,11 +1536,16 @@ function readCriteria() {
   return {
     mb: rowsOf('#mainBiomes').map((r) => Number.parseInt(r.querySelector('select').value, 10)),
     am: $('#adjMode').value,
-    ac: rowsOf('#adjClauses').map((r) => ({
-      b: Number.parseInt(r.querySelector('select').value, 10),
-      d: Number.parseInt(r.querySelector('input').value, 10) || 0,
-      n: r.querySelector('select.neg').value === '1' ? 1 : 0
-    })),
+    ac: rowsOf('#adjClauses').map((r) => {
+      const ins = r.querySelectorAll('input.num');
+      const y = Number.parseInt(ins[1].value, 10);
+      return {
+        b: Number.parseInt(r.querySelector('select').value, 10),
+        d: Number.parseInt(ins[0].value, 10) || 0,
+        n: r.querySelector('select.neg').value === '1' ? 1 : 0,
+        ...(Number.isFinite(y) ? { yl: y } : {})
+      };
+    }),
     qm: $('#pctMode').value,
     qc: rowsOf('#pctClauses').map((r) => {
       const ins = r.querySelectorAll('input.num');
@@ -1671,7 +1684,7 @@ function applyCriteria(raw) {
   if (!c) return;
   c.mb.forEach((b) => addMainBiomeRow(b));
   $('#adjMode').value = c.am;
-  c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n));
+  c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n, r.yl));
   $('#pctMode').value = c.qm;
   c.qc.forEach((r) => addPctRow(r.b, r.p, r.d));
   $('#structMode').value = c.sm;

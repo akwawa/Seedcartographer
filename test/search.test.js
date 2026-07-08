@@ -290,3 +290,41 @@ test('percentage clause sub-steps on large radii and still estimates the share',
   assert.ok(ok.some((h) => h.x === 50 * SC && h.z === 50 * SC), '~50% share passes a 30% floor');
   assert.ok(!no.some((h) => h.x === 50 * SC && h.z === 50 * SC), '~50% share fails an 80% floor');
 });
+
+test('an adjacency clause can target an extra Y layer', () => {
+  // main grid: biome 1 at the center, no biome 9 anywhere
+  const grid = makeGrid(8, 8, 0, [{ i: 4, j: 4, id: 1 }]);
+  // deep layer: biome 9 right under the spot
+  const deep = makeGrid(8, 8, 0, [{ i: 4, j: 4, id: 9 }]);
+  const layers = [{ y: -40, grid: deep }];
+  const hit = scanGrid(makeParams(grid, 8, 8, {
+    layers, adjClauses: [{ biomes: new Set([9]), dist: 64, y: -40 }]
+  }));
+  assert.strictEqual(hit.length, 1, 'the deep clause reads the -40 layer');
+  const miss = scanGrid(makeParams(grid, 8, 8, {
+    layers, adjClauses: [{ biomes: new Set([9]), dist: 64 }]
+  }));
+  assert.strictEqual(miss.length, 0, 'without y the clause reads the main grid');
+  // combining a surface clause and a deep clause on the same spot
+  const both = scanGrid(makeParams(makeGrid(8, 8, 0, [{ i: 4, j: 4, id: 1 }, { i: 5, j: 4, id: 2 }]), 8, 8, {
+    layers,
+    adjMode: 'and',
+    adjClauses: [
+      { biomes: new Set([2]), dist: 64 },
+      { biomes: new Set([9]), dist: 64, y: -40 }
+    ]
+  }));
+  assert.strictEqual(both.length, 1, 'surface AND depth clauses can coincide');
+  // a null y is the same as no y (share-link shape)
+  const nullY = scanGrid(makeParams(grid, 8, 8, {
+    layers, adjClauses: [{ biomes: new Set([9]), dist: 64, y: null }]
+  }));
+  assert.strictEqual(nullY.length, 0);
+});
+
+test('a clause asking for a missing layer makes the request malformed', () => {
+  const grid = makeGrid(8, 8, 0, [{ i: 4, j: 4, id: 1 }]);
+  assert.strictEqual(scanGrid(makeParams(grid, 8, 8, {
+    adjClauses: [{ biomes: new Set([9]), dist: 64, y: -40 }]
+  })), null);
+});

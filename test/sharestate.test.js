@@ -42,7 +42,7 @@ test('sanitizeCriteria coerces integers, drops junk and caps row counts', () => 
   }, 8);
   assert.deepStrictEqual(c, {
     mb: [185, 44], am: 'and',
-    ac: [{ b: 44, d: 400, n: true }],
+    ac: [{ b: 44, d: 400, n: true, yl: null }],
     qm: 'and', qc: [],
     sm: 'or', sc: [{ t: 7, mn: 2, r: 800, im: false }], pc: [],
     rg: null, sp: 16, s0: 60, s1: null
@@ -135,4 +135,17 @@ test('sanitizeCriteria keeps well-formed percentage clauses and drops the rest',
   const d = sanitizeCriteria({ mb: [1] }, 10);
   assert.strictEqual(d.qm, 'and');
   assert.deepStrictEqual(d.qc, []);
+});
+
+test('sanitizeCriteria clamps the optional per-clause altitude', () => {
+  const c = sanitizeCriteria({
+    mb: [1],
+    ac: [
+      { b: 5, d: 400, yl: -40 },
+      { b: 5, d: 400, yl: 999 },
+      { b: 5, d: 400, yl: 'x' },
+      { b: 5, d: 400 }
+    ]
+  }, 8);
+  assert.deepStrictEqual(c.ac.map((r) => r.yl), [-40, 320, null, null]);
 });

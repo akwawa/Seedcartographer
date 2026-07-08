@@ -17,8 +17,14 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   step                             — scan stride in blocks
 //   mergeDist                        — duplicate-merge distance in blocks
 //   mainSet                          — Set of accepted biome ids for the spot
-//   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?}]
-//                                      (negate: the biome must be ABSENT within dist)
+//   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?, y?}]
+//                                      (negate: the biome must be ABSENT within dist;
+//                                      y: check the clause on the extra layer
+//                                      generated at that altitude instead of the
+//                                      main grid)
+//   layers (optional)                — [{y, grid}] extra biome grids, same
+//                                      geometry as `grid`, one per distinct
+//                                      clause altitude
 //   pctMode, pctClauses              — 'and'|'or', [{biomes:Set, dist, pct}]
 //                                      (at least pct% of the cells within dist
 //                                      belong to the clause's biome set)
@@ -36,7 +42,8 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   hits (optional)                  — accumulator from previous slices, used
 //                                      for duplicate-merging across slices
 /**
- * @typedef {{biomes: Set<number>, dist: number, negate?: boolean}} AdjClause
+ * @typedef {{biomes: Set<number>, dist: number, negate?: boolean,
+ *            y?: number|null}} AdjClause
  * @typedef {{biomes: Set<number>, dist: number, pct: number}} PctClause
  * @typedef {{points: Array<[number, number]>, min: number, radius: number,
  *            inMain?: boolean}} StructClause
@@ -46,19 +53,33 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
  */
 // ---- scanGrid helpers (extracted to keep each function readable) ----
 
-// per-clause cell radii and sub-steps (same speedup as the old C scan)
-/** @param {AdjClause[]} clauses @param {number} SC @returns {object[]} */
-function prepAdjClauses(clauses, SC) {
-  return clauses.map((c) => {
+// per-clause cell radii and sub-steps (same speedup as the old C scan);
+// each clause resolves the grid it reads: the main one, or the extra layer
+// generated at its altitude. A clause asking for a missing layer makes the
+// whole request malformed (null), like an empty main-biome set.
+/**
+ * @param {AdjClause[]} clauses
+ * @param {number} SC
+ * @param {Int32Array|number[]} mainGrid
+ * @param {Array<{y: number, grid: Int32Array|number[]}>} [layers]
+ * @returns {object[]|null}
+ */
+function prepAdjClauses(clauses, SC, mainGrid, layers) {
+  const byY = new Map((layers || []).map((l) => [l.y, l.grid]));
+  const out = [];
+  for (const c of clauses) {
+    const grid = c.y === undefined || c.y === null ? mainGrid : byY.get(c.y);
+    if (!grid) return null;
     const cells = Math.floor(c.dist / SC);
-    return {
-      biomes: c.biomes, negate: !!c.negate,
+    out.push({
+      biomes: c.biomes, negate: !!c.negate, grid,
       dist2: c.dist * c.dist, cells,
       // negated clauses must scan every cell: sub-stepping could miss the
       // one occurrence that should disqualify the spot
       sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
-    };
-  });
+    });
+  }
+  return out;
 }
 
 // Percentage clauses share the adjacency sub-stepping: the ratio over a
@@ -135,7 +156,7 @@ function adjClauseFound(c, g, ci, cj) {
       const ni = ci + di;
       if (ni < 0 || ni >= g.cols) continue;
       if ((di * g.SC) * (di * g.SC) + (dj * g.SC) * (dj * g.SC) > c.dist2) continue;
-      if (c.biomes.has(g.grid[nj * g.cols + ni])) return true;
+      if (c.biomes.has(c.grid[nj * g.cols + ni])) return true;
     }
   }
   return false;
@@ -217,6 +238,7 @@ function evalCell(ctx, ci, cj, wx, wz) {
  *          cx: number, cz: number, range: number, step: number,
  *          mergeDist: number, mainSet: Set<number>,
  *          adjMode?: string, adjClauses?: AdjClause[],
+ *          layers?: Array<{y: number, grid: Int32Array|number[]}>,
  *          pctMode?: string, pctClauses?: PctClause[],
  *          structMode?: string, structClauses?: StructClause[],
  *          surface?: SurfaceClause|null,
@@ -232,7 +254,8 @@ function scanGrid(p) {
   if (!mainSet?.size) return null;
 
   const g = { grid, cols, rows, gx0, gz0, SC, mainSet };
-  const adj = prepAdjClauses(p.adjClauses || [], SC);
+  const adj = prepAdjClauses(p.adjClauses || [], SC, grid, p.layers);
+  if (!adj) return null;
   const pcts = prepPctClauses(p.pctClauses || [], SC);
   const structs = prepStructClauses(p.structClauses || [], g);
   const surf = typeof p.surface?.heightAt === 'function'

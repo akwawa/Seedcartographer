@@ -56,7 +56,7 @@ function normalizeLegacyCriteria(c) {
 /**
  * @param {any} c untrusted criteria (share-link `c` shape)
  * @param {number} maxRows cap on each clause list
- * @returns {{mb: number[], am: string, ac: Array<{b: number, d: number, n: boolean}>,
+ * @returns {{mb: number[], am: string, ac: Array<{b: number, d: number, n: boolean, yl: number|null}>,
  *            qm: string, qc: Array<{b: number, p: number, d: number}>,
  *            sm: string, sc: Array<{t: number, mn: number, r: number, im: boolean}>,
  *            pc: Array<{t1: number, t2: number, g: number, r: number}>,
@@ -69,7 +69,10 @@ function sanitizeCriteria(c, maxRows) {
   const mb = rows(c.mb).map(intOrNull).filter((b) => b !== null);
   const ac = rows(c.ac).map((r) => {
     const b = intOrNull(r?.b), d = intOrNull(r?.d);
-    return b !== null && d !== null && d >= 0 ? { b, d, n: intOrNull(r?.n) === 1 } : null;
+    if (b === null || d === null || d < 0) return null;
+    // optional per-clause altitude, clamped to the world's build range
+    const yl = intOrNull(r?.yl);
+    return { b, d, n: intOrNull(r?.n) === 1, yl: yl === null ? null : clamp(yl, -64, 320) };
   }).filter(Boolean);
   const sc = rows(c.sc).map((r) => {
     const t = intOrNull(r?.t), mn = intOrNull(r?.mn), rr = intOrNull(r?.r);
