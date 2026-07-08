@@ -31,6 +31,7 @@ jobs:
       # scanGrid micro-benchmark: fails on a performance regression beyond
       # the time budget (durations are logged for tracking)
       - run: node scripts/bench-scan.js
+      - run: node scripts/bench-shapes.js
         env:
           BENCH_BUDGET_MS: '2000'
 

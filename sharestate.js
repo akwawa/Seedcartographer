@@ -58,6 +58,7 @@ function normalizeLegacyCriteria(c) {
  * @param {number} maxRows cap on each clause list
  * @returns {{mb: number[], am: string, ac: Array<{b: number, d: number, n: boolean, yl: number|null}>,
  *            qm: string, qc: Array<{b: number, p: number, d: number}>,
+ *            hm: string, hc: Array<{k: string, a: number[], b: number[], mx: number}>,
  *            sm: string, sc: Array<{t: number, mn: number, r: number, im: boolean}>,
  *            pc: Array<{t1: number, t2: number, g: number, r: number}>,
  *            rg: number|null, sp: number|null, s0: number|null, s1: number|null}|null}
@@ -84,6 +85,16 @@ function sanitizeCriteria(c, maxRows) {
     return b !== null && p !== null && d !== null && p >= 1 && p <= 100 && d > 0
       ? { b, p, d } : null;
   }).filter(Boolean);
+  const SHAPE_KINDS_HASH = ['island', 'lagoon', 'enclave'];
+  const hc = rows(c.hc).map((r) => {
+    if (!r || typeof r !== 'object' || !SHAPE_KINDS_HASH.includes(r.k)) return null;
+    const mx = intOrNull(r.mx);
+    if (mx === null || mx <= 0) return null;
+    const ids = (/** @type {any} */ v) => (Array.isArray(v) ? v : []).slice(0, 8).map(intOrNull).filter((n) => n !== null);
+    const a = ids(r.a), b = ids(r.b);
+    if (r.k === 'enclave' && (!a.length || !b.length)) return null;
+    return { k: r.k, a, b, mx: clamp(mx, 16, 4000) };
+  }).filter(Boolean);
   const pc = rows(c.pc).map((r) => {
     const t1 = intOrNull(r?.t1), t2 = intOrNull(r?.t2), g = intOrNull(r?.g), rr = intOrNull(r?.r);
     return t1 !== null && t2 !== null && g !== null && rr !== null && g >= 0 && rr >= 0
@@ -93,6 +104,7 @@ function sanitizeCriteria(c, maxRows) {
     mb,
     am: c.am === 'or' ? 'or' : 'and', ac,
     qm: c.qm === 'or' ? 'or' : 'and', qc,
+    hm: c.hm === 'or' ? 'or' : 'and', hc,
     sm: c.sm === 'or' ? 'or' : 'and', sc, pc,
     rg: intOrNull(c.rg), sp: intOrNull(c.sp),
     s0: intOrNull(c.s0), s1: intOrNull(c.s1)

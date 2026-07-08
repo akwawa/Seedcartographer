@@ -873,6 +873,31 @@ test('an adjacency clause with its own Y layer searches and shares', async ({ pa
   await expect(p2.locator('#adjClauses .row input.yopt')).toHaveValue('63');
 });
 
+test('a geographic-pattern clause runs the search and shares', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria + "the spot is on an island of at most 500 blocks": the
+  // demo cherry grove is on the mainland, so the search completes empty
+  await page.click('#addShape');
+  const row = page.locator('#shapeClauses .row');
+  await row.locator('select').first().selectOption('island');
+  await row.locator('input.num').fill('500');
+  // the biome pair only applies to enclaves: disabled here
+  await expect(row.locator('select').nth(1)).toBeDisabled();
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/empty|ok/);
+  await expect(page.locator('#searchInfo')).not.toHaveClass(/err/);
+  // the share link restores the clause
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#shapeClauses .row')).toHaveCount(1);
+  await expect(p2.locator('#shapeClauses .row select').first()).toHaveValue('island');
+  await expect(p2.locator('#shapeClauses .row input.num')).toHaveValue('500');
+});
+
 test('the seed gallery renders cards that open the app on the spot', async ({ page }) => {
   await page.goto('/gallery.html');
   await expect(page.locator('.gallerycard')).toHaveCount(4);

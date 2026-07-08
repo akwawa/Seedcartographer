@@ -1,6 +1,6 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js', './palette.js', './tilegrid.js', './relief.js');
+importScripts('./mcfinder.js', './seed.js', './shapes.js', './search.js', './slime.js', './markers.js', './palette.js', './tilegrid.js', './relief.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -170,6 +170,14 @@ function buildStructClauses(d) {
   return clauses;
 }
 
+// shape clauses cross the message boundary as plain arrays: rebuild the sets
+function workerShapeClauses(d) {
+  return (d.shapeClauses || []).map((c) => ({
+    kind: c.kind, max: c.max,
+    a: new Set(c.a || []), b: new Set(c.b || [])
+  }));
+}
+
 // distinct extra altitudes requested by adjacency clauses (block Y values)
 function adjLayerYs(d) {
   const ys = new Set();
@@ -267,6 +275,7 @@ async function runSearchJob(d) {
       mainSet: new Set(d.mainBiomes),
       adjMode: d.adjMode, adjClauses,
       pctMode: d.pctMode, pctClauses,
+      shapeMode: d.shapeMode, shapeClauses: workerShapeClauses(d),
       structMode: d.structMode, structClauses,
       // surface height is Overworld-only; heightAt calls into the engine
       surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -319,6 +328,8 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
     adjClauses: (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate })),
     pctMode: d.pctMode,
     pctClauses: (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct })),
+    shapeMode: d.shapeMode,
+    shapeClauses: workerShapeClauses(d),
     structMode: d.structMode,
     structClauses: buildStructClauses({ ...d, cx: 0, cz: 0 }),
     surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))

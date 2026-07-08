@@ -44,6 +44,7 @@ test('sanitizeCriteria coerces integers, drops junk and caps row counts', () => 
     mb: [185, 44], am: 'and',
     ac: [{ b: 44, d: 400, n: true, yl: null }],
     qm: 'and', qc: [],
+    hm: 'and', hc: [],
     sm: 'or', sc: [{ t: 7, mn: 2, r: 800, im: false }], pc: [],
     rg: null, sp: 16, s0: 60, s1: null
   });
@@ -148,4 +149,28 @@ test('sanitizeCriteria clamps the optional per-clause altitude', () => {
     ]
   }, 8);
   assert.deepStrictEqual(c.ac.map((r) => r.yl), [-40, 320, null, null]);
+});
+
+test('sanitizeCriteria validates shape clauses (hc/hm)', () => {
+  const c = sanitizeCriteria({
+    mb: [1], hm: 'or',
+    hc: [
+      { k: 'island', mx: 800 },
+      { k: 'lagoon', a: 'junk', b: null, mx: 99999 },              // ids scrubbed, mx clamped
+      { k: 'enclave', a: [14, 'x'], b: [1], mx: 8 },               // mx clamped up to 16
+      { k: 'volcano', mx: 800 },                                   // unknown kind
+      { k: 'island', mx: 0 },                                      // no size
+      { k: 'island', mx: 'x' },                                    // bad size
+      { k: 'enclave', a: [], b: [1], mx: 800 },                    // enclave needs both sets
+      { k: 'enclave', a: [14], b: [], mx: 800 },
+      'junk',
+      null
+    ]
+  }, 20);
+  assert.strictEqual(c.hm, 'or');
+  assert.deepStrictEqual(c.hc, [
+    { k: 'island', a: [], b: [], mx: 800 },
+    { k: 'lagoon', a: [], b: [], mx: 4000 },
+    { k: 'enclave', a: [14], b: [1], mx: 16 }
+  ]);
 });

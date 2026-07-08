@@ -78,6 +78,14 @@
       </div>
 
       <div class="field">
+        <label><span data-i18n="shapePatterns">Geographic patterns</span> <span class="opt" data-i18n="optional">optional</span>
+          <select id="shapeMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
+        </label>
+        <div id="shapeClauses" class="crit"></div>
+        <button id="addShape" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
+      </div>
+
+      <div class="field">
         <label><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span>
           <select id="structMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         </label>
