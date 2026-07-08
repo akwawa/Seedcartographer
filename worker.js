@@ -1,6 +1,6 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js', './palette.js', './tilegrid.js');
+importScripts('./mcfinder.js', './seed.js', './search.js', './slime.js', './markers.js', './palette.js', './tilegrid.js', './relief.js');
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -319,12 +319,37 @@ function handleRenderTile(d) {
     TILE_CELLS, TILE_CELLS, d.scale, scaledY(d.y));
   const rgba = new Uint8ClampedArray(cells * 4);
   const present = new Set();
-  if (ok) paintTile(rgba, present, cells, null);
+  if (ok) {
+    paintTile(rgba, present, cells, null);
+    if (d.relief && (d.dim || 0) === 0) applyRelief(rgba, d);
+  }
   postMessage({
     type: 'gridTile', key: d.key, wk: d.wk, ok: !!ok, rgba: rgba.buffer,
     cols: TILE_CELLS, rows: TILE_CELLS, scale: d.scale, present: [...present],
     originX: d.originX, originZ: d.originZ
   }, [rgba.buffer]);
+}
+
+// hillshade overlay (Overworld): sample the approximate surface height on a
+// coarse grid over the tile (step adapted to the zoom, relief.js), turn it
+// into shade multipliers and darken/brighten the biome pixels in place
+function applyRelief(rgba, d) {
+  const step = reliefSampleStep(d.scale);
+  const sCols = Math.ceil(TILE_CELLS / step), sRows = sCols;
+  const heights = new Float64Array(sCols * sRows);
+  for (let j = 0; j < sRows; j++) {
+    for (let i = 0; i < sCols; i++) {
+      heights[j * sCols + i] = M._approxSurfaceY(
+        d.originX + (i * step + step / 2) * d.scale,
+        d.originZ + (j * step + step / 2) * d.scale);
+    }
+  }
+  const shade = upsampleShade(hillshade(heights, sCols, sRows, step * d.scale),
+    sCols, sRows, step, TILE_CELLS, TILE_CELLS);
+  for (let i = 0; i < shade.length; i++) {
+    const s = shade[i];
+    rgba[i * 4] *= s; rgba[i * 4 + 1] *= s; rgba[i * 4 + 2] *= s;
+  }
 }
 
 // render one biome tile (RGBA + present-biome set) for the requested view

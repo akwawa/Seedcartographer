@@ -10,10 +10,11 @@ const TILE_CACHE_MAX = 24;   // tiles kept; ~viewport-sized each, so a few MB
 /**
  * @param {{seed: string|number, mc: number, large: boolean, dim: number}} world
  * @param {number} y altitude layer used for the render
+ * @param {boolean} [relief] hillshade overlay baked into the pixels
  * @returns {string}
  */
-function tileWorldKey(world, y) {
-  return `${world.seed}|${world.mc}|${world.large ? 1 : 0}|${world.dim}|${y}`;
+function tileWorldKey(world, y, relief = false) {
+  return `${world.seed}|${world.mc}|${world.large ? 1 : 0}|${world.dim}|${y}${relief ? '|r' : ''}`;
 }
 
 /**

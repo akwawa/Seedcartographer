@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Couche relief (Overworld) : une case « Relief » superpose un ombrage type
+  hillshade (lumière du nord-ouest) aux couleurs de biomes — la hauteur de
+  surface est échantillonnée par le worker sur une grille adaptée au zoom
+  (relief.js, module pur testé) et l'ombrage est cuit dans les tuiles du
+  damier, mises en cache sous une clé dédiée pour un aller-retour instantané
+  (#138).
 - Tests de mutation : `npm run mutation` lance Stryker sur les 19 modules
   purs partagés (runner `node --test`, seuil `break` sous lequel le run
   échoue) ; le workflow CI `mutation` l'exécute sur chaque push vers `main`,

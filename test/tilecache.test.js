@@ -12,7 +12,9 @@ test('tileWorldKey covers every input that invalidates cached pixels', () => {
   assert.notStrictEqual(tileWorldKey({ ...W, large: true }, 60), base);
   assert.notStrictEqual(tileWorldKey({ ...W, dim: -1 }, 60), base);
   assert.notStrictEqual(tileWorldKey(W, -52), base);
+  assert.notStrictEqual(tileWorldKey(W, 60, true), base);
   assert.strictEqual(tileWorldKey({ ...W }, 60), base);
+  assert.strictEqual(tileWorldKey(W, 60, false), base);
 });
 
 test('the cache evicts least-recently-used entries and touch refreshes', () => {

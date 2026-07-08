@@ -31,6 +31,9 @@ let structToggles = [];                         // [{type,label,on,color,points}
 let renderReq = 0, biomeProbeReq = 0;
 let showGrid = false;                           // coordinate-grid overlay toggle
 let showNetherGrid = false;                     // linked-dimension (portal) grid overlay
+let showRelief = false;                         // hillshade terrain overlay (Overworld)
+// relief tiles are only requested (and keyed) in the Overworld
+function reliefOn() { return showRelief && world.dim === 0; }
 const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
 
@@ -96,7 +99,7 @@ function onTileMessage(d) {
   // highlight re-renders keep the legend DOM intact (hover must survive);
   // they also carry dimmed pixels, so only plain tiles enter the cache
   if (d.highlight == null) {
-    const wk = tileWorldKey(world, yLayer);
+    const wk = tileWorldKey(world, yLayer, reliefOn());
     tileCache.put({ ...tile, worldKey: wk, key: tileKey(wk, d.scale, d.originX, d.originZ) });
     buildLegend(d.present || []);
   }
@@ -113,7 +116,7 @@ function onGridTile(d) {
   const entry = { ...tileCanvasOf(d), worldKey: d.wk, key: d.key, present: d.present };
   tileCache.put(entry);
   // tiles of a previous world/altitude are cached but not drawn
-  if (d.wk !== tileWorldKey(world, yLayer)) return;
+  if (d.wk !== tileWorldKey(world, yLayer, reliefOn())) return;
   draw();
   refreshLegendFromView();
 }
@@ -240,6 +243,9 @@ function setDimension(dim) {
     lbl.hidden = dim === 1;
     if (dim === 1) { showNetherGrid = false; $('#netherChk').checked = false; }
   }
+  // surface relief only exists in the Overworld
+  const rlbl = $('#reliefToggleLbl');
+  if (rlbl) rlbl.hidden = dim !== 0;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
   $('#pairClauses').textContent = '';
@@ -287,7 +293,7 @@ function draw() {
     // instantly while the fresh tile is being computed (coarse first, then fine)
     const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
     // bounded: overdrawing the whole LRU every drag frame costs frame time
-    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect, TILE_PAINT_MAX)) drawTile(e);
+    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer, reliefOn()), rect, TILE_PAINT_MAX)) drawTile(e);
   }
 
   // structure / slime layers (only points in view)
@@ -554,7 +560,7 @@ function requestGridTiles() {
   send({ type: 'tileGen', gen: renderGen });
   const W = Math.ceil(canvas.width / dpr), H = Math.ceil(canvas.height / dpr);
   const scale = renderScaleFor(view.bpp);
-  const wk = tileWorldKey(world, yLayer);
+  const wk = tileWorldKey(world, yLayer, reliefOn());
   const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
   for (const pos of tilesForView(view, W, H, scale)) {
     const key = tileKey(wk, scale, pos.originX, pos.originZ);
@@ -562,7 +568,7 @@ function requestGridTiles() {
     if (pendingTiles.has(key)) continue;   // already in flight
     pendingTiles.add(key);
     send({
-      type: 'renderTile', gen: renderGen, key, wk, scale,
+      type: 'renderTile', gen: renderGen, key, wk, scale, relief: reliefOn(),
       originX: pos.originX, originZ: pos.originZ,
       seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer
     });
@@ -573,7 +579,7 @@ function requestGridTiles() {
 function refreshLegendFromView() {
   const W = canvas.width / dpr, H = canvas.height / dpr;
   const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
-  buildLegend(unionPresent(tilesInView(tileCache.entries(), tileWorldKey(world, yLayer), rect)));
+  buildLegend(unionPresent(tilesInView(tileCache.entries(), tileWorldKey(world, yLayer, reliefOn()), rect)));
 }
 // The minimap barely changes while panning: it re-renders on its own longer
 // debounce so it never doubles the engine work of the main tile.
@@ -1726,6 +1732,8 @@ function init() {
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
   $('#netherChk').onchange = (e) => { showNetherGrid = e.target.checked; draw(); };
+  // relief is baked into the tile pixels: re-request tiles under the new key
+  $('#reliefChk').onchange = (e) => { showRelief = e.target.checked; requestRender(0); };
   const ySlider = $('#ySlider'), yVal = $('#yVal');
   ySlider.value = String(yLayer); yVal.textContent = String(yLayer);
   ySlider.oninput = () => { yVal.textContent = ySlider.value; };
