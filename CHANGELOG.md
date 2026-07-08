@@ -17,6 +17,9 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Domaine personnalisé : le site est servi sous **seedcarto.com** (fichier
+  `CNAME` déployé sur GitHub Pages, liens canoniques et README mis à jour)
+  (#166).
 - Motifs géographiques : un bloc « Motifs » accepte des clauses de forme —
   île (terre entourée d'eau), eau enclose (baie/lagon) et enclave (biome A
   entouré de biome B) avec une taille maximale — détectées par analyse de

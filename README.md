@@ -10,7 +10,7 @@ fait aucune requête externe.
 ## Démo en ligne
 
 L'application est déployée sur GitHub Pages à chaque mise à jour de `main` :
-**https://akwawa.github.io/Seedcartographer/**
+**https://seedcarto.com/** (alias : https://akwawa.github.io/Seedcartographer/)
 
 (Prérequis côté dépôt : Pages activé avec la source « GitHub Actions ».)
 
