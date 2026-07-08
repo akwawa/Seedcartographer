@@ -1480,6 +1480,27 @@ function downloadBlob(name, blob) {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+// merge an imported profile file into every local store and report counts
+function importProfileText(txt) {
+  const info = $('#profileInfo');
+  const imported = parseProfile(txt);
+  if (!imported) {
+    info.textContent = t('profileInvalid');
+    return;
+  }
+  const merged = mergeProfile(
+    { favorites, userPresets, history: searchHistory, markers: userMarkers }, imported);
+  setFavorites(merged.favorites);
+  userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
+  searchHistory = merged.history;
+  try { localStorage.setItem('searchHistory', JSON.stringify(searchHistory)); } catch { /* ignore */ }
+  buildHistList();
+  setUserMarkers(merged.markers);
+  info.textContent = t('profileImported', {
+    f: imported.favorites.length, p: imported.userPresets.length,
+    h: imported.history.length, m: imported.markers.length
+  });
+}
 function downloadFile(name, text, mime) {
   downloadBlob(name, new Blob([text], { type: mime }));
 }
@@ -1799,6 +1820,19 @@ function init() {
       f.text().then((txt) => setUserMarkers(mergeMarkers(userMarkers, parseMarkers(txt))));
     }
     markerImportInput.value = '';
+  };
+  // profile: one-file backup/restore of every local store
+  $('#profileExport').onclick = () => {
+    downloadFile('seedcartographer-profile.json',
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers }),
+      'application/json');
+  };
+  const profileImportInput = $('#profileImportFile');
+  $('#profileImport').onclick = () => profileImportInput.click();
+  profileImportInput.onchange = () => {
+    const f = profileImportInput.files[0];
+    if (f) f.text().then(importProfileText);
+    profileImportInput.value = '';
   };
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {

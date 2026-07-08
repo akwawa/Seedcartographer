@@ -798,6 +798,28 @@ test('the Nether grid overlay shows both referentials in the HUD', async ({ page
   await expect(page.locator('#hud .coords')).not.toContainText('⇄');
 });
 
+test('the profile round-trips through export and import', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  const profile = {
+    kind: 'seedcartographer-profile', version: 1,
+    favorites: [{ id: 1, seed: '141', mc: 22, large: false, dim: 0, x: 5, z: 6, note: 'ici' }],
+    userPresets: [{ id: 1, name: 'mon preset', dim: 0, c: { m: [5] } }],
+    history: [],
+    markers: [{ id: 1, seed: '141', mc: 22, large: false, dim: 0, x: 9, z: 9, name: 'spot' }]
+  };
+  await page.setInputFiles('#profileImportFile', {
+    name: 'profile.json', mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(profile))
+  });
+  await expect(page.locator('#profileInfo')).toContainText('1');
+  // the imported stores are live: preset in the selector, marker listed
+  await expect(page.locator('#presetSel option[value="user:1"], #presetSel option')).toContainText(['mon preset']);
+  // exporting downloads a JSON profile file
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#profileExport')]);
+  expect(dl.suggestedFilename()).toBe('seedcartographer-profile.json');
+});
+
 test('the relief overlay reshades the map tiles and is Overworld-only', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

@@ -26,6 +26,7 @@ const ASSETS = [
   './palette.js',
   './tilegrid.js',
   './relief.js',
+  './profile.js',
   './legend.js',
   './maptools.js',
   './tilecache.js',

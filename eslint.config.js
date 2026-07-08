@@ -34,6 +34,7 @@ module.exports = [
         SPAWN_STRUCT_TYPE: 'readonly', STRONGHOLD_STRUCT_TYPE: 'readonly', QUADHUT_STRUCT_TYPE: 'readonly',
         PRESETS: 'readonly', presetCriteria: 'readonly',
         // provided by favorites.js, loaded first
+        exportProfile: 'readonly', parseProfile: 'readonly', mergeProfile: 'readonly',
         parseFavorites: 'readonly', addFavorite: 'readonly', findFavorite: 'readonly',
         removeFavorite: 'readonly', updateFavoriteNote: 'readonly', favoritesFor: 'readonly',
         // provided by legend.js / theme.js / maptools.js, loaded first
@@ -77,6 +78,20 @@ module.exports = [
     languageOptions: { globals: { seedToBigInt: 'readonly', require: 'readonly', globalThis: 'readonly' } }
   },
   {
+    // profile.js consumes the sibling stores' APIs (script tags in the
+    // browser, require in Node)
+    files: ['profile.js'],
+    languageOptions: {
+      globals: {
+        require: 'readonly',
+        parseFavorites: 'readonly', addFavorite: 'readonly',
+        parseUserPresets: 'readonly', addUserPreset: 'readonly',
+        parseHistory: 'readonly', addHistoryEntry: 'readonly',
+        parseMarkers: 'readonly', mergeMarkers: 'readonly'
+      }
+    }
+  },
+  {
     // sharestate.js runs in the browser (btoa/atob) and in Node tests (Buffer)
     files: ['sharestate.js'],
     languageOptions: { globals: { btoa: 'readonly', atob: 'readonly', Buffer: 'readonly' } }
@@ -114,7 +129,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

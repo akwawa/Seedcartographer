@@ -161,6 +161,18 @@
     </section>
 
     <section class="card">
+      <h3 data-i18n="profileTitle">Profile</h3>
+      <p class="muted small" data-i18n="profileLede">Back up or move your favorites, custom presets, search history and markers.</p>
+      <div class="export">
+        <button id="profileExport" class="btn tiny" data-i18n="profileExport">Export profile</button>
+        <button id="profileImport" class="btn tiny" data-i18n="profileImport">Import profile</button>
+        <label for="profileImportFile" hidden data-i18n="profileImport">Import profile</label>
+        <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" hidden>
+      </div>
+      <p id="profileInfo" class="muted small" role="status"></p>
+    </section>
+
+    <section class="card">
       <h3 data-i18n="showOnMap">Show on map</h3>
       <div id="structLayers" class="layers"></div>
     </section>
@@ -236,6 +248,7 @@
 <script src="./searchhistory.js"></script>
 <script src="./userpresets.js"></script>
 <script src="./usermarkers.js"></script>
+<script src="./profile.js"></script>
 <script src="./palette.js"></script>
 <script src="./theme.js"></script>
 <script src="./export.js"></script>
