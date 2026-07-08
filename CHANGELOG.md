@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Statistiques d'usage : le site intègre le script [Umami](https://umami.is/)
+  (auto-hébergé sur analytics.super-h.fr, sans cookies) pour compter les
+  visites de façon anonyme ; le dialogue d'aide (6 langues) et le README
+  informent que les calculs et données restent locaux et que seules ces
+  statistiques anonymes sont collectées (#168).
 - Version visible : le dialogue d'aide affiche la version déployée et le
   commit (« v0.6.0 (abc1234) ») — un `version.js` committé en valeur « dev »
   est régénéré à chaque déploiement (GitHub Pages et image Docker) par
