@@ -46,6 +46,7 @@ module.exports = [
         sortHitsByDist: 'readonly',
         SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
         sequentialSeeds: 'readonly', randomSeeds: 'readonly', planBatches: 'readonly',
+        serializeSeedRun: 'readonly', parseSeedRun: 'readonly',
         encodeShareState: 'readonly', decodeShareState: 'readonly', encodeShareHash: 'readonly', decodeShareHash: 'readonly', normalizeLegacyCriteria: 'readonly',
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
