@@ -145,7 +145,7 @@ const SHARE_COMPRESSED_PREFIX = 'z.';
 function bytesToB64(bytes) {
   let bin = '';
   for (let i = 0; i < bytes.length; i += 0x8000) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    bin += String.fromCodePoint(...bytes.subarray(i, i + 0x8000));
   }
   return b64encode(bin);
 }
@@ -153,7 +153,7 @@ function bytesToB64(bytes) {
 function b64ToBytes(b64) {
   const bin = b64decode(b64);
   const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  for (let i = 0; i < bin.length; i++) out[i] = /** @type {number} */ (bin.codePointAt(i));
   return out;
 }
 /** @param {BufferSource} bytes @param {any} stream transform to pipe through @returns {Promise<Uint8Array>} */
