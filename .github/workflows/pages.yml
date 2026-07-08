@@ -29,9 +29,11 @@ jobs:
           cp index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js \
              biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.html gallery.js gallery.json \
              theme.js export.js mcfinder.js mcfinder.wasm \
-             manifest.webmanifest icon.svg sw.js CNAME _site/
+             manifest.webmanifest icon.svg sw.js version.js CNAME _site/
           cp -r fonts _site/
       # stamp the service-worker cache version with a content hash of the assets
+      # stamp the deployed version (release + commit) shown in the help dialog
+      - run: node scripts/app-version.js _site
       - run: node scripts/sw-version.js _site
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

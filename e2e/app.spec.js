@@ -283,6 +283,8 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
   await page.click('#helpBtn');
   await expect(page.locator('#helpDlg')).toBeVisible();
   await expect(page.locator('#helpDlg h2')).toHaveText('Help');
+  // the deployed-build stamp is filled in (dev placeholder when served raw)
+  await expect(page.locator('#helpVersion')).toHaveText(/^v/);
   await page.selectOption('#langSel', 'fr');
   await expect(page.locator('#helpDlg h2')).toHaveText('Aide');
   await page.click('#helpClose');

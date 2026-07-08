@@ -2002,6 +2002,9 @@ async function init() {
     $('#panelToggle').setAttribute('aria-expanded', String(!collapsed));
     resize();   // the map area changed size
   };
+  // deployed-build stamp (version.js, regenerated at deploy)
+  $('#helpVersion').textContent = 'v' + APP_VERSION.version
+    + (APP_VERSION.commit ? ` (${APP_VERSION.commit})` : '');
   $('#helpBtn').onclick = () => $('#helpDlg').showModal();
   $('#helpClose').onclick = () => $('#helpDlg').close();
   buildDimSelect();
