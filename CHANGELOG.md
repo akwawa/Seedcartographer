@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Rendu en damier progressif : la carte est composée de tuiles fixes de
+  256 cellules alignées monde, demandées séparément au worker (les plus
+  proches du centre d'abord) — le cache LRU devient vraiment réutilisable au
+  pan (une zone déjà vue n'est jamais régénérée), le rendu arrive tuile par
+  tuile, et changer de vue annule les tuiles hors écran encore en file
+  (génération côté worker) ; la légende agrège les biomes des tuiles
+  visibles (#114).
 - Recherche multi-seeds : les seeds candidates sont notées et triées — nombre
   de lieux trouvés puis distance du meilleur lieu à l'origine, affichés dans
   la liste (« N ⚑ · D blocs ») ; le clic charge toujours la seed centrée sur

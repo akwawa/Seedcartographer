@@ -38,7 +38,7 @@ module.exports = [
         // provided by legend.js / theme.js / maptools.js, loaded first
         legendEntries: 'readonly',
         scaleBarSpec: 'readonly', gridSpec: 'readonly', gridLines: 'readonly',
-        MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly', parseGotoInput: 'readonly', rulerMeasure: 'readonly', HISTORY_MAX: 'readonly', addHistoryEntry: 'readonly', parseHistory: 'readonly', USER_PRESET_NAME_MAX: 'readonly', addUserPreset: 'readonly', removeUserPreset: 'readonly', parseUserPresets: 'readonly', altRgb: 'readonly', originDist: 'readonly', insertCandidate: 'readonly',
+        MINIMAP_ZOOM_OUT: 'readonly', minimapClickToWorld: 'readonly', viewportRectOnMinimap: 'readonly', parseGotoInput: 'readonly', rulerMeasure: 'readonly', HISTORY_MAX: 'readonly', addHistoryEntry: 'readonly', parseHistory: 'readonly', USER_PRESET_NAME_MAX: 'readonly', addUserPreset: 'readonly', removeUserPreset: 'readonly', parseUserPresets: 'readonly', altRgb: 'readonly', originDist: 'readonly', insertCandidate: 'readonly', TILE_GRID_CACHE_MAX: 'readonly', TILE_PAINT_MAX: 'readonly', renderScaleFor: 'readonly', tilesForView: 'readonly', unionPresent: 'readonly',
         tileWorldKey: 'readonly', tileKey: 'readonly', createTileCache: 'readonly', tilesInView: 'readonly',
         seedToBigInt: 'readonly',
         SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
@@ -101,6 +101,7 @@ module.exports = [
         SLIME_STRUCT_TYPE: 'readonly',
         pairMidpoints: 'readonly',    // search.js
         altBiomeColors: 'readonly',   // palette.js
+        TILE_CELLS: 'readonly',       // tilegrid.js
         SPAWN_STRUCT_TYPE: 'readonly',       // markers.js
         STRONGHOLD_STRUCT_TYPE: 'readonly',
         QUADHUT_STRUCT_TYPE: 'readonly'
@@ -108,7 +109,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'palette.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'palette.js', 'tilegrid.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
