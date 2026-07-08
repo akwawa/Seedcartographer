@@ -1548,16 +1548,20 @@ function exportResults(fmt) {
 }
 
 // ---------- URL hash sharing ----------
+let hashSeq = 0;   // only the freshest encode may write the hash (async races)
 function syncHash() {
   const state = {
     s: world.seed, m: world.mc, l: world.large ? 1 : 0, d: world.dim, y: yLayer,
     x: Math.round(view.cx), z: Math.round(view.cz), b: +view.bpp.toFixed(2),
     c: readCriteria()
   };
-  history.replaceState(null, '', '#' + encodeShareState(state));
+  const seq = ++hashSeq;
+  return encodeShareHash(state).then((h) => {
+    if (seq === hashSeq) history.replaceState(null, '', '#' + h);
+  });
 }
 function readHash() {
-  return decodeShareState(location.hash.slice(1));
+  return decodeShareHash(location.hash.slice(1));
 }
 // Rebuild the criteria rows from a share-link-shaped `c` object. Values may
 // be attacker-controlled (share links): coerce everything to integers and cap
@@ -1710,8 +1714,8 @@ function initTheme() {
 }
 
 // ---------- init ----------
-function init() {
-  hashState = readHash();
+async function init() {
+  hashState = await readHash();
   const wv = sanitizeWorldView(hashState);
   if (wv) {
     world.seed = wv.seed;
@@ -1753,8 +1757,7 @@ function init() {
   $('#addStruct').onclick = () => addStructRow();
   $('#addPair').onclick = () => addPairRow();
   $('#shareBtn').onclick = () => {
-    syncHash();
-    copyText(location.href)
+    syncHash().then(() => copyText(location.href))
       .then(() => { $('#shareBtn').textContent = t('linkCopied'); })
       .catch(() => { $('#shareBtn').textContent = t('copyFailed'); });
     setTimeout(() => $('#shareBtn').textContent = t('shareLink'), 1300);

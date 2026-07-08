@@ -46,7 +46,7 @@ module.exports = [
         sortHitsByDist: 'readonly',
         SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
         sequentialSeeds: 'readonly', randomSeeds: 'readonly', planBatches: 'readonly',
-        encodeShareState: 'readonly', decodeShareState: 'readonly', normalizeLegacyCriteria: 'readonly',
+        encodeShareState: 'readonly', decodeShareState: 'readonly', encodeShareHash: 'readonly', decodeShareHash: 'readonly', normalizeLegacyCriteria: 'readonly',
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
       }
@@ -92,9 +92,10 @@ module.exports = [
     }
   },
   {
-    // sharestate.js runs in the browser (btoa/atob) and in Node tests (Buffer)
+    // sharestate.js runs in the browser (btoa/atob) and in Node tests
+    // (Buffer); the compression codec uses WHATWG globals present in both
     files: ['sharestate.js'],
-    languageOptions: { globals: { btoa: 'readonly', atob: 'readonly', Buffer: 'readonly' } }
+    languageOptions: { globals: { btoa: 'readonly', atob: 'readonly', Buffer: 'readonly', Blob: 'readonly', Response: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly' } }
   },
   {
     files: ['sw.js'],
@@ -152,7 +153,7 @@ module.exports = [
     files: ['e2e/**/*.js'],
     languageOptions: {
       sourceType: 'commonjs',
-      globals: { ...globals.node, ...globals.browser, syncHash: 'readonly' }
+      globals: { ...globals.node, ...globals.browser, syncHash: 'readonly', decodeShareHash: 'readonly' }
     }
   }
 ];

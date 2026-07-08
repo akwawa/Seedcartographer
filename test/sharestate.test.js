@@ -2,7 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const {
-  encodeShareState, decodeShareState, normalizeLegacyCriteria,
+  encodeShareState, decodeShareState, encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
   sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
 } = require('../sharestate.js');
 
@@ -81,4 +81,37 @@ test('sanitizeCriteria keeps the explicit or-modes', () => {
   const c = sanitizeCriteria({ mb: [1], am: 'or', ac: [], sm: 'or', sc: [], pc: [] }, 8);
   assert.strictEqual(c.am, 'or');
   assert.strictEqual(c.sm, 'or');
+});
+
+test('encodeShareHash produces a compressed hash that decodeShareHash round-trips', async () => {
+  const state = { s: '141', m: 22, l: 0, d: 0, y: 60, x: 0, z: 0, b: 4, c: { mb: [5, 6, 7], ac: [{ b: 44, d: 300 }] } };
+  const hash = await encodeShareHash(state);
+  assert.ok(hash.startsWith('z.'), 'compressed hashes carry the z. prefix');
+  assert.deepStrictEqual(await decodeShareHash(hash), state);
+  // the point of the ticket: shorter links than the legacy encoding
+  assert.ok(hash.length < encodeShareState(state).length);
+});
+
+test('decodeShareHash still reads legacy uncompressed hashes', async () => {
+  const state = { s: 'legacy', m: 21, c: { mb: [1] } };
+  assert.deepStrictEqual(await decodeShareHash(encodeShareState(state)), state);
+});
+
+test('decodeShareHash rejects malformed compressed payloads', async () => {
+  assert.strictEqual(await decodeShareHash('z.not-valid-deflate!!'), null);
+  assert.strictEqual(await decodeShareHash('z.'), null);
+  assert.strictEqual(await decodeShareHash(null), null);
+});
+
+test('the codec degrades to the legacy format without CompressionStream', async (t) => {
+  const CS = globalThis.CompressionStream, DS = globalThis.DecompressionStream;
+  t.after(() => { globalThis.CompressionStream = CS; globalThis.DecompressionStream = DS; });
+  globalThis.CompressionStream = undefined;
+  globalThis.DecompressionStream = undefined;
+  const state = { s: '141', m: 22 };
+  const hash = await encodeShareHash(state);
+  assert.ok(!hash.startsWith('z.'), 'fallback links use the legacy format');
+  assert.deepStrictEqual(await decodeShareHash(hash), state);
+  // a compressed link cannot be read on such a runtime: null, not a throw
+  assert.strictEqual(await decodeShareHash('z.abc'), null);
 });
