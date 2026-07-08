@@ -804,6 +804,34 @@ test('the Nether grid overlay shows both referentials in the HUD', async ({ page
   await expect(page.locator('#hud .coords')).not.toContainText('⇄');
 });
 
+test('a biome-share criterion filters results and survives the share link', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria + "at least 20% cherry grove within 100 blocks": the spot
+  // cell itself is a cherry grove, so a small disc keeps a high share
+  await page.click('#addPct');
+  const row = page.locator('#pctClauses .row');
+  await row.locator('select').selectOption({ label: 'Cherry Grove' });
+  const nums = row.locator('input.num');
+  await nums.nth(0).fill('20');
+  await nums.nth(1).fill('100');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  // an impossible floor finds nothing
+  await nums.nth(0).fill('100');
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/empty/);
+  // the share link restores the clause
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#pctClauses .row')).toHaveCount(1);
+  await expect(p2.locator('#pctClauses .row input.num').first()).toHaveValue('100');
+});
+
 test('the profile round-trips through export and import', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

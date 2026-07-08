@@ -234,3 +234,59 @@ test('sortHitsByDist orders results closest-to-origin first and is stable', () =
   // non-zero origin changes the winner
   assert.strictEqual(sortHitsByDist(hits, { x: 100, z: 0 })[0].tag, 'far');
 });
+
+test('percentage clause: enough share passes, too little fails', () => {
+  // 9x9 grid, main biome 1 at the center, half the disc is biome 2
+  const cells = [{ i: 4, j: 4, id: 1 }];
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 4; i++) cells.push({ i, j, id: 2 });
+  const grid = makeGrid(9, 9, 0, cells);
+  const low = scanGrid(makeParams(grid, 9, 9, {
+    pctMode: 'and', pctClauses: [{ biomes: new Set([2]), dist: 64, pct: 30 }]
+  }));
+  assert.strictEqual(low.length, 1, 'biome 2 covers well over 30% of the disc');
+  const high = scanGrid(makeParams(grid, 9, 9, {
+    pctMode: 'and', pctClauses: [{ biomes: new Set([2]), dist: 64, pct: 90 }]
+  }));
+  assert.strictEqual(high.length, 0, 'biome 2 covers far less than 90%');
+});
+
+test('percentage clause: 100% passes on a uniform disc', () => {
+  // everything is biome 1: the main spot and the whole disc qualify
+  const grid = makeGrid(9, 9, 1);
+  const hits = scanGrid(makeParams(grid, 9, 9, {
+    pctClauses: [{ biomes: new Set([1]), dist: 64, pct: 100 }]
+  }));
+  assert.ok(hits.length > 0);
+});
+
+test('percentage clauses combine with AND and OR', () => {
+  // half biome 2 around the spot, no biome 3 at all
+  const cells = [{ i: 4, j: 4, id: 1 }];
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 4; i++) cells.push({ i, j, id: 2 });
+  const grid = makeGrid(9, 9, 0, cells);
+  const clauses = [
+    { biomes: new Set([2]), dist: 64, pct: 20 },   // satisfied
+    { biomes: new Set([3]), dist: 64, pct: 20 }    // not satisfied
+  ];
+  const and = scanGrid(makeParams(grid, 9, 9, { pctMode: 'and', pctClauses: clauses }));
+  assert.strictEqual(and.length, 0, 'AND fails when one clause fails');
+  const or = scanGrid(makeParams(grid, 9, 9, { pctMode: 'or', pctClauses: clauses }));
+  assert.strictEqual(or.length, 1, 'OR passes when one clause holds');
+});
+
+test('percentage clause sub-steps on large radii and still estimates the share', () => {
+  // 101x101 grid: west half biome 2, main spot at the center. dist=640
+  // (40 cells) triggers the sub-stepped scan (sub=2).
+  const cells = [{ i: 50, j: 50, id: 1 }];
+  for (let j = 0; j < 101; j++) for (let i = 0; i < 50; i++) cells.push({ i, j, id: 2 });
+  const grid = makeGrid(101, 101, 0, cells);
+  // biome 1 only exists at the center, so it is the only candidate cell
+  const ok = scanGrid(makeParams(grid, 101, 101, {
+    pctClauses: [{ biomes: new Set([2]), dist: 640, pct: 30 }]
+  }));
+  const no = scanGrid(makeParams(grid, 101, 101, {
+    pctClauses: [{ biomes: new Set([2]), dist: 640, pct: 80 }]
+  }));
+  assert.ok(ok.some((h) => h.x === 50 * SC && h.z === 50 * SC), '~50% share passes a 30% floor');
+  assert.ok(!no.some((h) => h.x === 50 * SC && h.z === 50 * SC), '~50% share fails an 80% floor');
+});

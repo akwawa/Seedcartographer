@@ -250,7 +250,7 @@ function setDimension(dim) {
   const rlbl = $('#reliefToggleLbl');
   if (rlbl) rlbl.hidden = dim !== 0;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
-  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = '';
   $('#pairClauses').textContent = '';
   const presetSel = $('#presetSel');
   if (presetSel) presetSel.value = '';   // criteria no longer match any preset
@@ -842,6 +842,14 @@ function addAdjRow(biome, dist, negate) {
   aria(neg, 'ariaPresence');
   addRow($('#adjClauses'), [aria(biomeSelect(biome), 'ariaBiome'), neg, subLbl('within'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks')]);
 }
+// "at least pct% of biome B within dist blocks of the spot"
+function addPctRow(biome, pct, dist) {
+  addRow($('#pctClauses'), [
+    aria(biomeSelect(biome), 'ariaBiome'),
+    subLbl('atLeast'), aria(numInput(pct ?? 30, 0, 1, 'sm'), 'ariaPercent'),
+    subLbl('pctWithin'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks')
+  ]);
+}
 function addStructRow(type, min, radius, inMain) {
   const im = document.createElement('input');
   im.type = 'checkbox'; im.className = 'inmain'; im.checked = !!inMain;
@@ -874,6 +882,14 @@ function collectCriteria() {
     dist: Number.parseInt(r.querySelector('input').value, 10) || 0,
     negate: r.querySelector('select.neg').value === '1'
   })).filter((c) => Number.isFinite(c.biomes[0]) && c.dist > 0);
+  const pctClauses = rowsOf('#pctClauses').map((r) => {
+    const ins = r.querySelectorAll('input.num');
+    return {
+      biomes: [Number.parseInt(r.querySelector('select').value, 10)],
+      pct: Number.parseInt(ins[0].value, 10) || 0,
+      dist: Number.parseInt(ins[1].value, 10) || 0
+    };
+  }).filter((c) => Number.isFinite(c.biomes[0]) && c.pct >= 1 && c.pct <= 100 && c.dist > 0);
   const structClauses = rowsOf('#structClauses').map((r) => {
     const ins = r.querySelectorAll('input.num');
     return {
@@ -901,6 +917,7 @@ function collectCriteria() {
   return {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
+    pctMode: $('#pctMode').value, pctClauses,
     structMode: $('#structMode').value, structClauses, pairClauses,
     surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null
   };
@@ -1445,6 +1462,15 @@ function readCriteria() {
       d: Number.parseInt(r.querySelector('input').value, 10) || 0,
       n: r.querySelector('select.neg').value === '1' ? 1 : 0
     })),
+    qm: $('#pctMode').value,
+    qc: rowsOf('#pctClauses').map((r) => {
+      const ins = r.querySelectorAll('input.num');
+      return {
+        b: Number.parseInt(r.querySelector('select').value, 10),
+        p: Number.parseInt(ins[0].value, 10) || 0,
+        d: Number.parseInt(ins[1].value, 10) || 0
+      };
+    }),
     sm: $('#structMode').value,
     sc: rowsOf('#structClauses').map((r) => {
       const ins = r.querySelectorAll('input.num');
@@ -1567,7 +1593,7 @@ function readHash() {
 // be attacker-controlled (share links): coerce everything to integers and cap
 // list sizes before building any DOM from them.
 function applyCriteria(raw) {
-  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = '';
   $('#pairClauses').textContent = '';
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
@@ -1575,6 +1601,8 @@ function applyCriteria(raw) {
   c.mb.forEach((b) => addMainBiomeRow(b));
   $('#adjMode').value = c.am;
   c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n));
+  $('#pctMode').value = c.qm;
+  c.qc.forEach((r) => addPctRow(r.b, r.p, r.d));
   $('#structMode').value = c.sm;
   c.sc.forEach((r) => addStructRow(r.t, r.mn, r.r, r.im));
   c.pc.forEach((r) => addPairRow(r.t1, r.t2, r.g, r.r));
@@ -1754,6 +1782,7 @@ async function init() {
   wirePresetSave();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
+  $('#addPct').onclick = () => addPctRow();
   $('#addStruct').onclick = () => addStructRow();
   $('#addPair').onclick = () => addPairRow();
   $('#shareBtn').onclick = () => {

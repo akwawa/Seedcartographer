@@ -19,6 +19,9 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   mainSet                          — Set of accepted biome ids for the spot
 //   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?}]
 //                                      (negate: the biome must be ABSENT within dist)
+//   pctMode, pctClauses              — 'and'|'or', [{biomes:Set, dist, pct}]
+//                                      (at least pct% of the cells within dist
+//                                      belong to the clause's biome set)
 //   structMode, structClauses        — 'and'|'or', [{points:[[x,z]], min, radius,
 //                                      inMain?}] (inMain: only structures on a
 //                                      main-set biome cell count)
@@ -34,6 +37,7 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //                                      for duplicate-merging across slices
 /**
  * @typedef {{biomes: Set<number>, dist: number, negate?: boolean}} AdjClause
+ * @typedef {{biomes: Set<number>, dist: number, pct: number}} PctClause
  * @typedef {{points: Array<[number, number]>, min: number, radius: number,
  *            inMain?: boolean}} StructClause
  * @typedef {{x: number, z: number, count: number}} SearchHit
@@ -55,6 +59,51 @@ function prepAdjClauses(clauses, SC) {
       sub: !c.negate && cells > 20 ? Math.floor(cells / 20) : 1
     };
   });
+}
+
+// Percentage clauses share the adjacency sub-stepping: the ratio over a
+// regular subsample is an unbiased estimate of the disc's biome share.
+/** @param {PctClause[]} clauses @param {number} SC @returns {object[]} */
+function prepPctClauses(clauses, SC) {
+  return clauses.map((c) => {
+    const cells = Math.floor(c.dist / SC);
+    return {
+      biomes: c.biomes, pct: c.pct,
+      dist2: c.dist * c.dist, cells,
+      sub: cells > 20 ? Math.floor(cells / 20) : 1
+    };
+  });
+}
+
+// does the clause's biome set cover at least pct% of the disc around (ci, cj)?
+/** @param {any} c @param {GridCtx} g @param {number} ci @param {number} cj @returns {boolean} */
+function pctClauseOk(c, g, ci, cj) {
+  let inSet = 0, total = 0;
+  for (let dj = -c.cells; dj <= c.cells; dj += c.sub) {
+    const nj = cj + dj;
+    if (nj < 0 || nj >= g.rows) continue;
+    for (let di = -c.cells; di <= c.cells; di += c.sub) {
+      const ni = ci + di;
+      if (ni < 0 || ni >= g.cols) continue;
+      if ((di * g.SC) * (di * g.SC) + (dj * g.SC) * (dj * g.SC) > c.dist2) continue;
+      total++;
+      if (c.biomes.has(g.grid[nj * g.cols + ni])) inSet++;
+    }
+  }
+  // the disc always contains at least the center cell, so total >= 1
+  return inSet * 100 >= c.pct * total;
+}
+
+// AND/OR combination of the percentage clauses for one cell
+/** @param {any[]} pcts @param {boolean} pctAll @param {GridCtx} g @param {number} ci @param {number} cj @returns {boolean} */
+function pctPass(pcts, pctAll, g, ci, cj) {
+  let pass = pctAll;
+  for (const c of pcts) {
+    const ok = pctClauseOk(c, g, ci, cj);
+    if (pctAll && !ok) return false;
+    if (!pctAll && ok) return true;
+  }
+  return pass;
 }
 
 // "in main biome" restricts a clause to structures standing on a cell of the
@@ -136,7 +185,8 @@ function isDuplicate(hits, wx, wz, merge2) {
 // every per-cell criterion in one place: returns the structure count when
 // the cell passes, or null when any clause rejects it
 /**
- * @param {{g: GridCtx, adj: object[], adjAll: boolean, structs: object[],
+ * @param {{g: GridCtx, adj: object[], adjAll: boolean,
+ *          pcts: object[], pctAll: boolean, structs: object[],
  *          structAll: boolean, surf: {min: number, max: number,
  *          heightAt: (x: number, z: number) => number}|null}} ctx
  * @param {number} ci @param {number} cj @param {number} wx @param {number} wz
@@ -145,6 +195,7 @@ function isDuplicate(hits, wx, wz, merge2) {
 function evalCell(ctx, ci, cj, wx, wz) {
   if (!ctx.g.mainSet.has(ctx.g.grid[cj * ctx.g.cols + ci])) return null;
   if (ctx.adj.length && !adjPass(ctx.adj, ctx.adjAll, ctx.g, ci, cj)) return null;
+  if (ctx.pcts.length && !pctPass(ctx.pcts, ctx.pctAll, ctx.g, ci, cj)) return null;
   let count = 0;
   if (ctx.structs.length) {
     const total = structCount(ctx.structs, ctx.structAll, wx, wz);
@@ -166,6 +217,7 @@ function evalCell(ctx, ci, cj, wx, wz) {
  *          cx: number, cz: number, range: number, step: number,
  *          mergeDist: number, mainSet: Set<number>,
  *          adjMode?: string, adjClauses?: AdjClause[],
+ *          pctMode?: string, pctClauses?: PctClause[],
  *          structMode?: string, structClauses?: StructClause[],
  *          surface?: SurfaceClause|null,
  *          rowStart?: number, rowEnd?: number, hits?: SearchHit[]}} p
@@ -175,11 +227,13 @@ function scanGrid(p) {
   const { grid, cols, rows, gx0, gz0, SC, cx, cz, range, mergeDist } = p;
   const mainSet = p.mainSet;
   const adjAll = p.adjMode !== 'or';
+  const pctAll = p.pctMode !== 'or';
   const structAll = p.structMode !== 'or';
   if (!mainSet?.size) return null;
 
   const g = { grid, cols, rows, gx0, gz0, SC, mainSet };
   const adj = prepAdjClauses(p.adjClauses || [], SC);
+  const pcts = prepPctClauses(p.pctClauses || [], SC);
   const structs = prepStructClauses(p.structClauses || [], g);
   const surf = typeof p.surface?.heightAt === 'function'
     ? { min: p.surface.min ?? -Infinity, max: p.surface.max ?? Infinity, heightAt: p.surface.heightAt }
@@ -199,7 +253,7 @@ function scanGrid(p) {
   // stride alignment is identical to a full scan
   const rowStart = p.rowStart ?? bj0, rowEnd = p.rowEnd ?? bj1;
 
-  const ctx = { g, adj, adjAll, structs, structAll, surf };
+  const ctx = { g, adj, adjAll, pcts, pctAll, structs, structAll, surf };
   const hits = p.hits || [];
   if (hits.length >= SEARCH_MAX_HITS) return hits;
   for (let cj = bj0; cj <= bj1; cj += stride) {

@@ -57,6 +57,7 @@ function normalizeLegacyCriteria(c) {
  * @param {any} c untrusted criteria (share-link `c` shape)
  * @param {number} maxRows cap on each clause list
  * @returns {{mb: number[], am: string, ac: Array<{b: number, d: number, n: boolean}>,
+ *            qm: string, qc: Array<{b: number, p: number, d: number}>,
  *            sm: string, sc: Array<{t: number, mn: number, r: number, im: boolean}>,
  *            pc: Array<{t1: number, t2: number, g: number, r: number}>,
  *            rg: number|null, sp: number|null, s0: number|null, s1: number|null}|null}
@@ -75,6 +76,11 @@ function sanitizeCriteria(c, maxRows) {
     return t !== null && mn !== null && rr !== null && mn >= 0 && rr >= 0
       ? { t, mn, r: rr, im: intOrNull(r?.im) === 1 } : null;
   }).filter(Boolean);
+  const qc = rows(c.qc).map((r) => {
+    const b = intOrNull(r?.b), p = intOrNull(r?.p), d = intOrNull(r?.d);
+    return b !== null && p !== null && d !== null && p >= 1 && p <= 100 && d > 0
+      ? { b, p, d } : null;
+  }).filter(Boolean);
   const pc = rows(c.pc).map((r) => {
     const t1 = intOrNull(r?.t1), t2 = intOrNull(r?.t2), g = intOrNull(r?.g), rr = intOrNull(r?.r);
     return t1 !== null && t2 !== null && g !== null && rr !== null && g >= 0 && rr >= 0
@@ -83,6 +89,7 @@ function sanitizeCriteria(c, maxRows) {
   return {
     mb,
     am: c.am === 'or' ? 'or' : 'and', ac,
+    qm: c.qm === 'or' ? 'or' : 'and', qc,
     sm: c.sm === 'or' ? 'or' : 'and', sc, pc,
     rg: intOrNull(c.rg), sp: intOrNull(c.sp),
     s0: intOrNull(c.s0), s1: intOrNull(c.s1)
