@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Noms de biomes intégralement traduits : les 11 noms hérités (pré-1.18 —
+  montagnes, toundra enneigée, taïgas géantes, savane délabrée…) rejoignent
+  les 94 déjà traduits dans les 6 langues, et un test de parité garantit
+  désormais que chaque langue couvre exactement la liste des biomes du
+  submodule cubiomes (#136).
 - Copie de zone : le bouton ⬚ active un mode sélection — glisser trace un
   rectangle sur la carte (dimensions en blocs affichées en direct), puis une
   barre propose l'export PNG recadré de la sélection et la copie des
