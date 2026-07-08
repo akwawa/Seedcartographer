@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "e2e": "playwright test",
     "coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info",
+    "coverage:branches": "node --test --experimental-test-coverage --test-coverage-branches=100 --test-coverage-exclude='test/**' --test-coverage-exclude='scripts/**'",
     "lint:css": "stylelint styles.css fonts/fonts.css",
     "typecheck": "tsc --noEmit"
   },

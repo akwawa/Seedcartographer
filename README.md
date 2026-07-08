@@ -162,7 +162,11 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 - **Tests end-to-end** : `npm run e2e` (Playwright ; `npx playwright install chromium`
   au premier lancement, ou `CHROMIUM_PATH=/chemin/vers/chromium` pour utiliser un
   navigateur déjà installé).
-- **Couverture** : `npm run coverage` génère `coverage/lcov.info` (node:test).
+- **Couverture** : `npm run coverage` génère `coverage/lcov.info` (node:test) ;
+  `npm run coverage:branches` exige **100 % de couverture par branche** sur les
+  modules purs partagés (vérifié en CI — les scripts CLI et les fichiers de
+  test sont exclus, la colle navigateur est marquée `node:coverage ignore`
+  avec justification).
 - **Benchmark** : `node scripts/bench-scan.js` mesure `scanGrid` sur une grille
   synthétique réaliste ; la CI échoue si la durée dépasse le budget
   (`BENCH_BUDGET_MS`, 2 s).

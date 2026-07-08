@@ -24,6 +24,8 @@ jobs:
       - run: npm run lint:css
       - run: npm run typecheck
       - run: npm test
+      # every branch of the shared pure modules must be exercised
+      - run: npm run coverage:branches
       # scanGrid micro-benchmark: fails on a performance regression beyond
       # the time budget (durations are logged for tracking)
       - run: node scripts/bench-scan.js

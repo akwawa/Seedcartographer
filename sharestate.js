@@ -4,7 +4,9 @@
 // Shared between app.js (script tag) and the Node test suite (require).
 'use strict';
 
-// btoa/atob only exist in browsers; Node (tests) falls back to Buffer.
+// btoa/atob exist in browsers AND in Node >= 16 (the test runtime), so the
+// Buffer fallback only runs on exotic runtimes: excluded from coverage.
+/* node:coverage ignore next 2 */
 const b64encode = typeof btoa === 'function' ? btoa : (/** @type {string} */ s) => Buffer.from(s, 'binary').toString('base64');
 const b64decode = typeof atob === 'function' ? atob : (/** @type {string} */ s) => Buffer.from(s, 'base64').toString('binary');
 

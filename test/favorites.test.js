@@ -66,3 +66,11 @@ test('the list is capped', () => {
   for (let i = 0; i < FAV_MAX + 5; i++) l = addFavorite(l, { ...spot, x: i });
   assert.strictEqual(l.length, FAV_MAX);
 });
+
+test('favorites with a non-string, non-number seed are dropped', () => {
+  const good = { id: 1, seed: 141, mc: 30, large: false, dim: 0, x: 1, z: 2, note: 'n' };
+  const bad = { ...good, id: 2, seed: { nope: true } };
+  const list = parseFavorites(JSON.stringify([good, bad]));
+  assert.deepStrictEqual(list.map((f) => f.id), [1]);
+  assert.strictEqual(list[0].seed, '141');   // numeric seeds are stringified
+});

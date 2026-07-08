@@ -180,3 +180,42 @@ test('inMain structure clauses only count structures on main-set cells', () => {
   params.structClauses = [{ points: [onMain, offMain], min: 2, radius: 4000 }];
   assert.ok(scanGrid(params).length > 0);
 });
+
+const { SEARCH_MAX_HITS } = require('../search.js');
+
+test('or-mode structure clauses reject a cell when none matches', () => {
+  const grid = [7, 7, 7, 7];
+  const p = {
+    grid, cols: 2, rows: 2, gx0: 0, gz0: 0, SC: 16,
+    cx: 16, cz: 16, range: 32, step: 16, mergeDist: 0,
+    mainSet: new Set([7]),
+    structMode: 'or',
+    structClauses: [{ points: [], min: 1, radius: 100 }, { points: [], min: 1, radius: 100 }]
+  };
+  assert.deepStrictEqual(scanGrid(p), []);
+});
+
+test('scanGrid defaults: no clause lists, sub-cell step clamps the stride', () => {
+  const grid = [7, 7, 7, 7];
+  const hits = scanGrid({
+    grid, cols: 2, rows: 2, gx0: 0, gz0: 0, SC: 16,
+    cx: 16, cz: 16, range: 32, step: 1, mergeDist: 0,   // step < SC
+    mainSet: new Set([7])
+  });
+  assert.strictEqual(hits.length, 4);
+});
+
+test('the hit cap stops the scan and short-circuits full accumulators', () => {
+  // 64x64 all-matching cells with no merging: more candidates than the cap
+  const n = 64;
+  const grid = new Array(n * n).fill(7);
+  const p = {
+    grid, cols: n, rows: n, gx0: 0, gz0: 0, SC: 16,
+    cx: (n * 16) / 2, cz: (n * 16) / 2, range: n * 16, step: 16, mergeDist: 0,
+    mainSet: new Set([7])
+  };
+  const hits = scanGrid(p);
+  assert.strictEqual(hits.length, SEARCH_MAX_HITS);
+  // calling again with a full accumulator returns immediately
+  assert.strictEqual(scanGrid({ ...p, hits }), hits);
+});

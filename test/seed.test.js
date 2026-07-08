@@ -38,3 +38,7 @@ test('non-numeric-looking strings are hashed, not parsed', () => {
   // "+5" has a plus sign, which Minecraft treats as text
   assert.notStrictEqual(seedToBigInt('+5'), 5n);
 });
+
+test('the Java 32-bit overflow wrap matches Java (famous MIN_VALUE hash)', () => {
+  assert.strictEqual(seedToBigInt('polygenelubricants'), -2147483648n);
+});
