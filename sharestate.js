@@ -85,9 +85,9 @@ function sanitizeCriteria(c, maxRows) {
     return b !== null && p !== null && d !== null && p >= 1 && p <= 100 && d > 0
       ? { b, p, d } : null;
   }).filter(Boolean);
-  const SHAPE_KINDS_HASH = ['island', 'lagoon', 'enclave'];
+  const SHAPE_KINDS_HASH = new Set(['island', 'lagoon', 'enclave']);
   const hc = rows(c.hc).map((r) => {
-    if (!r || typeof r !== 'object' || !SHAPE_KINDS_HASH.includes(r.k)) return null;
+    if (!r || typeof r !== 'object' || !SHAPE_KINDS_HASH.has(r.k)) return null;
     const mx = intOrNull(r.mx);
     if (mx === null || mx <= 0) return null;
     const ids = (/** @type {any} */ v) => (Array.isArray(v) ? v : []).slice(0, 8).map(intOrNull).filter((n) => n !== null);

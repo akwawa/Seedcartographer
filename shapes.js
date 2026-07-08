@@ -43,16 +43,24 @@ function floodComponent(grid, cols, rows, ci, cj, inside, cap, scratch) {
     if (!inside(grid[idx])) { frontier.push(grid[idx]); continue; }
     if (++size > cap) return { size, overflow: true, touchedEdge, frontier };
     if (x === 0 || z === 0 || x === cols - 1 || z === rows - 1) touchedEdge = true;
-    for (const n of [idx - 1, idx + 1, idx - cols, idx + cols]) {
-      // stay on the row for horizontal moves (no wrap across grid edges)
-      if (n === idx - 1 && x === 0) continue;
-      if (n === idx + 1 && x === cols - 1) continue;
-      if (n < 0 || n >= cols * rows || stamp[n] === gen) continue;
-      stamp[n] = gen;
-      queue[tail++] = n;
-    }
+    tail = pushNeighbors(idx, x, cols, rows, gen, scratch, tail);
   }
   return { size, overflow: false, touchedEdge, frontier };
+}
+
+// enqueue the unvisited 4-neighbors of `idx` (no wrap across grid edges)
+/** @param {number} idx @param {number} x @param {number} cols @param {number} rows @param {number} gen @param {{stamp: Int32Array, queue: Int32Array}} scratch @param {number} tail @returns {number} new queue tail */
+function pushNeighbors(idx, x, cols, rows, gen, scratch, tail) {
+  const { stamp, queue } = scratch;
+  for (const n of [idx - 1, idx + 1, idx - cols, idx + cols]) {
+    // stay on the row for horizontal moves
+    if (n === idx - 1 && x === 0) continue;
+    if (n === idx + 1 && x === cols - 1) continue;
+    if (n < 0 || n >= cols * rows || stamp[n] === gen) continue;
+    stamp[n] = gen;
+    queue[tail++] = n;
+  }
+  return tail;
 }
 
 // membership/enclosure predicates per pattern kind
@@ -85,7 +93,7 @@ function prepShapeClauses(clauses, SC, cols, rows) {
     if (!SHAPE_KINDS.has(c.kind)) return null;
     if (c.kind === 'enclave' && (!c.a?.size || !c.b?.size)) return null;
     const max = Math.min(SHAPE_MAX_BLOCKS, c.max);
-    if (!(max > 0)) return null;
+    if (!Number.isFinite(max) || max <= 0) return null;
     const side = Math.max(1, Math.floor(max / SC));
     out.push({ ...shapePredicates(c), capCells: side * side, scratch });
   }
@@ -100,7 +108,7 @@ function shapeClauseOk(c, g, ci, cj) {
   if (!c.inside(g.grid[cj * g.cols + ci])) return false;
   const comp = floodComponent(g.grid, g.cols, g.rows, ci, cj, c.inside, c.capCells, c.scratch);
   if (comp.overflow || comp.touchedEdge) return false;
-  return comp.frontier.every(c.encloses);
+  return comp.frontier.every((id) => c.encloses(id));
 }
 
 // AND/OR combination of the shape clauses for one cell
