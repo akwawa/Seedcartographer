@@ -28,13 +28,13 @@ test('floodComponent measures a bounded component and its frontier', () => {
   // 3x3 land square in an ocean
   const g = grid(9, 9, OCEAN, square(4, 4, 1, LAND));
   const scratch = { stamp: new Int32Array(81), gen: 0, queue: new Int32Array(82) };
-  const comp = floodComponent(g, 9, 9, 4, 4, (id) => !WATER_BIOMES.has(id), 100, scratch);
+  const comp = floodComponent({ grid: g, cols: 9, rows: 9 }, 4, 4, (id) => !WATER_BIOMES.has(id), 100, scratch);
   assert.strictEqual(comp.size, 9);
   assert.strictEqual(comp.overflow, false);
   assert.strictEqual(comp.touchedEdge, false);
   assert.ok(comp.frontier.every((id) => id === OCEAN));
   // the cap makes big components overflow instead of scanning forever
-  const capped = floodComponent(g, 9, 9, 0, 0, (id) => WATER_BIOMES.has(id), 5, scratch);
+  const capped = floodComponent({ grid: g, cols: 9, rows: 9 }, 0, 0, (id) => WATER_BIOMES.has(id), 5, scratch);
   assert.strictEqual(capped.overflow, true);
 });
 

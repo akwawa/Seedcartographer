@@ -20,8 +20,7 @@ const SHAPE_MAX_BLOCKS = 4000;   // size cap in blocks (keeps the fill bounded)
 // cells satisfy `inside`. Uses a generation-stamped visited buffer so
 // successive fills never rescan or clear memory.
 /**
- * @param {Int32Array|number[]} grid
- * @param {number} cols @param {number} rows
+ * @param {{grid: Int32Array|number[], cols: number, rows: number}} g
  * @param {number} ci @param {number} cj start cell
  * @param {(id: number) => boolean} inside component membership
  * @param {number} cap max component size in cells
@@ -30,7 +29,8 @@ const SHAPE_MAX_BLOCKS = 4000;   // size cap in blocks (keeps the fill bounded)
  *            frontier: number[]}} component stats; `frontier` lists the
  *            biome ids of the cells immediately outside the component
  */
-function floodComponent(grid, cols, rows, ci, cj, inside, cap, scratch) {
+function floodComponent(g, ci, cj, inside, cap, scratch) {
+  const { grid, cols, rows } = g;
   const { stamp, queue } = scratch;
   const gen = ++scratch.gen;
   const frontier = [];
@@ -106,7 +106,7 @@ function prepShapeClauses(clauses, SC, cols, rows) {
 /** @param {any} c prepared clause @param {{grid: Int32Array|number[], cols: number, rows: number}} g @param {number} ci @param {number} cj @returns {boolean} */
 function shapeClauseOk(c, g, ci, cj) {
   if (!c.inside(g.grid[cj * g.cols + ci])) return false;
-  const comp = floodComponent(g.grid, g.cols, g.rows, ci, cj, c.inside, c.capCells, c.scratch);
+  const comp = floodComponent(g, ci, cj, c.inside, c.capCells, c.scratch);
   if (comp.overflow || comp.touchedEdge) return false;
   return comp.frontier.every((id) => c.encloses(id));
 }
