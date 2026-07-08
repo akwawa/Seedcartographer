@@ -123,6 +123,28 @@ function parseGotoInput(str) {
   return { x, z };
 }
 
+// Selection rectangle from two dragged corners, in world blocks: ordered
+// corners plus the block dimensions (inclusive of both edges).
+/**
+ * @param {{x: number, z: number}} a first corner
+ * @param {{x: number, z: number}} b opposite corner
+ * @returns {{x0: number, z0: number, x1: number, z1: number, w: number, h: number}}
+ */
+function normalizeRect(a, b) {
+  const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x);
+  const z0 = Math.min(a.z, b.z), z1 = Math.max(a.z, b.z);
+  return { x0, z0, x1, z1, w: x1 - x0 + 1, h: z1 - z0 + 1 };
+}
+
+// Human-readable form of a selection, used by the copy-coordinates action.
+/**
+ * @param {{x0: number, z0: number, x1: number, z1: number, w: number, h: number}} r
+ * @returns {string}
+ */
+function formatRect(r) {
+  return `${r.x0}, ${r.z0} -> ${r.x1}, ${r.z1} (${r.w} x ${r.h})`;
+}
+
 // Ruler measurement between two world points: Euclidean distance and
 // per-axis deltas, all in blocks.
 /**
@@ -139,5 +161,5 @@ function rulerMeasure(a, b) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec };
+  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect };
 }

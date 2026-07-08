@@ -185,6 +185,12 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .rulerbtn{position:absolute;left:14px;top:128px}
 .rulerbtn.on{border-color:#e8b23c;color:#e8b23c;background:var(--raise)}
 .markerbtn{position:absolute;left:56px;top:128px}
+.selbtn{position:absolute;left:98px;top:128px}
+.selbtn.on{border-color:var(--lapis-hi);color:var(--lapis-hi);background:var(--raise)}
+.selbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+  background:var(--overlay);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;
+  padding:6px 10px;font-size:12px}
+.selbar[hidden]{display:none}
 .markerbtn.on{border-color:#b17ee0;background:var(--hover)}
 .palettebtn.on{border-color:var(--lapis);background:var(--hover)}
 

@@ -24,6 +24,8 @@ let pins = [];                                  // [{x,z,count}]
 let selected = -1;
 // ruler tool: a/b world endpoints, b tracks the pointer until the 2nd click
 const ruler = { on: false, a: null, b: null, done: false };
+// selection tool: a/b world corners dragged on the map
+const sel = { on: false, a: null, b: null, done: false };
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -308,6 +310,7 @@ function draw() {
   if (showNetherGrid) drawNetherGrid(W, H);
   drawScaleBar(H);
   drawRuler();
+  drawSelection();
 
   // center crosshair
   ctx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
@@ -403,6 +406,44 @@ function drawRuler() {
   ctx.fillText(label, lx, ly);
 }
 
+function drawSelection() {
+  if (!sel.on || !sel.a || !sel.b) return;
+  const r = normalizeRect(sel.a, sel.b);
+  const x = w2sx(r.x0), y = w2sy(r.z0);
+  const w = w2sx(r.x1) - x, h = w2sy(r.z1) - y;
+  ctx.save();
+  ctx.fillStyle = 'rgba(91,136,245,.15)';
+  ctx.strokeStyle = 'rgba(91,136,245,.9)'; ctx.lineWidth = 1.5;
+  ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(91,136,245,1)'; ctx.font = '11px monospace';
+  ctx.fillText(`${r.w} × ${r.h}`, x + 4, y - 5);
+  ctx.restore();
+}
+function setSelOn(on) {
+  sel.on = on; sel.a = null; sel.b = null; sel.done = false;
+  $('#selBtn').classList.toggle('on', on);
+  $('#selBar').hidden = true;
+  canvas.style.cursor = on ? 'crosshair' : '';
+  draw();
+}
+function showSelBar() {
+  const bar = $('#selBar');
+  bar.hidden = false;
+  const r = normalizeRect(sel.a, sel.b);
+  $('#selInfo').textContent = formatRect(r);
+}
+// crop the current canvas to the selection and download it as PNG
+function exportSelectionPNG() {
+  if (!sel.a || !sel.b) return;
+  const r = normalizeRect(sel.a, sel.b);
+  const px = Math.round(w2sx(r.x0) * dpr), py = Math.round(w2sy(r.z0) * dpr);
+  const pw = Math.max(1, Math.round((r.w / view.bpp) * dpr));
+  const ph = Math.max(1, Math.round((r.h / view.bpp) * dpr));
+  const out = document.createElement('canvas');
+  out.width = pw; out.height = ph;
+  out.getContext('2d').drawImage(canvas, px, py, pw, ph, 0, 0, pw, ph);
+  out.toBlob((blob) => { if (blob) downloadBlob(exportFileName(world.seed, 'selection', 'png'), blob); }, 'image/png');
+}
 function setRulerOn(on) {
   ruler.on = on; ruler.a = null; ruler.b = null; ruler.done = false;
   $('#rulerBtn').classList.toggle('on', on);
@@ -578,7 +619,17 @@ canvas.addEventListener('pointerdown', (e) => {
   // synthetic events (tests) carry no active pointer to capture
   try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
   if (pointers.size === 2) { dragging = false; moved = true; pinchDist = pinchState().dist; }
-  else if (pointers.size === 1) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; }
+  else if (pointers.size === 1) {
+    if (sel.on) {
+      const r = canvas.getBoundingClientRect();
+      sel.a = { x: Math.round(s2wx(e.clientX - r.left)), z: Math.round(s2wz(e.clientY - r.top)) };
+      sel.b = null; sel.done = false;
+      $('#selBar').hidden = true;
+      dragging = false; moved = true;   // a selection drag never pans or clicks
+      return;
+    }
+    dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
+  }
 });
 canvas.addEventListener('pointermove', (e) => {
   const r = canvas.getBoundingClientRect();
@@ -603,6 +654,11 @@ canvas.addEventListener('pointermove', (e) => {
     pinchDist = p.dist;
     return;
   }
+  if (sel.on && sel.a && !sel.done) {
+    sel.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+    draw();
+    return;
+  }
   if (dragging) {
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
@@ -618,6 +674,11 @@ canvas.addEventListener('pointermove', (e) => {
 });
 function endPointer(e) {
   pointers.delete(e.pointerId);
+  if (sel.on && sel.a && sel.b && !sel.done && e.type === 'pointerup') {
+    sel.done = true;
+    showSelBar();
+    return;
+  }
   if (pointers.size < 2) pinchDist = 0;
   if (e.type === 'pointerup' && dragging && !moved) clickAt(e);
   dragging = false;
@@ -658,7 +719,7 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
@@ -1685,6 +1746,10 @@ function init() {
   gotoInput.oninput = () => gotoInput.classList.remove('bad');
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
+  $('#selBtn').onclick = () => setSelOn(!sel.on);
+  $('#selPng').onclick = exportSelectionPNG;
+  $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
+  $('#selClose').onclick = () => setSelOn(false);
   $('#markerExport').onclick = () => {
     downloadFile('seedcartographer-markers.json', JSON.stringify(userMarkers, null, 2), 'application/json');
   };
