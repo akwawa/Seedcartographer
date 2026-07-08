@@ -322,13 +322,9 @@ function drawTile(e) {
   ctx.drawImage(e.canvas, px, py, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
 }
 
-// adaptive coordinate grid: chunk/region multiples with edge labels
-function drawGrid(W, H) {
-  const { step } = gridSpec(view.bpp);
-  const line = curTheme === 'light' ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.13)';
-  const label = curTheme === 'light' ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.5)';
-  ctx.strokeStyle = line; ctx.lineWidth = 1;
-  ctx.fillStyle = label; ctx.font = '10px monospace';
+// stroke every grid line of `step` across the viewport (shared by the
+// coordinate grid and the linked-dimension overlay)
+function strokeGridLines(W, H, step) {
   ctx.beginPath();
   for (const wx of gridLines(s2wx(0), s2wx(W), step)) {
     const px = w2sx(wx);
@@ -339,6 +335,16 @@ function drawGrid(W, H) {
     ctx.moveTo(0, py); ctx.lineTo(W, py);
   }
   ctx.stroke();
+}
+
+// adaptive coordinate grid: chunk/region multiples with edge labels
+function drawGrid(W, H) {
+  const { step } = gridSpec(view.bpp);
+  const line = curTheme === 'light' ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.13)';
+  const label = curTheme === 'light' ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.5)';
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  ctx.fillStyle = label; ctx.font = '10px monospace';
+  strokeGridLines(W, H, step);
   for (const wx of gridLines(s2wx(0), s2wx(W), step)) ctx.fillText(String(wx), w2sx(wx) + 3, 11);
   for (const wz of gridLines(s2wz(0), s2wz(H), step)) ctx.fillText(String(wz), 3, w2sy(wz) - 3);
 }
@@ -354,16 +360,7 @@ function drawNetherGrid(W, H) {
   ctx.strokeStyle = 'rgba(226,110,60,.55)'; ctx.lineWidth = 1;
   ctx.setLineDash([5, 4]);
   ctx.fillStyle = 'rgba(226,110,60,.9)'; ctx.font = '10px monospace';
-  ctx.beginPath();
-  for (const wx of gridLines(s2wx(0), s2wx(W), step)) {
-    const px = w2sx(wx);
-    ctx.moveTo(px, 0); ctx.lineTo(px, H);
-  }
-  for (const wz of gridLines(s2wz(0), s2wz(H), step)) {
-    const py = w2sy(wz);
-    ctx.moveTo(0, py); ctx.lineTo(W, py);
-  }
-  ctx.stroke();
+  strokeGridLines(W, H, step);
   for (const wx of gridLines(s2wx(0), s2wx(W), step)) {
     ctx.fillText(`${spec.label} ${Math.round(wx / spec.factor)}`, w2sx(wx) + 3, 23);
   }
