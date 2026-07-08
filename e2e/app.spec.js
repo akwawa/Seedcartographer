@@ -797,3 +797,27 @@ test('the Nether grid overlay shows both referentials in the HUD', async ({ page
   await page.mouse.move(box.x + 320, box.y + 300);
   await expect(page.locator('#hud .coords')).not.toContainText('⇄');
 });
+
+test('the area selection drags a rectangle and copies its coordinates', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#selBtn');
+  await expect(page.locator('#selBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.move(box.x + 300, box.y + 300);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 420, box.y + 380);
+  await page.mouse.up();
+  // the toolbar shows the world-block summary of the dragged rectangle
+  await expect(page.locator('#selBar')).toBeVisible();
+  await expect(page.locator('#selInfo')).toContainText('->');
+  await page.click('#selCopy');
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toMatch(/-?\d+, -?\d+ -> -?\d+, -?\d+ \(\d+ x \d+\)/);
+  // Escape leaves selection mode and hides the toolbar
+  await page.focus('#map');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#selBar')).toBeHidden();
+  await expect(page.locator('#selBtn')).not.toHaveClass(/on/);
+});

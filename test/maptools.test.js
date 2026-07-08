@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT,
-  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec
+  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
 } = require('../maptools.js');
 
 test('scaleBarSpec picks the longest 1/2/5×10^n length that fits', () => {
@@ -102,4 +102,17 @@ test('linkedGridSpec maps nice Nether steps onto Overworld blocks and back', () 
   assert.ok(ne.currentStep / 2 >= 48);
   // the End has no linked dimension
   assert.strictEqual(linkedGridSpec(1, 2), null);
+});
+
+test('normalizeRect orders the corners and counts inclusive block spans', () => {
+  const r = normalizeRect({ x: 100, z: -50 }, { x: -20, z: 30 });
+  assert.deepStrictEqual(r, { x0: -20, z0: -50, x1: 100, z1: 30, w: 121, h: 81 });
+  // degenerate one-block selection
+  assert.deepStrictEqual(normalizeRect({ x: 5, z: 5 }, { x: 5, z: 5 }),
+    { x0: 5, z0: 5, x1: 5, z1: 5, w: 1, h: 1 });
+});
+
+test('formatRect renders the copyable coordinate summary', () => {
+  assert.strictEqual(formatRect(normalizeRect({ x: 0, z: 0 }, { x: 9, z: 4 })),
+    '0, 0 -> 9, 4 (10 x 5)');
 });

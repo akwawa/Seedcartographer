@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Copie de zone : le bouton ⬚ active un mode sélection — glisser trace un
+  rectangle sur la carte (dimensions en blocs affichées en direct), puis une
+  barre propose l'export PNG recadré de la sélection et la copie des
+  coordonnées (« x0, z0 → x1, z1 (L × H) ») ; Échap annule (#135).
 - Grille Nether ⇄ Overworld : une couche « grille Nether » superpose en
   pointillés orange les pas « ronds » de la dimension liée (÷8 depuis
   l'Overworld, ×8 depuis le Nether) avec les coordonnées liées en étiquette,
