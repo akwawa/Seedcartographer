@@ -17,6 +17,11 @@ et la release GitHub.
 ## [0.5.0](https://github.com/akwawa/Seedcartographer/compare/v0.4.0...v0.5.0) (2026-07-08)
 
 ### Ajouté
+- Export/import du profil : un panneau « Profil » sauvegarde en un fichier
+  JSON tout l'état local (favoris, presets personnalisés, historique des
+  recherches, marqueurs) et le réimporte avec fusion défensive — chaque liste
+  repasse par le parseur de son module, doublons ignorés, presets remplacés
+  par nom, plafonds respectés (module pur profile.js testé) (#140).
 - Tri des résultats : un sélecteur au-dessus de la liste permet de trier par
   distance au spawn du monde (le spawn accompagne désormais la réponse de
   recherche, Overworld uniquement) en plus de l'ordre de recherche ;
