@@ -56,3 +56,25 @@ test('mergeMarkers imports with fresh ids and skips exact duplicates', () => {
   const merged = mergeMarkers(mine, theirs);
   assert.deepStrictEqual(merged.map((m) => [m.id, m.name]), [[1, 'mine'], [2, 'new']]);
 });
+
+test('renameMarker tolerates a null name and unknown ids', () => {
+  const list = addMarker([], at(1, 2, 'A'));
+  assert.strictEqual(renameMarker(list, 1, null)[0].name, 'A');
+  assert.strictEqual(renameMarker(list, 99, 'B')[0].name, 'A');
+});
+
+test('normalization rejects bad ids, versions and seed types, accepts numeric seeds', () => {
+  const good = { id: 3, ...W, x: 5, z: 6, name: 'ok' };
+  const bad = [
+    { ...good, id: 0 },                    // id must be a positive integer
+    { ...good, id: 'x' },
+    { ...good, mc: 1.5 },                  // mc must be an integer
+    { ...good, name: undefined },          // missing name
+    { ...good, seed: { nope: true } }      // seed must be string or number
+  ];
+  assert.deepStrictEqual(parseMarkers(JSON.stringify(bad)), []);
+  const numSeed = parseMarkers(JSON.stringify([{ ...good, seed: 141 }]));
+  assert.strictEqual(numSeed[0].seed, '141');
+  // valid JSON that is not an array yields an empty list
+  assert.deepStrictEqual(parseMarkers('{"a":1}'), []);
+});
