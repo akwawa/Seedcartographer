@@ -683,3 +683,32 @@ test('custom presets save, replay and delete', async ({ page }) => {
   await expect(page.locator('#presetSel')).not.toContainText('Mon spot');
   await expect(page.locator('#presetDel')).toBeHidden();
 });
+
+test('the high-visibility palette repaints the map and persists', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  const centerPixel = () => page.evaluate(() => {
+    const c = document.querySelector('#map');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+    return [d[0], d[1], d[2]].join(',');
+  });
+  // wait until the default tile is actually painted (not the empty canvas)
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#map');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+    return d[3] === 255;
+  });
+  const before = await centerPixel();
+  await page.click('#paletteBtn');
+  await expect(page.locator('#paletteBtn')).toHaveClass(/on/);
+  // the tile re-renders with the remapped table: the center pixel changes
+  await page.waitForFunction((prev) => {
+    const c = document.querySelector('#map');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+    return d[3] === 255 && [d[0], d[1], d[2]].join(',') !== prev;
+  }, before);
+  // the choice survives a reload
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator('#paletteBtn')).toHaveClass(/on/);
+});

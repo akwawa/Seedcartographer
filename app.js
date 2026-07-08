@@ -1088,7 +1088,8 @@ function buildLegend(present) {
     const row = document.createElement('div');
     row.className = 'lg'; row.dataset.id = e.id;
     const dot = document.createElement('span');
-    dot.className = 'dot'; dot.style.background = `rgb(${e.rgb[0]},${e.rgb[1]},${e.rgb[2]})`;
+    const [dr, dg, db] = dispRgb(e.id, e.rgb);
+    dot.className = 'dot'; dot.style.background = `rgb(${dr},${dg},${db})`;
     const lbl = document.createElement('span');
     lbl.textContent = e.label;
     row.append(dot, lbl);
@@ -1369,6 +1370,24 @@ function wirePresetSave() {
   };
 }
 
+// ---------- high-visibility palette ----------
+let altPalette = (() => {
+  try { return localStorage.getItem('palette') === 'alt'; } catch { return false; }
+})();
+// display color of a biome swatch (legend, dropdown dots) under the mode
+function dispRgb(id, rgb) { return altPalette ? altRgb(id, rgb) : rgb; }
+function applyPalette(alt, persist) {
+  altPalette = alt;
+  $('#paletteBtn').classList.toggle('on', alt);
+  $('#paletteBtn').setAttribute('aria-pressed', String(alt));
+  if (persist) { try { localStorage.setItem('palette', alt ? 'alt' : 'default'); } catch { /* ignore */ } }
+  send({ type: 'palette', alt });
+  // every cached tile was painted with the old table
+  tileCache.clear(); minimapTile = null;
+  draw(); requestRender(0); requestMinimap(0);
+  buildLegend(legendPresent);
+}
+
 // ---------- theme ----------
 let curTheme = 'dark';
 let mapBg = '#0c1016', mapText = '#dfe7f1';   // canvas colors, refreshed per theme
@@ -1391,6 +1410,8 @@ function initTheme() {
   const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
   applyTheme(resolveTheme(stored, prefersLight), false);
   $('#themeBtn').onclick = () => applyTheme(otherTheme(curTheme), true);
+  $('#paletteBtn').onclick = () => applyPalette(!altPalette, true);
+  if (altPalette) applyPalette(true, false);
 }
 
 // ---------- init ----------

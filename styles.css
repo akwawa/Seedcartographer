@@ -182,6 +182,7 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .goto input.bad{border-color:#c0392b;outline:1px solid #c0392b}
 .rulerbtn{position:absolute;left:14px;top:128px}
 .rulerbtn.on{border-color:#e8b23c;color:#e8b23c;background:var(--raise)}
+.palettebtn.on{border-color:var(--lapis);background:var(--hover)}
 
 /* ---------- biome legend ---------- */
 .legend{position:absolute;right:14px;top:14px;max-width:230px;background:var(--overlay);
