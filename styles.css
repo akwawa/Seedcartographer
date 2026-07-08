@@ -164,6 +164,8 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .popup .pop-fav:hover{filter:brightness(1.25)}
 
 /* ---------- map navigation aids ---------- */
+.maptoggles{position:absolute;left:14px;top:14px;display:flex;gap:6px}
+.maptoggles .gridtoggle{position:static}
 .gridtoggle{position:absolute;left:14px;top:14px;display:flex;align-items:center;gap:6px;
   background:var(--overlay);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;
   padding:6px 10px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}

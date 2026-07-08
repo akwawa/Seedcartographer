@@ -85,6 +85,24 @@ function viewportRectOnMinimap(mainW, mainH, mmW, mmH) {
   return { x: mmW / 2 - w / 2, y: mmH / 2 - h / 2, w, h };
 }
 
+// Portal-planning grid: "nice" grid steps of the LINKED dimension
+// (Overworld <-> Nether, 1:8), expressed in current-dimension blocks so the
+// overlay can be drawn directly on the map. Returns null for the End.
+/**
+ * @param {number} dim current dimension (0 Overworld, -1 Nether, 1 End)
+ * @param {number} bpp blocks per screen pixel in the current dimension
+ * @param {number} [minPx] minimum on-screen spacing between lines
+ * @returns {{currentStep: number, factor: number, label: string}|null}
+ *          factor converts current-dim blocks to linked-dim blocks (x / factor)
+ */
+function linkedGridSpec(dim, bpp, minPx = 48) {
+  if (dim !== 0 && dim !== -1) return null;
+  const factor = dim === 0 ? 8 : 1 / 8;   // linked -> current scale
+  // pick a nice step in the linked dimension, seen at its apparent zoom
+  const { step } = gridSpec(bpp / factor, minPx);
+  return { currentStep: step * factor, factor, label: dim === 0 ? 'Nether' : 'Overworld' };
+}
+
 // Farthest coordinate reachable in Java (the world border).
 const GOTO_LIMIT = 29999984;
 
@@ -121,5 +139,5 @@ function rulerMeasure(a, b) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure };
+  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec };
 }

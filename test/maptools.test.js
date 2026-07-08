@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT,
-  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure
+  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec
 } = require('../maptools.js');
 
 test('scaleBarSpec picks the longest 1/2/5×10^n length that fits', () => {
@@ -84,4 +84,22 @@ test('rulerMeasure returns the euclidean distance and per-axis deltas', () => {
 test('parseGotoInput tolerates null and undefined input', () => {
   assert.strictEqual(parseGotoInput(null), null);
   assert.strictEqual(parseGotoInput(undefined), null);
+});
+
+test('linkedGridSpec maps nice Nether steps onto Overworld blocks and back', () => {
+  // Overworld at bpp 2: linked (Nether) zoom is 0.25 bpp -> 16-block Nether
+  // chunks are readable, drawn every 128 Overworld blocks
+  const ow = linkedGridSpec(0, 2);
+  assert.strictEqual(ow.factor, 8);
+  assert.strictEqual(ow.label, 'Nether');
+  assert.strictEqual(ow.currentStep / ow.factor % 16, 0);   // nice Nether step
+  assert.ok(ow.currentStep / 2 >= 48);                       // readable spacing
+  // Nether at the same zoom: Overworld steps are 8x coarser in blocks but
+  // 8x denser on this map
+  const ne = linkedGridSpec(-1, 2);
+  assert.strictEqual(ne.factor, 1 / 8);
+  assert.strictEqual(ne.label, 'Overworld');
+  assert.ok(ne.currentStep / 2 >= 48);
+  // the End has no linked dimension
+  assert.strictEqual(linkedGridSpec(1, 2), null);
 });
