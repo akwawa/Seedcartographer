@@ -51,3 +51,15 @@ test('parseUserPresets survives garbage payloads', () => {
   assert.deepStrictEqual(parseUserPresets('not json'), []);
   assert.deepStrictEqual(parseUserPresets('{"a":1}'), []);
 });
+
+test('null names are refused and replacing keeps the other presets', () => {
+  assert.strictEqual(addUserPreset([], null, 0, crit).length, 0);
+  let list = addUserPreset(addUserPreset([], 'A', 0, crit), 'B', 0, crit);
+  list = addUserPreset(list, 'A', 1, { mb: [14] });
+  assert.deepStrictEqual(list.map((p) => p.name), ['A', 'B']);
+  assert.strictEqual(list[1].dim, 0);   // B untouched
+});
+
+test('parseUserPresets drops entries without a name field', () => {
+  assert.deepStrictEqual(parseUserPresets(JSON.stringify([{ id: 1, dim: 0, c: crit }])), []);
+});

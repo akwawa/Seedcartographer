@@ -43,3 +43,10 @@ test('parseHistory survives garbage payloads', () => {
   assert.deepStrictEqual(parseHistory('not json'), []);
   assert.deepStrictEqual(parseHistory('{"a":1}'), []);
 });
+
+test('normalization defaults the seed and the timestamp', () => {
+  const raw = JSON.stringify([{ mc: 30, dim: 0, cx: 0, cz: 0, crit: {} }]);
+  const [e] = parseHistory(raw);
+  assert.strictEqual(e.seed, '0');
+  assert.strictEqual(e.at, 0);
+});

@@ -80,3 +80,8 @@ test('rulerMeasure returns the euclidean distance and per-axis deltas', () => {
   // non-integer distances are rounded to whole blocks
   assert.strictEqual(rulerMeasure({ x: 0, z: 0 }, { x: 1, z: 1 }).dist, 1);
 });
+
+test('parseGotoInput tolerates null and undefined input', () => {
+  assert.strictEqual(parseGotoInput(null), null);
+  assert.strictEqual(parseGotoInput(undefined), null);
+});

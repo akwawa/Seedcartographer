@@ -76,3 +76,9 @@ test('world and screen transforms are exact inverses around the view center', ()
   const w = screenToWorld(view, 800, 600, s.x, s.y);
   assert.deepStrictEqual(w, { x: 1234, z: -321 });
 });
+
+test('sanitizeCriteria keeps the explicit or-modes', () => {
+  const c = sanitizeCriteria({ mb: [1], am: 'or', ac: [], sm: 'or', sc: [], pc: [] }, 8);
+  assert.strictEqual(c.am, 'or');
+  assert.strictEqual(c.sm, 'or');
+});

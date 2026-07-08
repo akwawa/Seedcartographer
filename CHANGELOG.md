@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Couverture par branche exigée : tous les chemins des modules purs partagés
+  sont testés (11 nouveaux tests — cap de résultats de `scanGrid`, wrap 32
+  bits du hash Java, modes OU, entrées dégénérées des parseurs…) et le job CI
+  `test` échoue sous 100 % de branches (`--test-coverage-branches`) ; la
+  colle spécifique au navigateur est exclue explicitement avec justification
+  (#128).
 - Rendu en damier progressif : la carte est composée de tuiles fixes de
   256 cellules alignées monde, demandées séparément au worker (les plus
   proches du centre d'abord) — le cache LRU devient vraiment réutilisable au

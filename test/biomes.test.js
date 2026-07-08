@@ -29,3 +29,23 @@ test('English and unknown entries fall back to prettified technical names', () =
   assert.strictEqual(biomeLabel('made_up_biome', 'fr'), 'Made Up Biome');
   assert.strictEqual(prettifyBiome('the_end'), 'The End');
 });
+
+test('biomeLabel defaults to English outside the browser and prettify keeps empty segments', () => {
+  // no lang argument and no currentLang global: the 'en' fallback branch
+  assert.strictEqual(biomeLabel('cherry_grove'), 'Cherry Grove');
+  // unknown language code falls back to prettified English too
+  assert.strictEqual(biomeLabel('cherry_grove', 'xx'), 'Cherry Grove');
+  // double underscore produces an empty segment (kept as-is)
+  assert.strictEqual(prettifyBiome('a__b'), 'A  B');
+});
+
+test('biomeLabel picks up the UI language global when it exists', () => {
+  // biomes.js reads the bare `currentLang` binding (set by i18n.js in the
+  // browser); a global property is visible to that lookup in Node too
+  globalThis.currentLang = 'fr';
+  try {
+    assert.strictEqual(biomeLabel('cherry_grove'), BIOME_NAMES.fr.cherry_grove);
+  } finally {
+    delete globalThis.currentLang;
+  }
+});

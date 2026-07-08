@@ -837,6 +837,9 @@ function detectLang() {
   return I18N[nav] ? nav : 'en';
 }
 
+// environment fork: the DOM branch only exists in the browser (covered by
+// the e2e suite), Node unit tests always take the 'en' arm
+/* node:coverage ignore next */
 let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
 
 // Translate a key in the current language; {placeholders} are filled from params.
