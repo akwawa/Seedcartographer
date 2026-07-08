@@ -283,13 +283,21 @@ function scanGrid(p) {
   const ctx = { g, adj, adjAll, pcts, pctAll, structs, structAll, surf };
   const hits = p.hits || [];
   if (hits.length >= SEARCH_MAX_HITS) return hits;
-  for (let cj = bj0; cj <= bj1; cj += stride) {
-    if (cj < rowStart || cj > rowEnd) continue;
-    for (let ci = bi0; ci <= bi1; ci += stride) {
+  return scanCells(ctx, { bi0, bi1, bj0, bj1, rowStart, rowEnd, stride, merge2 }, hits);
+}
+
+// the hot double loop, extracted so scanGrid stays readable: walks the
+// strided cell window and accumulates non-duplicate matches up to the cap
+/** @param {any} ctx @param {any} b window/stride/merge bounds @param {SearchHit[]} hits @returns {SearchHit[]} */
+function scanCells(ctx, b, hits) {
+  const { gx0, gz0, SC } = ctx.g;
+  for (let cj = b.bj0; cj <= b.bj1; cj += b.stride) {
+    if (cj < b.rowStart || cj > b.rowEnd) continue;
+    for (let ci = b.bi0; ci <= b.bi1; ci += b.stride) {
       const wx = gx0 * SC + ci * SC;
       const wz = gz0 * SC + cj * SC;
       const count = evalCell(ctx, ci, cj, wx, wz);
-      if (count === null || isDuplicate(hits, wx, wz, merge2)) continue;
+      if (count === null || isDuplicate(hits, wx, wz, b.merge2)) continue;
       hits.push({ x: wx, z: wz, count });
       if (hits.length >= SEARCH_MAX_HITS) return hits;
     }

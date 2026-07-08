@@ -179,6 +179,23 @@ function adjLayerYs(d) {
   return [...ys];
 }
 
+// Banded, cancellable generation of the main search grid (0 -> 80% of the
+// progress bar). Returns true, or the failure kind.
+async function genMainGrid(y, ctx) {
+  const { cols, rows, gx0, gz0, SC } = ctx;
+  const GEN_BAND = 512;
+  for (let j = 0; j < rows; j += GEN_BAND) {
+    if (ctx.cancelled()) return 'cancelled';
+    const h = Math.min(GEN_BAND, rows - j);
+    if (!M._genBiomeArea(searchPtr + j * cols * 4, gx0, gz0 + j, cols, h, SC, scaledY(y))) {
+      return 'area-too-large';
+    }
+    ctx.progress(Math.round(80 * (j + h) / rows));
+    await yieldToQueue();
+  }
+  return true;
+}
+
 // Generate one banded, cancellable biome grid per requested altitude into
 // the search buffer, after the main grid. Returns true, or the failure kind.
 async function genExtraLayers(layerYs, ctx) {
@@ -229,16 +246,8 @@ async function runSearchJob(d) {
 
     // 1) generate the grid in row bands (0 → 80%), yielding between bands so
     // tile renders and cancel messages are processed
-    const GEN_BAND = 512;
-    for (let j = 0; j < rows; j += GEN_BAND) {
-      if (cancelled()) { fail('cancelled'); return; }
-      const h = Math.min(GEN_BAND, rows - j);
-      if (!M._genBiomeArea(searchPtr + j * cols * 4, gx0, gz0 + j, cols, h, SC, scaledY(d.y))) {
-        fail('area-too-large'); return;
-      }
-      progress(Math.round(80 * (j + h) / rows));
-      await yieldToQueue();
-    }
+    const mainOk = await genMainGrid(d.y, { cols, rows, gx0, gz0, SC, cancelled, progress });
+    if (mainOk !== true) { fail(mainOk); return; }
 
     // 1b) extra biome layers for the multi-Y adjacency clauses, same box
     const cells = cols * rows;
