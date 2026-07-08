@@ -22,6 +22,8 @@ const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
 let pins = [];                                  // [{x,z,count}]
 let selected = -1;
+// ruler tool: a/b world endpoints, b tracks the pointer until the 2nd click
+const ruler = { on: false, a: null, b: null, done: false };
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -260,6 +262,7 @@ function draw() {
 
   if (showGrid) drawGrid(W, H);
   drawScaleBar(H);
+  drawRuler();
 
   // center crosshair
   ctx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
@@ -305,6 +308,34 @@ function drawScaleBar(H) {
   ctx.stroke();
   ctx.font = '11px monospace';
   ctx.fillText(`${blocks} ${t('blocks')}`, x, y - 7);
+}
+
+// ruler segment with its endpoints and a distance label at the midpoint
+function drawRuler() {
+  if (!ruler.on || !ruler.a || !ruler.b) return;
+  const x1 = w2sx(ruler.a.x), y1 = w2sy(ruler.a.z);
+  const x2 = w2sx(ruler.b.x), y2 = w2sy(ruler.b.z);
+  ctx.strokeStyle = '#e8b23c'; ctx.fillStyle = '#e8b23c'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  for (const [px, py] of [[x1, y1], [x2, y2]]) {
+    ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+  const m = rulerMeasure(ruler.a, ruler.b);
+  const label = `${m.dist} ${t('blocks')} (Δx ${m.dx} · Δz ${m.dz})`;
+  ctx.font = '12px monospace';
+  const tw = ctx.measureText(label).width;
+  const lx = (x1 + x2) / 2 - tw / 2, ly = (y1 + y2) / 2 - 10;
+  ctx.fillStyle = curTheme === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.65)';
+  ctx.fillRect(lx - 4, ly - 12, tw + 8, 17);
+  ctx.fillStyle = '#e8b23c';
+  ctx.fillText(label, lx, ly);
+}
+
+function setRulerOn(on) {
+  ruler.on = on; ruler.a = null; ruler.b = null; ruler.done = false;
+  $('#rulerBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+  draw();
 }
 
 // overview minimap: same center, fixed zoom-out, viewport rectangle on top
@@ -459,6 +490,10 @@ canvas.addEventListener('pointermove', (e) => {
     view.cx -= dx * view.bpp; view.cz -= dy * view.bpp;
     lastX = e.clientX; lastY = e.clientY; draw();
   } else {
+    if (ruler.on && ruler.a && !ruler.done) {
+      ruler.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+      draw();
+    }
     clearTimeout(probeTimer); probeTimer = setTimeout(() => probeBiome(mx, my), 120);
   }
 });
@@ -503,7 +538,7 @@ canvas.addEventListener('keydown', (e) => {
     draw(); requestRender(); syncHash();
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
-  else if (e.key === 'Escape') { hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
@@ -511,6 +546,12 @@ canvas.addEventListener('keydown', (e) => {
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
+  if (ruler.on) {
+    const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+    if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
+    else { ruler.b = p; ruler.done = true; }
+    draw(); return;
+  }
   // hit-test pins
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
@@ -1341,6 +1382,7 @@ function init() {
     draw(); requestRender(0); syncHash();
   };
   gotoInput.oninput = () => gotoInput.classList.remove('bad');
+  $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {
     const collapsed = document.body.classList.toggle('panel-collapsed');
