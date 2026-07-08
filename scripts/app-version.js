@@ -9,7 +9,6 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
 
 // The tool only ever works below the invoking process's working directory
 // (the CI workspace / staging dir): the CLI argument is canonicalized and
@@ -24,6 +23,33 @@ function insideCwd(abs) {
     throw new Error(`path escapes the working directory: ${abs}`);
   }
   return abs;
+}
+
+// Short commit of a git checkout, read straight from the metadata files —
+// no subprocess, so nothing is looked up through PATH. Returns '' outside a
+// git checkout (e.g. an exported archive).
+/**
+ * @param {string} gitDir the .git directory
+ * @returns {string} 7-char commit hash, or ''
+ */
+function gitShortCommit(gitDir) {
+  try {
+    const head = fs.readFileSync(path.join(gitDir, 'HEAD'), 'utf8').trim();
+    const sha = head.startsWith('ref: ') ? refSha(gitDir, head.slice(5)) : head;
+    return /^[0-9a-f]{40}$/.test(sha) ? sha.slice(0, 7) : '';
+  } catch { return ''; }
+}
+/**
+ * @param {string} gitDir the .git directory
+ * @param {string} ref symbolic ref (e.g. refs/heads/main)
+ * @returns {string} the ref's sha, from the loose ref file or packed-refs
+ */
+function refSha(gitDir, ref) {
+  const loose = path.join(gitDir, ref);
+  if (fs.existsSync(loose)) return fs.readFileSync(loose, 'utf8').trim();
+  const packed = fs.readFileSync(path.join(gitDir, 'packed-refs'), 'utf8');
+  const line = packed.split('\n').find((l) => l.endsWith(' ' + ref));
+  return line ? line.split(' ')[0] : '';
 }
 
 // rewrite the APP_VERSION line of a version.js source
@@ -47,10 +73,7 @@ function stampAppVersion(source, version, commit) {
  */
 function stampDir(dir) {
   const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
-  let commit = '';
-  try {
-    commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
-  } catch { /* not a git checkout (e.g. exported archive): version only */ }
+  const commit = gitShortCommit(path.resolve('.git'));
   const root = insideCwd(fs.realpathSync(path.resolve(dir)));
   const file = insideCwd(path.resolve(root, 'version.js'));
   fs.writeFileSync(file, stampAppVersion(fs.readFileSync(file, 'utf8'), pkg.version, commit));
@@ -63,4 +86,4 @@ if (require.main === module) {
   console.log(`${version} (${commit || 'no commit'})`);
 }
 
-module.exports = { stampAppVersion, stampDir };
+module.exports = { stampAppVersion, stampDir, gitShortCommit };
