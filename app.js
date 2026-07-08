@@ -631,13 +631,26 @@ canvas.addEventListener('pointerdown', (e) => {
     dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
   }
 });
-canvas.addEventListener('pointermove', (e) => {
-  const r = canvas.getBoundingClientRect();
-  const mx = e.clientX - r.left, my = e.clientY - r.top;
+// HUD coordinate readout, in both referentials while the portal grid is on
+function updateHudCoords(mx, my) {
   const hx = Math.round(s2wx(mx)), hz = Math.round(s2wz(my));
   const linked = showNetherGrid ? convertCoords(world.dim, hx, hz) : null;
   hud.querySelector('.coords').textContent =
     linked ? `${hx}, ${hz} ⇄ ${linked.label} ${linked.x}, ${linked.z}` : `${hx}, ${hz}`;
+}
+// live endpoint tracking for the drag-shaped tools (selection, ruler)
+function trackToolPoint(mx, my) {
+  if (sel.on && sel.a && !sel.done) {
+    sel.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+    draw();
+    return true;
+  }
+  return false;
+}
+canvas.addEventListener('pointermove', (e) => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  updateHudCoords(mx, my);
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) {
     const p = pinchState();
@@ -654,11 +667,7 @@ canvas.addEventListener('pointermove', (e) => {
     pinchDist = p.dist;
     return;
   }
-  if (sel.on && sel.a && !sel.done) {
-    sel.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
-    draw();
-    return;
-  }
+  if (trackToolPoint(mx, my)) return;
   if (dragging) {
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
