@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Comparaison de versions A/B : un sélecteur « vs » dans la barre du haut
+  arme une version de comparaison et le bouton ⇄ (ou la touche V sur la
+  carte) permute la génération en conservant la vue — le cache de tuiles
+  étant par version, l'aller-retour est instantané une fois les deux côtés
+  rendus (#132).
 - Budget de performance e2e : un test mesure le temps entre le chargement de
   la page et le premier rendu effectif de la carte (tuile peinte sur le
   canvas) et fait échouer la CI au-delà du budget (`RENDER_BUDGET_MS`),

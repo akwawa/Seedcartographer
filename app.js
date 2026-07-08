@@ -182,13 +182,17 @@ const MC_VERSIONS = [
   [8, '1.5'], [7, '1.4'], [6, '1.3'], [5, '1.2'], [4, '1.1'], [3, '1.0']
 ];
 function buildVersionSelect() {
-  const sel = $('#mcver');
-  sel.textContent = '';
+  const sel = $('#mcver'), cmp = $('#cmpVer');
+  sel.textContent = ''; cmp.textContent = '';
   const versions = MC_VERSIONS[0][0] === MC_NEWEST ? MC_VERSIONS : [[MC_NEWEST, 'newest']];
+  const off = document.createElement('option');
+  off.value = ''; off.textContent = '—';
+  cmp.appendChild(off);
   for (const [v, label] of versions) {
     const o = document.createElement('option');
     o.value = v; o.textContent = label;
     sel.appendChild(o);
+    cmp.appendChild(o.cloneNode(true));
   }
   sel.value = String(world.mc);
   if (sel.value === '') { world.mc = MC_NEWEST; sel.value = String(MC_NEWEST); }
@@ -196,6 +200,22 @@ function buildVersionSelect() {
     world.mc = Number.parseInt(sel.value, 10);
     curReset(); draw(); requestRender(0); syncHash();
   };
+  cmp.onchange = () => { $('#cmpSwap').hidden = cmp.value === ''; };
+  // A/B swap: the tile cache is keyed by version, so flipping back and
+  // forth repaints instantly from cache once both sides have rendered
+  $('#cmpSwap').onclick = swapCompareVersion;
+}
+function swapCompareVersion() {
+  const sel = $('#mcver'), cmp = $('#cmpVer');
+  if (cmp.value === '' || cmp.value === sel.value) return;
+  const other = Number.parseInt(cmp.value, 10);
+  cmp.value = String(world.mc);
+  world.mc = other;
+  sel.value = String(other);
+  // structures and pins belong to the previous version's world
+  structToggles.forEach((tg) => { tg.points = null; });
+  hidePopup();
+  draw(); requestRender(0); syncHash();
 }
 
 // ---------- dimension ----------
@@ -588,6 +608,7 @@ canvas.addEventListener('keydown', (e) => {
     draw(); requestRender(); syncHash();
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
+  else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
   else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
