@@ -16,41 +16,6 @@ et la release GitHub.
 
 ## [0.5.0](https://github.com/akwawa/Seedcartographer/compare/v0.4.0...v0.5.0) (2026-07-08)
 
-
-### Ajouté
-
-* A/B compare the generation between two Java versions ([70fb667](https://github.com/akwawa/Seedcartographer/commit/70fb667dfe9d149188bc42926e6648b482092a23)), closes [#132](https://github.com/akwawa/Seedcartographer/issues/132)
-* add Stryker mutation testing on the shared pure modules ([9b56fa0](https://github.com/akwawa/Seedcartographer/commit/9b56fa03fafa86df494f74df22e4b33283031b59)), closes [#137](https://github.com/akwawa/Seedcartographer/issues/137)
-* audit Lighthouse en CI avec seuils d'échec ([bcb513d](https://github.com/akwawa/Seedcartographer/commit/bcb513dfaa72f942b99996226006d6ec98ecb3bd))
-* audit the served page with Lighthouse in CI ([939a8d7](https://github.com/akwawa/Seedcartographer/commit/939a8d7540cb873d1c0c84bc16a66062598f19a7)), closes [#130](https://github.com/akwawa/Seedcartographer/issues/130)
-* budget de performance e2e sur le premier rendu de carte ([debe198](https://github.com/akwawa/Seedcartographer/commit/debe198454e6e34558848c157d69353d13e8aadc))
-* comparaison A/B de la génération entre deux versions Java ([f146988](https://github.com/akwawa/Seedcartographer/commit/f1469881b7f5d601b41df8bbf3abc6465a281eea))
-* copie de zone — sélection rectangulaire, PNG et coordonnées ([2e7fd9f](https://github.com/akwawa/Seedcartographer/commit/2e7fd9ffceec04bae3971c51f2f6e1b0a6cb7af3))
-* couche relief ombrée (Overworld) ([5f4b326](https://github.com/akwawa/Seedcartographer/commit/5f4b32620facf0c162339427951d25367cd5c205))
-* enforce a first-map-render time budget in e2e ([64cda00](https://github.com/akwawa/Seedcartographer/commit/64cda000ef7c1a92670a858244e622804aaed86e)), closes [#131](https://github.com/akwawa/Seedcartographer/issues/131)
-* grille Nether ⇄ Overworld pour planifier les portails ([fccd9f8](https://github.com/akwawa/Seedcartographer/commit/fccd9f809a8b51910b3c62ed94587de6779eb21b))
-* marqueurs personnalisés nommés sur la carte ([f4ebc1a](https://github.com/akwawa/Seedcartographer/commit/f4ebc1a847652b4521492fc52f40b8b9389bfdb4))
-* overlay the linked-dimension grid for portal planning ([83941fb](https://github.com/akwawa/Seedcartographer/commit/83941fb803c252e72b5221be79ab50f9fb33aa8f)), closes [#134](https://github.com/akwawa/Seedcartographer/issues/134)
-* place free named markers on the map ([7038edd](https://github.com/akwawa/Seedcartographer/commit/7038edd3e005ed33d019dc8faa82da9fec152e2a)), closes [#133](https://github.com/akwawa/Seedcartographer/issues/133)
-* select a map area to export or copy ([3c72589](https://github.com/akwawa/Seedcartographer/commit/3c725890650f42174b9442767b2b7a1e61654856)), closes [#135](https://github.com/akwawa/Seedcartographer/issues/135)
-* shaded relief overlay on the Overworld map ([9f088fc](https://github.com/akwawa/Seedcartographer/commit/9f088fcf0310a7bade66d34e24be7979663ee951)), closes [#138](https://github.com/akwawa/Seedcartographer/issues/138)
-* sort search results by distance to the world spawn ([0cef375](https://github.com/akwawa/Seedcartographer/commit/0cef3752af0741f81c3141805556107d92e322ab)), closes [#139](https://github.com/akwawa/Seedcartographer/issues/139)
-* tests de mutation Stryker sur les modules purs ([29792bf](https://github.com/akwawa/Seedcartographer/commit/29792bfc90a5bbacd7a50f6e3dc2884e2e2c0d14))
-* traduction complète des noms de biomes (6 langues) ([6e23a3a](https://github.com/akwawa/Seedcartographer/commit/6e23a3ac71b0fffd73a98da66d286b22f97b3046))
-* translate the legacy biome names in all six languages ([0929aed](https://github.com/akwawa/Seedcartographer/commit/0929aed8d850ff4f1811a1483a68108f53579fe0)), closes [#136](https://github.com/akwawa/Seedcartographer/issues/136)
-* tri des résultats par distance au spawn ([6290537](https://github.com/akwawa/Seedcartographer/commit/6290537b6cb286cc43f5343cc395e3912cdbdc73))
-
-
-### Corrigé
-
-* calibrate the Lighthouse floors for CI runners ([6632e9e](https://github.com/akwawa/Seedcartographer/commit/6632e9e4bb83423af352bfcc68aff4b94460ada6))
-* fetch the cubiomes submodule in the test and sonar jobs ([7521665](https://github.com/akwawa/Seedcartographer/commit/752166530272959390d1f2fd517d08551e9d70cc))
-* run Lighthouse from a pinned devDependency ([255c15b](https://github.com/akwawa/Seedcartographer/commit/255c15bf37f91565738a3c528a6f17dd9a8c473f))
-* share the grid-line stroking between the two overlays ([92ba9cd](https://github.com/akwawa/Seedcartographer/commit/92ba9cd9b96302284b89df62cd02ed3fb168f985))
-* split the pointermove handler under the complexity threshold ([bc59984](https://github.com/akwawa/Seedcartographer/commit/bc59984bbbd692bda418a4b87fec8051b35cde2e))
-
-## [Non publié]
-
 ### Ajouté
 - Tri des résultats : un sélecteur au-dessus de la liste permet de trier par
   distance au spawn du monde (le spawn accompagne désormais la réponse de
@@ -335,5 +300,5 @@ Première version publiée. Contenu du jalon
 - Workflows durcis : token en moindre privilège, actions épinglées par SHA,
   `npm ci --ignore-scripts` (#35).
 
-[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.3.0...HEAD
+[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.5.0...HEAD
 [0.1.0]: https://github.com/akwawa/Seedcartographer/releases/tag/v0.1.0
