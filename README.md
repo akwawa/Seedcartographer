@@ -94,7 +94,8 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   espagnol, allemand, italien et portugais brésilien : la langue du navigateur
   est détectée automatiquement et
   le sélecteur en haut à droite permet d'en changer (choix mémorisé). Les noms
-  de biomes restent ceux du moteur cubiomes (identifiants techniques).
+  de biomes sont traduits dans les 6 langues (liste cubiomes complète,
+  vérifiée par un test de parité).
 
 - **Résolution de détection : 16 blocs.** Les biomes sont échantillonnés tous les
   16 blocs (compromis vitesse/précision). Les cherry groves et océans sont bien

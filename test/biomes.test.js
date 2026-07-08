@@ -49,3 +49,15 @@ test('biomeLabel picks up the UI language global when it exists', () => {
     delete globalThis.currentLang;
   }
 });
+
+test('every language translates the full cubiomes biome list', () => {
+  // canonical name list straight from the pinned cubiomes submodule
+  const src = require('node:fs').readFileSync('cubiomes/util.c', 'utf8');
+  const body = src.match(/biome2str[^{]*\{([^]*?)\n\}/)[1];
+  const names = [...new Set([...body.matchAll(/return "(\w+)"/g)].map((m) => m[1]))];
+  assert.ok(names.length >= 100);
+  for (const lang of Object.keys(BIOME_NAMES)) {
+    const missing = names.filter((n) => !BIOME_NAMES[lang][n]);
+    assert.deepStrictEqual(missing, [], `${lang} is missing ${missing.length} biome name(s)`);
+  }
+});

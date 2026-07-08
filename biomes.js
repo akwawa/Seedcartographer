@@ -99,7 +99,19 @@ const BIOME_NAMES = {
     windswept_hills: 'Collines balayées par les vents',
     windswept_savanna: 'Savane balayée par les vents',
     wooded_badlands: 'Badlands boisées',
-    wooded_hills: 'Collines boisées'
+    wooded_hills: 'Collines boisées',
+    // legacy pre-1.18 biome names
+    giant_spruce_taiga: "Taïga aux sapins géants",
+    giant_tree_taiga: "Taïga aux arbres géants",
+    gravelly_mountains: "Montagnes graveleuses",
+    jungle_edge: "Lisière de jungle",
+    mountains: "Montagnes",
+    shattered_savanna: "Savane délabrée",
+    snowy_tundra: "Toundra enneigée",
+    stone_shore: "Rivage rocheux",
+    tall_birch_forest: "Forêt de grands bouleaux",
+    wooded_badlands_plateau: "Plateau de badlands boisé",
+    wooded_mountains: "Montagnes boisées",
   },
   es: {
     badlands: 'Badlands',
@@ -195,7 +207,19 @@ const BIOME_NAMES = {
     windswept_hills: 'Colinas azotadas por el viento',
     windswept_savanna: 'Sabana azotada por el viento',
     wooded_badlands: 'Badlands arbolados',
-    wooded_hills: 'Colinas arboladas'
+    wooded_hills: 'Colinas arboladas',
+    // legacy pre-1.18 biome names
+    giant_spruce_taiga: "Taiga de píceas gigantes",
+    giant_tree_taiga: "Taiga de árboles gigantes",
+    gravelly_mountains: "Montañas de grava",
+    jungle_edge: "Linde de jungla",
+    mountains: "Montañas",
+    shattered_savanna: "Sabana destrozada",
+    snowy_tundra: "Tundra nevada",
+    stone_shore: "Orilla de piedra",
+    tall_birch_forest: "Bosque de abedules altos",
+    wooded_badlands_plateau: "Meseta de badlands arbolada",
+    wooded_mountains: "Montañas arboladas",
   },
   de: {
     badlands: 'Tafelberge',
@@ -291,7 +315,19 @@ const BIOME_NAMES = {
     windswept_hills: 'Windgepeitschte Hügel',
     windswept_savanna: 'Windgepeitschte Savanne',
     wooded_badlands: 'Bewaldete Tafelberge',
-    wooded_hills: 'Bewaldete Hügel'
+    wooded_hills: 'Bewaldete Hügel',
+    // legacy pre-1.18 biome names
+    giant_spruce_taiga: "Riesenfichtentaiga",
+    giant_tree_taiga: "Riesenbaumtaiga",
+    gravelly_mountains: "Geröllberge",
+    jungle_edge: "Dschungelrand",
+    mountains: "Berge",
+    shattered_savanna: "Zerklüftete Savanne",
+    snowy_tundra: "Verschneite Tundra",
+    stone_shore: "Steinufer",
+    tall_birch_forest: "Hoher Birkenwald",
+    wooded_badlands_plateau: "Bewaldetes Tafelberg-Plateau",
+    wooded_mountains: "Bewaldete Berge",
   },
   it: {
     badlands: "Calanchi",
@@ -387,7 +423,19 @@ const BIOME_NAMES = {
     windswept_hills: "Colline battute dai venti",
     windswept_savanna: "Savana battuta dai venti",
     wooded_badlands: "Calanchi boscosi",
-    wooded_hills: "Colline boscose"
+    wooded_hills: "Colline boscose",
+    // legacy pre-1.18 biome names
+    giant_spruce_taiga: "Taiga degli abeti giganti",
+    giant_tree_taiga: "Taiga degli alberi giganti",
+    gravelly_mountains: "Montagne ghiaiose",
+    jungle_edge: "Margine della giungla",
+    mountains: "Montagne",
+    shattered_savanna: "Savana frantumata",
+    snowy_tundra: "Tundra innevata",
+    stone_shore: "Riva rocciosa",
+    tall_birch_forest: "Foresta di betulle alte",
+    wooded_badlands_plateau: "Altopiano dei calanchi boscoso",
+    wooded_mountains: "Montagne boscose",
   },
   pt: {
     badlands: "Ermo",
@@ -483,7 +531,19 @@ const BIOME_NAMES = {
     windswept_hills: "Colinas varridas pelo vento",
     windswept_savanna: "Savana varrida pelo vento",
     wooded_badlands: "Ermo arborizado",
-    wooded_hills: "Colinas arborizadas"
+    wooded_hills: "Colinas arborizadas",
+    // legacy pre-1.18 biome names
+    giant_spruce_taiga: "Taiga de pinheiros gigantes",
+    giant_tree_taiga: "Taiga de árvores gigantes",
+    gravelly_mountains: "Montanhas cascalhentas",
+    jungle_edge: "Borda de selva",
+    mountains: "Montanhas",
+    shattered_savanna: "Savana despedaçada",
+    snowy_tundra: "Tundra nevada",
+    stone_shore: "Costa de pedra",
+    tall_birch_forest: "Floresta de bétulas altas",
+    wooded_badlands_plateau: "Platô do ermo arborizado",
+    wooded_mountains: "Montanhas arborizadas",
   },
 };
 
