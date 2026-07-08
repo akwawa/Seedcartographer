@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Version visible : le dialogue d'aide affiche la version déployée et le
+  commit (« v0.6.0 (abc1234) ») — un `version.js` committé en valeur « dev »
+  est régénéré à chaque déploiement (GitHub Pages et image Docker) par
+  `scripts/app-version.js` depuis `package.json` (release-please) et le HEAD
+  git (#167).
 - Domaine personnalisé : le site est servi sous **seedcarto.com** (fichier
   `CNAME` déployé sur GitHub Pages, liens canoniques et README mis à jour)
   (#166).

@@ -49,7 +49,8 @@ module.exports = [
         serializeSeedRun: 'readonly', parseSeedRun: 'readonly',
         encodeShareState: 'readonly', decodeShareState: 'readonly', encodeShareHash: 'readonly', decodeShareHash: 'readonly', normalizeLegacyCriteria: 'readonly',
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
-        THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
+        THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly',
+        APP_VERSION: 'readonly'
       }
     }
   },
@@ -143,7 +144,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js', 'shapes.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js', 'shapes.js', 'version.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
