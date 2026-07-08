@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Recherche multi-seeds : les seeds candidates sont notées et triées — nombre
+  de lieux trouvés puis distance du meilleur lieu à l'origine, affichés dans
+  la liste (« N ⚑ · D blocs ») ; le clic charge toujours la seed centrée sur
+  son meilleur lieu (désormais le plus proche de l'origine, pas le premier
+  balayé) (#113).
 - Palette haute lisibilité : le bouton 🎨 bascule la carte et la légende sur
   des couleurs adaptées au daltonisme (teintes sûres Okabe–Ito cyclées par
   biome, ombrées par la luminance d'origine pour préserver le relief

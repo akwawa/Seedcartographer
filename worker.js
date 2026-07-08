@@ -286,9 +286,15 @@ async function runSeedSearchJob(d) {
       return;
     }
     const hits = scanGrid(seedScanParams(d, cols, cols, gx0, gz0, SC));
+    // the best hit is the one closest to the origin the scan centers on
+    let best = null, bd = Infinity;
+    for (const h of hits || []) {
+      const dd = h.x * h.x + h.z * h.z;
+      if (dd < bd) { bd = dd; best = h; }
+    }
     postMessage({
       type: 'seedScanned', reqId: d.reqId, seed: seedStr,
-      hit: hits?.length ? hits[0] : null
+      hit: best, count: hits ? hits.length : 0
     });
     // let cancel messages through between seeds
     await yieldToQueue();

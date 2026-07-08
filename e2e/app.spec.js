@@ -570,6 +570,12 @@ test('multi-seed search finds candidate seeds and loads one', async ({ page }) =
   await expect(page.locator('#seedInfo')).toHaveClass(/ok/);
   const first = page.locator('#seedResults .result').first();
   await expect(first).toBeVisible();
+  // rows carry the score: place count and best-place distance to the origin
+  await expect(first.locator('.rc')).toContainText('⚑');
+  const scores = await page.$$eval('#seedResults .result .rc', (els) =>
+    els.map((e) => Number.parseInt(e.textContent, 10)));
+  const sorted = [...scores].sort((a, b) => b - a);
+  expect(scores).toEqual(sorted);   // best candidates first
   const seed = await first.locator('.rx').textContent();
   await first.click();
   await expect(page.locator('#seed')).toHaveValue(seed);
