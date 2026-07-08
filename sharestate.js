@@ -135,9 +135,63 @@ function screenToWorld(view, W, H, px, py) {
   return { x: view.cx + (px - W / 2) * view.bpp, z: view.cz + (py - H / 2) * view.bpp };
 }
 
+// ---- compressed share links (deflate via CompressionStream) ----
+// New links carry 'z.' + base64(deflate-raw(JSON)); the prefix cannot appear
+// in a legacy hash ('.' is outside the base64 alphabet), so old uncompressed
+// links keep decoding through the legacy path forever.
+const SHARE_COMPRESSED_PREFIX = 'z.';
+
+/** @param {Uint8Array} bytes @returns {string} base64 */
+function bytesToB64(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return b64encode(bin);
+}
+/** @param {string} b64 @returns {Uint8Array<ArrayBuffer>} */
+function b64ToBytes(b64) {
+  const bin = b64decode(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+/** @param {BufferSource} bytes @param {any} stream transform to pipe through @returns {Promise<Uint8Array>} */
+async function pipeBytes(bytes, stream) {
+  const out = await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer();
+  return new Uint8Array(out);
+}
+
+// Compressed when the runtime supports it, byte-identical to the legacy
+// format otherwise — the link stays shareable either way.
+/**
+ * @param {object} state plain JSON-serializable share state
+ * @returns {Promise<string>} hash payload (without the leading '#')
+ */
+async function encodeShareHash(state) {
+  const CS = /** @type {any} */ (globalThis).CompressionStream;
+  if (typeof CS !== 'function') return encodeShareState(state);
+  const raw = new TextEncoder().encode(JSON.stringify(state));
+  return SHARE_COMPRESSED_PREFIX + bytesToB64(await pipeBytes(raw, new CS('deflate-raw')));
+}
+/**
+ * @param {string} hash payload (without the leading '#'), untrusted
+ * @returns {Promise<any|null>} parsed state, or null when malformed
+ */
+async function decodeShareHash(hash) {
+  const h = String(hash ?? '');
+  if (!h.startsWith(SHARE_COMPRESSED_PREFIX)) return decodeShareState(h);
+  const DS = /** @type {any} */ (globalThis).DecompressionStream;
+  if (typeof DS !== 'function') return null;
+  try {
+    const raw = await pipeBytes(b64ToBytes(h.slice(SHARE_COMPRESSED_PREFIX.length)), new DS('deflate-raw'));
+    return JSON.parse(new TextDecoder().decode(raw));
+  } catch { return null; }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    encodeShareState, decodeShareState, normalizeLegacyCriteria,
+    encodeShareState, decodeShareState, encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
     sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
   };
 }

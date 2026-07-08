@@ -14,14 +14,23 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [0.5.0](https://github.com/akwawa/Seedcartographer/compare/v0.4.0...v0.5.0) (2026-07-08)
+## [Non publié]
 
 ### Ajouté
+- Permaliens raccourcis : le hash des liens de partage est compressé
+  (deflate via `CompressionStream`, préfixe `z.`) quand le navigateur le
+  permet, avec repli sur le format existant sinon — les anciens liens non
+  compressés restent lisibles pour toujours (codec pur dans sharestate.js,
+  testé) (#141).
 - Export/import du profil : un panneau « Profil » sauvegarde en un fichier
   JSON tout l'état local (favoris, presets personnalisés, historique des
   recherches, marqueurs) et le réimporte avec fusion défensive — chaque liste
   repasse par le parseur de son module, doublons ignorés, presets remplacés
   par nom, plafonds respectés (module pur profile.js testé) (#140).
+
+## [0.5.0](https://github.com/akwawa/Seedcartographer/compare/v0.4.0...v0.5.0) (2026-07-08)
+
+### Ajouté
 - Tri des résultats : un sélecteur au-dessus de la liste permet de trier par
   distance au spawn du monde (le spawn accompagne désormais la réponse de
   recherche, Overworld uniquement) en plus de l'ordre de recherche ;

@@ -85,7 +85,7 @@ test('share link restores seed, criteria and modes', async ({ page, context }) =
   await waitForApp(page);
   await page.click('#addMainBiome');
   await page.selectOption('#structMode', 'or');
-  const url = await page.evaluate(() => { syncHash(); return location.href; });
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
   const p2 = await context.newPage();
   await p2.goto(url);
   await waitForApp(p2);
@@ -128,7 +128,7 @@ test('Nether dimension: biome list, map, search and share link work', async ({ p
   await waitForSearchDone(page);
   await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
   // share link restores the dimension
-  const url = await page.evaluate(() => { syncHash(); return location.href; });
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
   const p2 = await context.newPage();
   await p2.goto(url);
   await waitForApp(p2);
@@ -351,7 +351,10 @@ test('forged hash values are ignored without breaking the app', async ({ page })
 test('map pans and zooms with the keyboard', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
-  const state = () => page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  const state = () => page.evaluate(async () => {
+    await syncHash();
+    return decodeShareHash(location.hash.slice(1));
+  });
   await page.focus('#map');
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowDown');
@@ -416,8 +419,8 @@ test.describe('mobile', () => {
       }
       ev('pointerup', 1, cx - 140, cy); ev('pointerup', 2, cx + 140, cy);
     });
-    // the hash is synced synchronously when the last pointer lifts
-    const zoomed = await page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))).b);
+    // the hash write is asynchronous now: re-sync before reading it back
+    const zoomed = await page.evaluate(async () => { await syncHash(); return (await decodeShareHash(location.hash.slice(1))).b; });
     expect(zoomed).toBeLessThan(before);
   });
 });
@@ -428,7 +431,7 @@ test('minimap recenters the map and the grid toggle draws the overlay', async ({
   await expect(page.locator('#minimap')).toBeVisible();
   // click right of the minimap center: the view center must move east
   await page.click('#minimap', { position: { x: 128, y: 66 } });
-  const s = await page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  const s = await page.evaluate(async () => { await syncHash(); return decodeShareHash(location.hash.slice(1)); });
   expect(s.x).toBeGreaterThan(-392);
   expect(s.z).toBe(56);
   // grid overlay toggles without breaking rendering
@@ -457,7 +460,7 @@ test('the Y slider reveals underground biomes and survives the share link', asyn
   await p2.goto(url);
   await waitForApp(p2);
   await expect(p2.locator('#yVal')).toHaveText('-52');
-  const s = await p2.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  const s = await p2.evaluate(() => decodeShareHash(location.hash.slice(1)));
   expect(s.y).toBe(-52);
 });
 
@@ -609,7 +612,10 @@ test('the minimap is painted across its whole surface', async ({ page }) => {
 test('the go-to control recenters the map and rejects bad input', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
-  const state = () => page.evaluate(() => JSON.parse(decodeURIComponent(atob(location.hash.slice(1)))));
+  const state = () => page.evaluate(async () => {
+    await syncHash();
+    return decodeShareHash(location.hash.slice(1));
+  });
   await page.fill('#gotoInput', '1234, -5678');
   await page.press('#gotoInput', 'Enter');
   const s = await state();
@@ -739,9 +745,9 @@ test('the tile checkerboard reuses cached tiles when panning back', async ({ pag
 test('the A/B version compare swaps the generation and keeps the view', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
-  const state = () => page.evaluate(() => {
-    syncHash();
-    return JSON.parse(decodeURIComponent(atob(location.hash.slice(1))));
+  const state = () => page.evaluate(async () => {
+    await syncHash();
+    return decodeShareHash(location.hash.slice(1));
   });
   await expect(page.locator('#cmpSwap')).toBeHidden();
   const mainVer = await page.locator('#mcver').inputValue();

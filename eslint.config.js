@@ -46,7 +46,7 @@ module.exports = [
         sortHitsByDist: 'readonly',
         SEED_SEARCH_MAX_TOTAL: 'readonly', SEED_SEARCH_MAX_FOUND: 'readonly',
         sequentialSeeds: 'readonly', randomSeeds: 'readonly', planBatches: 'readonly',
-        encodeShareState: 'readonly', decodeShareState: 'readonly', normalizeLegacyCriteria: 'readonly',
+        encodeShareState: 'readonly', decodeShareState: 'readonly', encodeShareHash: 'readonly', decodeShareHash: 'readonly', normalizeLegacyCriteria: 'readonly',
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly'
       }
@@ -152,7 +152,7 @@ module.exports = [
     files: ['e2e/**/*.js'],
     languageOptions: {
       sourceType: 'commonjs',
-      globals: { ...globals.node, ...globals.browser, syncHash: 'readonly' }
+      globals: { ...globals.node, ...globals.browser, syncHash: 'readonly', decodeShareHash: 'readonly' }
     }
   }
 ];
