@@ -173,6 +173,11 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   (`BENCH_BUDGET_MS`, 2 s). Côté e2e, `e2e/perf.spec.js` mesure le temps
   jusqu'au premier rendu de carte et échoue au-delà du budget
   (`RENDER_BUDGET_MS`, 15 s en CI).
+- **Tests de mutation** : `npm run mutation` lance
+  [Stryker](https://stryker-mutator.io/) sur les modules purs partagés
+  (`stryker.config.json`) et échoue sous le seuil `break`. Le run complet
+  dure ~25 minutes : il n'est pas un gate de PR mais tourne via le workflow
+  `mutation` (push sur `main`, hebdomadaire et déclenchement manuel).
 - **Typage** : `npm run typecheck` (JSDoc + `tsc --noEmit` via `checkJs` sur
   les modules purs — typage statique sans migration TypeScript).
 - **Lint** : `npm run lint` (ESLint) et `npm run lint:css` (stylelint) ; la CI vérifie aussi le `Dockerfile` (hadolint), les workflows (actionlint) et `build.sh` (shellcheck).

@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Tests de mutation : `npm run mutation` lance Stryker sur les 19 modules
+  purs partagés (runner `node --test`, seuil `break` sous lequel le run
+  échoue) ; le workflow CI `mutation` l'exécute sur chaque push vers `main`,
+  chaque semaine et à la demande — le run complet (~1700 mutants, ~25 min)
+  reste hors du gate de PR (#137).
 - Noms de biomes intégralement traduits : les 11 noms hérités (pré-1.18 —
   montagnes, toundra enneigée, taïgas géantes, savane délabrée…) rejoignent
   les 94 déjà traduits dans les 6 langues, et un test de parité garantit
