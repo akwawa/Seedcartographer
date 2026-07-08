@@ -57,6 +57,22 @@ jobs:
       - run: ./node_modules/.bin/playwright install --with-deps chromium
       - run: npm run e2e
 
+  # Lighthouse audit of the served page: performance, accessibility,
+  # best practices and SEO scores must stay above the lighthouserc floors
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.0.0
+        with:
+          node-version: 22
+          cache: npm
+      # lhci is a pinned devDependency installed with lifecycle scripts
+      # disabled: no on-demand npx execution (S6505)
+      - run: npm ci --ignore-scripts
+      - run: ./node_modules/.bin/lhci autorun
+
   # SonarQube Cloud analysis (quality gate + unit-test coverage). Requires the
   # SONAR_TOKEN repository secret; the scan step is skipped when it is not
   # available (Dependabot PRs, forks) so those PRs are not blocked.

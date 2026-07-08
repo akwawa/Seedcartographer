@@ -5,3 +5,5 @@ playwright-report/
 test-results/
 coverage/
 .tmp-swv-*/
+lighthouse-report/
+.lighthouseci/
