@@ -250,7 +250,7 @@ function setDimension(dim) {
   const rlbl = $('#reliefToggleLbl');
   if (rlbl) rlbl.hidden = dim !== 0;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
-  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = '';
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
   const presetSel = $('#presetSel');
   if (presetSel) presetSel.value = '';   // criteria no longer match any preset
@@ -845,6 +845,29 @@ function addAdjRow(biome, dist, negate, yl) {
   yInp.max = 320; yInp.placeholder = 'Y';
   addRow($('#adjClauses'), [aria(biomeSelect(biome), 'ariaBiome'), neg, subLbl('within'), aria(numInput(dist ?? 400, 0, 16), 'ariaDistance'), subLbl('blocks'), subLbl('atY'), aria(yInp, 'ariaClauseY')]);
 }
+// geographic pattern: island / lagoon, or "biome A enclosed by biome B"
+function addShapeRow(kind, a, b, mx) {
+  const kindSel = critSelect([
+    ['island', t('shapeIsland'), 'shapeIsland'],
+    ['lagoon', t('shapeLagoon'), 'shapeLagoon'],
+    ['enclave', t('shapeEnclave'), 'shapeEnclave']
+  ], kind || 'island');
+  kindSel.className = 'shapekind';
+  aria(kindSel, 'ariaShapeKind');
+  const selA = aria(biomeSelect(a), 'ariaBiome');
+  const selB = aria(biomeSelect(b), 'ariaBiome');
+  // the biome pair only means something for an enclave
+  const sync = () => {
+    const en = kindSel.value === 'enclave';
+    selA.disabled = !en; selB.disabled = !en;
+  };
+  kindSel.addEventListener('change', sync);
+  addRow($('#shapeClauses'), [
+    kindSel, selA, subLbl('shapeIn'), selB,
+    subLbl('maxSize'), aria(numInput(mx ?? 1000, 16, 16, 'sm'), 'ariaShapeMax'), subLbl('blocks')
+  ]);
+  sync();
+}
 // "at least pct% of biome B within dist blocks of the spot"
 function addPctRow(biome, pct, dist) {
   addRow($('#pctClauses'), [
@@ -898,6 +921,13 @@ function collectCriteria() {
       dist: Number.parseInt(ins[1].value, 10) || 0
     };
   }).filter((c) => Number.isFinite(c.biomes[0]) && c.pct >= 1 && c.pct <= 100 && c.dist > 0);
+  const shapeClauses = rowsOf('#shapeClauses').map((r) => {
+    const sels = r.querySelectorAll('select');
+    const kind = sels[0].value;
+    const max = Number.parseInt(r.querySelector('input.num').value, 10) || 0;
+    const a = Number.parseInt(sels[1].value, 10), b = Number.parseInt(sels[2].value, 10);
+    return { kind, max, ...(kind === 'enclave' ? { a: [a], b: [b] } : {}) };
+  }).filter((c) => c.max > 0 && (c.kind !== 'enclave' || (Number.isFinite(c.a[0]) && Number.isFinite(c.b[0]))));
   const structClauses = rowsOf('#structClauses').map((r) => {
     const ins = r.querySelectorAll('input.num');
     return {
@@ -926,6 +956,7 @@ function collectCriteria() {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
     pctMode: $('#pctMode').value, pctClauses,
+    shapeMode: $('#shapeMode').value, shapeClauses,
     structMode: $('#structMode').value, structClauses, pairClauses,
     surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null
   };
@@ -1555,6 +1586,16 @@ function readCriteria() {
         d: Number.parseInt(ins[1].value, 10) || 0
       };
     }),
+    hm: $('#shapeMode').value,
+    hc: rowsOf('#shapeClauses').map((r) => {
+      const sels = r.querySelectorAll('select');
+      return {
+        k: sels[0].value,
+        a: [Number.parseInt(sels[1].value, 10)],
+        b: [Number.parseInt(sels[2].value, 10)],
+        mx: Number.parseInt(r.querySelector('input.num').value, 10) || 0
+      };
+    }),
     sm: $('#structMode').value,
     sc: rowsOf('#structClauses').map((r) => {
       const ins = r.querySelectorAll('input.num');
@@ -1677,7 +1718,7 @@ function readHash() {
 // be attacker-controlled (share links): coerce everything to integers and cap
 // list sizes before building any DOM from them.
 function applyCriteria(raw) {
-  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = '';
+  $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
@@ -1687,6 +1728,8 @@ function applyCriteria(raw) {
   c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n, r.yl));
   $('#pctMode').value = c.qm;
   c.qc.forEach((r) => addPctRow(r.b, r.p, r.d));
+  $('#shapeMode').value = c.hm;
+  c.hc.forEach((r) => addShapeRow(r.k, r.a[0], r.b[0], r.mx));
   $('#structMode').value = c.sm;
   c.sc.forEach((r) => addStructRow(r.t, r.mn, r.r, r.im));
   c.pc.forEach((r) => addPairRow(r.t1, r.t2, r.g, r.r));
@@ -1869,6 +1912,7 @@ async function init() {
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addPct').onclick = () => addPctRow();
+  $('#addShape').onclick = () => addShapeRow();
   $('#addStruct').onclick = () => addStructRow();
   $('#addPair').onclick = () => addPairRow();
   $('#shareBtn').onclick = () => {

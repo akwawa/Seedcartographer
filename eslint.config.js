@@ -74,6 +74,12 @@ module.exports = [
     languageOptions: { globals: { currentLang: 'readonly' } }
   },
   {
+    // search.js consumes shapes.js (importScripts in the worker, require in
+    // Node)
+    files: ['search.js'],
+    languageOptions: { globals: { require: 'readonly', prepShapeClauses: 'readonly', shapePass: 'readonly', globalThis: 'readonly' } }
+  },
+  {
     // seedsearch.js consumes seedToBigInt (seed.js in the browser, require in Node)
     files: ['seedsearch.js'],
     languageOptions: { globals: { seedToBigInt: 'readonly', require: 'readonly', globalThis: 'readonly' } }
@@ -137,7 +143,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js', 'shapes.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

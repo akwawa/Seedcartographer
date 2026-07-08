@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Motifs géographiques : un bloc « Motifs » accepte des clauses de forme —
+  île (terre entourée d'eau), eau enclose (baie/lagon) et enclave (biome A
+  entouré de biome B) avec une taille maximale — détectées par analyse de
+  composantes connexes bornée sur la grille de biomes (remplissage 4-connexe
+  avec tampon de génération, module pur shapes.js testé et benchmarké en CI) ;
+  combinables ET/OU avec les autres critères et incluses dans le lien de
+  partage (#146).
 - Critères multi-Y : chaque clause de biome adjacent peut préciser sa propre
   altitude (champ « à Y » optionnel) — la recherche génère une grille de
   biomes par couche demandée et combine les critères entre couches, pour
