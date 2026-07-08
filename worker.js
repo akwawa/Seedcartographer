@@ -54,8 +54,7 @@ function ensureSearchArea(cells) {
 }
 
 let curSeedStr = null, curMc = null, curLarge = null, curDim = null;
-function applyWorld(seedStr, mc, large, rawDim) {
-  const dim = rawDim || 0;
+function applyWorld(seedStr, mc, large, dim = 0) {
   if (seedStr === curSeedStr && mc === curMc && large === curLarge && dim === curDim) return;
   M._initGen(mc, large ? 1 : 0, seedToBigInt(seedStr), dim);
   curSeedStr = seedStr; curMc = mc; curLarge = large; curDim = dim;
@@ -379,75 +378,51 @@ function handleStructures(d) {
   postMessage({ type: 'structures', reqId: d.reqId, groups: out });
 }
 
+// message dispatch table: one handler per message type
+function handleBiomeMsg(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const id = M._biomeAtBlock(d.x, d.z, Number.isInteger(d.y) ? d.y : DEFAULT_Y);
+  postMessage({ type: 'biome', reqId: d.reqId, id, name: M.UTF8ToString(M._biomeName(id)) });
+}
+function handleSearchMsg(d) {
+  if (searchBusy) {
+    postMessage({ type: 'search', reqId: d.reqId, error: 'busy', hits: [], ms: 0 });
+    return;
+  }
+  runSearchJob(d); // async: runs in slices so tiles/cancel stay responsive
+}
+function handlePaletteMsg(d) {
+  // swap the active color table; tiles rendered after this repaint with it
+  if (d.alt && !altColors) altColors = altBiomeColors(baseColors);
+  colors = d.alt ? altColors : baseColors;
+}
+function handleBiomeListMsg() {
+  // enumerate valid biome ids + names + colors for the dropdowns
+  const list = [];
+  for (let id = 0; id <= 255; id++) {
+    const name = M.UTF8ToString(M._biomeName(id));
+    if (!name) continue;
+    list.push({ id, name, dim: M._biomeDimension(id), rgb: [colors[id * 3], colors[id * 3 + 1], colors[id * 3 + 2]] });
+  }
+  postMessage({ type: 'biomeList', list });
+}
+const HANDLERS = {
+  tileGen: (d) => { tileGen = d.gen; },
+  renderTile: handleRenderTile,
+  render: handleRender,
+  structures: handleStructures,
+  biome: handleBiomeMsg,
+  cancelSearch: (d) => { searchCancelId = d.reqId; },
+  seedSearch: runSeedSearchJob, // async: yields between seeds so cancel is processed
+  cancelSeedSearch: (d) => { seedCancelId = d.reqId; },
+  search: handleSearchMsg,
+  palette: handlePaletteMsg,
+  structConsts: (d) => postMessage({ type: 'structConsts', values: d.indices.map((i) => M._structConst(i)) }),
+  biomeList: handleBiomeListMsg
+};
+
 onmessage = (e) => {
   if (!ready) { /* messages before ready are re-sent by main */ return; }
-  const d = e.data;
-
-  if (d.type === 'tileGen') { tileGen = d.gen; return; }
-
-  if (d.type === 'renderTile') { handleRenderTile(d); return; }
-
-  if (d.type === 'render') {
-    handleRender(d);
-    return;
-  }
-
-  if (d.type === 'structures') {
-    handleStructures(d);
-    return;
-  }
-
-  if (d.type === 'biome') {
-    applyWorld(d.seed, d.mc, d.large, d.dim);
-    const id = M._biomeAtBlock(d.x, d.z, Number.isInteger(d.y) ? d.y : DEFAULT_Y);
-    postMessage({ type: 'biome', reqId: d.reqId, id, name: M.UTF8ToString(M._biomeName(id)) });
-    return;
-  }
-
-  if (d.type === 'cancelSearch') {
-    searchCancelId = d.reqId;
-    return;
-  }
-
-  if (d.type === 'seedSearch') {
-    runSeedSearchJob(d); // async: yields between seeds so cancel is processed
-    return;
-  }
-
-  if (d.type === 'cancelSeedSearch') {
-    seedCancelId = d.reqId;
-    return;
-  }
-
-  if (d.type === 'search') {
-    if (searchBusy) {
-      postMessage({ type: 'search', reqId: d.reqId, error: 'busy', hits: [], ms: 0 });
-      return;
-    }
-    runSearchJob(d); // async: runs in slices so tiles/cancel stay responsive
-    return;
-  }
-
-  if (d.type === 'palette') {
-    // swap the active color table; tiles rendered after this repaint with it
-    if (d.alt && !altColors) altColors = altBiomeColors(baseColors);
-    colors = d.alt ? altColors : baseColors;
-    return;
-  }
-
-  if (d.type === 'structConsts') {
-    postMessage({ type: 'structConsts', values: d.indices.map((i) => M._structConst(i)) });
-    return;
-  }
-
-  if (d.type === 'biomeList') {
-    // enumerate valid biome ids + names + colors for the dropdowns
-    const list = [];
-    for (let id = 0; id <= 255; id++) {
-      const name = M.UTF8ToString(M._biomeName(id));
-      if (!name) continue;
-      list.push({ id, name, dim: M._biomeDimension(id), rgb: [colors[id * 3], colors[id * 3 + 1], colors[id * 3 + 2]] });
-    }
-    postMessage({ type: 'biomeList', list });
-  }
+  const handler = HANDLERS[e.data.type];
+  if (handler) handler(e.data);
 };

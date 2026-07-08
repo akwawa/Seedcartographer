@@ -133,6 +133,33 @@ function isDuplicate(hits, wx, wz, merge2) {
   return false;
 }
 
+// every per-cell criterion in one place: returns the structure count when
+// the cell passes, or null when any clause rejects it
+/**
+ * @param {{g: GridCtx, adj: object[], adjAll: boolean, structs: object[],
+ *          structAll: boolean, surf: {min: number, max: number,
+ *          heightAt: (x: number, z: number) => number}|null}} ctx
+ * @param {number} ci @param {number} cj @param {number} wx @param {number} wz
+ * @returns {number|null}
+ */
+function evalCell(ctx, ci, cj, wx, wz) {
+  if (!ctx.g.mainSet.has(ctx.g.grid[cj * ctx.g.cols + ci])) return null;
+  if (ctx.adj.length && !adjPass(ctx.adj, ctx.adjAll, ctx.g, ci, cj)) return null;
+  let count = 0;
+  if (ctx.structs.length) {
+    const total = structCount(ctx.structs, ctx.structAll, wx, wz);
+    if (total === null) return null;
+    count = total;
+  }
+  // surface-height clause: the engine callback is the most expensive check,
+  // so it only runs on cells that passed everything else
+  if (ctx.surf) {
+    const y = ctx.surf.heightAt(wx, wz);
+    if (!(y >= ctx.surf.min && y <= ctx.surf.max)) return null;
+  }
+  return count;
+}
+
 /**
  * @param {{grid: Int32Array|number[], cols: number, rows: number,
  *          gx0: number, gz0: number, SC: number,
@@ -149,7 +176,7 @@ function scanGrid(p) {
   const mainSet = p.mainSet;
   const adjAll = p.adjMode !== 'or';
   const structAll = p.structMode !== 'or';
-  if (!mainSet || !mainSet.size) return null;
+  if (!mainSet?.size) return null;
 
   const g = { grid, cols, rows, gx0, gz0, SC, mainSet };
   const adj = prepAdjClauses(p.adjClauses || [], SC);
@@ -172,33 +199,16 @@ function scanGrid(p) {
   // stride alignment is identical to a full scan
   const rowStart = p.rowStart ?? bj0, rowEnd = p.rowEnd ?? bj1;
 
+  const ctx = { g, adj, adjAll, structs, structAll, surf };
   const hits = p.hits || [];
   if (hits.length >= SEARCH_MAX_HITS) return hits;
   for (let cj = bj0; cj <= bj1; cj += stride) {
     if (cj < rowStart || cj > rowEnd) continue;
     for (let ci = bi0; ci <= bi1; ci += stride) {
-      if (!mainSet.has(grid[cj * cols + ci])) continue;
       const wx = gx0 * SC + ci * SC;
       const wz = gz0 * SC + cj * SC;
-
-      if (adj.length && !adjPass(adj, adjAll, g, ci, cj)) continue;
-
-      let count = 0;
-      if (structs.length) {
-        const total = structCount(structs, structAll, wx, wz);
-        if (total === null) continue;
-        count = total;
-      }
-
-      // surface-height clause: the engine callback is the most expensive
-      // check, so it only runs on cells that passed everything else
-      if (surf) {
-        const y = surf.heightAt(wx, wz);
-        if (!(y >= surf.min && y <= surf.max)) continue;
-      }
-
-      if (isDuplicate(hits, wx, wz, merge2)) continue;
-
+      const count = evalCell(ctx, ci, cj, wx, wz);
+      if (count === null || isDuplicate(hits, wx, wz, merge2)) continue;
       hits.push({ x: wx, z: wz, count });
       if (hits.length >= SEARCH_MAX_HITS) return hits;
     }
