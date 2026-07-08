@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Budget de performance e2e : un test mesure le temps entre le chargement de
+  la page et le premier rendu effectif de la carte (tuile peinte sur le
+  canvas) et fait échouer la CI au-delà du budget (`RENDER_BUDGET_MS`),
+  la durée étant journalisée à chaque run (#131).
 - Audit Lighthouse en CI : la page servie est auditée à chaque MR et le
   pipeline échoue sous les planchers configurés (performance ≥ 0,6,
   accessibilité ≥ 0,9, bonnes pratiques ≥ 0,9, SEO ≥ 0,8) (#130).
