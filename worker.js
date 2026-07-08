@@ -307,7 +307,12 @@ async function runSeedSearchJob(d) {
 // requests are simply skipped instead of computed).
 let tileGen = 0;
 function handleRenderTile(d) {
-  if (d.gen < tileGen) return;   // cancelled batch
+  if (d.gen < tileGen) {
+    // cancelled batch: acknowledge without computing so the app can drop
+    // the request from its in-flight bookkeeping
+    postMessage({ type: 'gridTile', key: d.key, wk: d.wk, skipped: true });
+    return;
+  }
   applyWorld(d.seed, d.mc, d.large, d.dim);
   const cells = TILE_CELLS * TILE_CELLS;
   ensureArea(cells);

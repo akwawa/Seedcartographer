@@ -101,6 +101,7 @@ function onTileMessage(d) {
 }
 function onGridTile(d) {
   pendingTiles.delete(d.key);
+  if (d.skipped) return;   // cancelled off-screen tile, acknowledged only
   if (!d.ok) {
     searchInfo.textContent = t('tileFailed');
     searchInfo.className = 'info err';
@@ -444,7 +445,6 @@ function requestRender(delay = 90) {
 function requestGridTiles() {
   renderGen++;
   send({ type: 'tileGen', gen: renderGen });
-  pendingTiles.clear();
   const W = Math.ceil(canvas.width / dpr), H = Math.ceil(canvas.height / dpr);
   const scale = renderScaleFor(view.bpp);
   const wk = tileWorldKey(world, yLayer);
@@ -452,6 +452,7 @@ function requestGridTiles() {
   for (const pos of tilesForView(view, W, H, scale)) {
     const key = tileKey(wk, scale, pos.originX, pos.originZ);
     if (cached.has(key)) { tileCache.touch(key); continue; }
+    if (pendingTiles.has(key)) continue;   // already in flight
     pendingTiles.add(key);
     send({
       type: 'renderTile', gen: renderGen, key, wk, scale,
@@ -1441,8 +1442,8 @@ function applyPalette(alt, persist) {
   $('#paletteBtn').setAttribute('aria-pressed', String(alt));
   if (persist) { try { localStorage.setItem('palette', alt ? 'alt' : 'default'); } catch { /* ignore */ } }
   send({ type: 'palette', alt });
-  // every cached tile was painted with the old table
-  tileCache.clear(); minimapTile = null;
+  // every cached or in-flight tile was painted with the old table
+  tileCache.clear(); pendingTiles.clear(); minimapTile = null;
   draw(); requestRender(0); requestMinimap(0);
   buildLegend(legendPresent);
 }
