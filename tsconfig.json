@@ -11,7 +11,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "seed.js", "search.js", "export.js", "coords.js", "slime.js", "maptools.js", "tilecache.js", "sharestate.js", "seedsearch.js", "searchhistory.js", "userpresets.js", "usermarkers.js", "palette.js", "tilegrid.js",
+    "seed.js", "search.js", "export.js", "coords.js", "slime.js", "maptools.js", "tilecache.js", "sharestate.js", "seedsearch.js", "searchhistory.js", "userpresets.js", "usermarkers.js", "palette.js", "tilegrid.js", "relief.js",
     "markers.js", "presets.js", "favorites.js", "legend.js", "theme.js",
     "scripts/*.js"
   ]

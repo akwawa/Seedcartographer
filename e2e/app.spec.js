@@ -798,6 +798,24 @@ test('the Nether grid overlay shows both referentials in the HUD', async ({ page
   await expect(page.locator('#hud .coords')).not.toContainText('⇄');
 });
 
+test('the relief overlay reshades the map tiles and is Overworld-only', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // capture a pixel strip at the center, toggle relief, wait for a reshade
+  const strip = () => page.evaluate(() => {
+    const c = document.querySelector('#map');
+    return [...c.getContext('2d').getImageData(c.width / 2 - 64, Math.floor(c.height / 2), 128, 1).data];
+  });
+  const before = await strip();
+  await page.check('#reliefChk');
+  await expect.poll(strip, { timeout: 15000 }).not.toEqual(before);
+  // the End has no surface: the toggle disappears; back home it returns
+  await page.selectOption('#dimSel', '1');
+  await expect(page.locator('#reliefToggleLbl')).toBeHidden();
+  await page.selectOption('#dimSel', '0');
+  await expect(page.locator('#reliefToggleLbl')).toBeVisible();
+});
+
 test('the area selection drags a rectangle and copies its coordinates', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');

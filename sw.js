@@ -25,6 +25,7 @@ const ASSETS = [
   './usermarkers.js',
   './palette.js',
   './tilegrid.js',
+  './relief.js',
   './legend.js',
   './maptools.js',
   './tilecache.js',

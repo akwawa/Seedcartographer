@@ -103,6 +103,9 @@ module.exports = [
         pairMidpoints: 'readonly',    // search.js
         altBiomeColors: 'readonly',   // palette.js
         TILE_CELLS: 'readonly',       // tilegrid.js
+        reliefSampleStep: 'readonly', // relief.js
+        hillshade: 'readonly',
+        upsampleShade: 'readonly',
         SPAWN_STRUCT_TYPE: 'readonly',       // markers.js
         STRONGHOLD_STRUCT_TYPE: 'readonly',
         QUADHUT_STRUCT_TYPE: 'readonly'
@@ -110,7 +113,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }
