@@ -12,6 +12,7 @@
     "coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info",
     "coverage:branches": "node --test --experimental-test-coverage --test-coverage-branches=100 --test-coverage-exclude='test/**' --test-coverage-exclude='scripts/**'",
     "lint:css": "stylelint styles.css fonts/fonts.css",
+    "mutation": "stryker run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -19,6 +20,7 @@
     "@eslint/js": "^10.0.1",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.61.1",
+    "@stryker-mutator/core": "^9.6.1",
     "@types/node": "^26.1.0",
     "eslint": "^10.6.0",
     "globals": "^17.7.0",

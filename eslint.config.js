@@ -8,7 +8,8 @@ const js = require('@eslint/js');
 module.exports = [
   js.configs.recommended,
   {
-    ignores: ['mcfinder.js'] // Emscripten-generated glue
+    // Emscripten-generated glue and the Stryker mutation sandbox
+    ignores: ['mcfinder.js', '.stryker-tmp/']
   },
   {
     rules: {
