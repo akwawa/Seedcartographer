@@ -102,14 +102,6 @@ jobs:
       # exposed as job-level env and tested through the env context instead
       - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         if: env.SONAR_TOKEN != ''
-      # TEMP debug: dump the new issues of this PR analysis (waits for the
-      # server to process the report first)
-      - if: env.SONAR_TOKEN != ''
-        run: |
-          sleep 90
-          curl -sS -u "$SONAR_TOKEN:" -o /tmp/issues.json \
-            "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&pullRequest=170&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true"
-          jq '{total, issues: [.issues[] | {rule, type, severity, component, line, message}]}' /tmp/issues.json
 
   # the committed mcfinder.wasm/js must be reproducible from mcfinder.c and
   # the pinned cubiomes submodule with the pinned emsdk version
