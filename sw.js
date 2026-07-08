@@ -21,6 +21,7 @@ const ASSETS = [
   './presets.js',
   './favorites.js',
   './searchhistory.js',
+  './userpresets.js',
   './legend.js',
   './maptools.js',
   './tilecache.js',

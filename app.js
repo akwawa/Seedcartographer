@@ -995,6 +995,12 @@ function buildHistList() {
     box.appendChild(btn);
   }
 }
+let userPresets = parseUserPresets((() => {
+  try { return localStorage.getItem('userPresets'); } catch { return null; }
+})());
+function saveUserPresets() {
+  try { localStorage.setItem('userPresets', JSON.stringify(userPresets)); } catch { /* ignore */ }
+}
 let favorites = parseFavorites((() => {
   try { return localStorage.getItem('favorites'); } catch { return null; }
 })());
@@ -1293,8 +1299,12 @@ function applyHashCriteria() {
 }
 
 // ---------- criteria presets ----------
+function updatePresetDelBtn() {
+  $('#presetDel').hidden = !$('#presetSel').value.startsWith('u:');
+}
 function buildPresetSelect() {
   const sel = $('#presetSel');
+  sel.textContent = '';   // rebuilt whenever the custom presets change
   const ph = document.createElement('option');
   ph.value = ''; ph.dataset.i18n = 'presetPlaceholder'; ph.textContent = t('presetPlaceholder');
   sel.appendChild(ph);
@@ -1303,14 +1313,59 @@ function buildPresetSelect() {
     o.value = p.id; o.dataset.i18n = p.labelKey; o.textContent = t(p.labelKey);
     sel.appendChild(o);
   }
+  if (userPresets.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = t('presetCustomGroup'); grp.dataset.i18nLabel = 'presetCustomGroup';
+    for (const p of userPresets) {
+      const o = document.createElement('option');
+      o.value = 'u:' + p.id; o.textContent = p.name;
+      grp.appendChild(o);
+    }
+    sel.appendChild(grp);
+  }
   sel.onchange = () => {
-    const preset = PRESETS.find((p) => p.id === sel.value);
-    if (!preset) return;
-    // presets are Overworld recipes; leave the current dimension first
-    if (world.dim !== 0) { setDimension(0); $('#dimSel').value = '0'; }
-    applyCriteria(presetCriteria(preset, structToggles.map((tg) => tg.type)));
-    sel.value = preset.id;   // setDimension may have reset the picker
+    const chosen = sel.value;
+    const user = userPresets.find((p) => 'u:' + p.id === chosen);
+    if (user) {
+      // a custom preset carries its own dimension
+      if (world.dim !== user.dim) { setDimension(user.dim); $('#dimSel').value = String(user.dim); }
+      applyCriteria(user.c);
+    } else {
+      const preset = PRESETS.find((p) => p.id === chosen);
+      if (!preset) { updatePresetDelBtn(); return; }
+      // built-in presets are Overworld recipes; leave the current dimension first
+      if (world.dim !== 0) { setDimension(0); $('#dimSel').value = '0'; }
+      applyCriteria(presetCriteria(preset, structToggles.map((tg) => tg.type)));
+    }
+    sel.value = chosen;   // setDimension may have reset the picker
+    updatePresetDelBtn();
     syncHash();
+  };
+  updatePresetDelBtn();
+}
+function wirePresetSave() {
+  const nameInput = $('#presetName'), sel = $('#presetSel');
+  $('#presetSave').onclick = () => {
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.classList.add('bad'); return; }
+    userPresets = addUserPreset(userPresets, name, world.dim, readCriteria());
+    saveUserPresets();
+    buildPresetSelect();
+  wirePresetSave();
+    const saved = userPresets.find((p) => p.name === name.slice(0, USER_PRESET_NAME_MAX));
+    if (saved) sel.value = 'u:' + saved.id;
+    updatePresetDelBtn();
+    nameInput.value = '';
+  };
+  nameInput.oninput = () => nameInput.classList.remove('bad');
+  $('#presetDel').onclick = () => {
+    const id = Number.parseInt(sel.value.slice(2), 10);
+    userPresets = removeUserPreset(userPresets, id);
+    saveUserPresets();
+    buildPresetSelect();
+  wirePresetSave();
+    sel.value = '';
+    updatePresetDelBtn();
   };
 }
 
@@ -1376,6 +1431,7 @@ function init() {
   $('#exportCsv').onclick = () => exportResults('csv');
   $('#exportJson').onclick = () => exportResults('json');
   buildPresetSelect();
+  wirePresetSave();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addStruct').onclick = () => addStructRow();

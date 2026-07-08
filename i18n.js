@@ -54,6 +54,10 @@ const I18N = {
     gotoAria: "Go to coordinates (x, z)",
     rulerTitle: "Measure a distance (two clicks on the map)",
     historyTitle: "Recent searches",
+    presetSaveBtn: "Save",
+    presetNamePh: "Preset name",
+    presetCustomGroup: "Custom presets",
+    presetDeleteTitle: "Delete this preset",
     historyEmpty: "No searches yet.",
     historyReplay: "Replay this search",
     minimapAria: "Overview minimap — click to recenter the map",
@@ -186,6 +190,10 @@ const I18N = {
     gotoAria: "Aller aux coordonnées (x, z)",
     rulerTitle: "Mesurer une distance (deux clics sur la carte)",
     historyTitle: "Recherches récentes",
+    presetSaveBtn: "Enregistrer",
+    presetNamePh: "Nom du preset",
+    presetCustomGroup: "Presets personnalisés",
+    presetDeleteTitle: "Supprimer ce preset",
     historyEmpty: "Aucune recherche pour l\u2019instant.",
     historyReplay: "Rejouer cette recherche",
     minimapAria: "Minimap d'ensemble — cliquer pour recentrer la carte",
@@ -318,6 +326,10 @@ const I18N = {
     gotoAria: "Ir a las coordenadas (x, z)",
     rulerTitle: "Medir una distancia (dos clics en el mapa)",
     historyTitle: "Búsquedas recientes",
+    presetSaveBtn: "Guardar",
+    presetNamePh: "Nombre del preset",
+    presetCustomGroup: "Presets personalizados",
+    presetDeleteTitle: "Eliminar este preset",
     historyEmpty: "Aún no hay búsquedas.",
     historyReplay: "Repetir esta búsqueda",
     minimapAria: "Minimapa general — clic para recentrar el mapa",
@@ -450,6 +462,10 @@ const I18N = {
     gotoAria: "Zu Koordinaten springen (x, z)",
     rulerTitle: "Eine Distanz messen (zwei Klicks auf der Karte)",
     historyTitle: "Letzte Suchen",
+    presetSaveBtn: "Speichern",
+    presetNamePh: "Preset-Name",
+    presetCustomGroup: "Eigene Presets",
+    presetDeleteTitle: "Dieses Preset löschen",
     historyEmpty: "Noch keine Suchen.",
     historyReplay: "Diese Suche wiederholen",
     minimapAria: "Übersichts-Minimap — Klick zentriert die Karte neu",
@@ -581,6 +597,10 @@ const I18N = {
     gotoAria: "Vai alle coordinate (x, z)",
     rulerTitle: "Misura una distanza (due clic sulla mappa)",
     historyTitle: "Ricerche recenti",
+    presetSaveBtn: "Salva",
+    presetNamePh: "Nome del preset",
+    presetCustomGroup: "Preset personalizzati",
+    presetDeleteTitle: "Elimina questo preset",
     historyEmpty: "Nessuna ricerca finora.",
     historyReplay: "Ripeti questa ricerca",
     minimapAria: "Minimappa generale — clic per ricentrare la mappa",
@@ -713,6 +733,10 @@ const I18N = {
     gotoAria: "Ir para as coordenadas (x, z)",
     rulerTitle: "Medir uma distância (dois cliques no mapa)",
     historyTitle: "Buscas recentes",
+    presetSaveBtn: "Salvar",
+    presetNamePh: "Nome do preset",
+    presetCustomGroup: "Presets personalizados",
+    presetDeleteTitle: "Excluir este preset",
     historyEmpty: "Nenhuma busca ainda.",
     historyReplay: "Repetir esta busca",
     minimapAria: "Minimapa geral — clique para recentralizar o mapa",
@@ -822,6 +846,8 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.setAttribute('placeholder', t(el.dataset.i18nPh)); });
+  document.querySelectorAll('[data-i18n-label]').forEach((el) => { el.setAttribute('label', t(el.dataset.i18nLabel)); });
   // biome option labels (biomes.js, loaded after this file)
   if (typeof biomeLabel === 'function') {
     document.querySelectorAll('[data-biome]').forEach((el) => { el.textContent = biomeLabel(el.dataset.biome); });

@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Presets personnalisés : « Enregistrer » sauvegarde les critères courants
+  sous un nom libre (avec la dimension) dans le navigateur (`localStorage`,
+  parsing défensif, plafond 30) ; ils apparaissent dans le sélecteur de
+  presets sous un groupe dédié, se rejouent d'un clic et se suppriment
+  (réenregistrer sous le même nom remplace) (#111).
 - Historique des recherches : les 10 dernières recherches (monde, critères,
   zone) sont conservées dans le navigateur (`localStorage`) et listées dans
   le panneau « Recherches récentes » — un clic restaure la seed, la version,

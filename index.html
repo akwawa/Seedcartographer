@@ -43,6 +43,11 @@
       <div class="field">
         <label for="presetSel" data-i18n="presets">Presets</label>
         <select id="presetSel"></select>
+        <div class="export presetsave">
+          <input id="presetName" maxlength="40" aria-label="Preset name" data-i18n-aria="presetNamePh" data-i18n-ph="presetNamePh" placeholder="Preset name">
+          <button id="presetSave" class="btn tiny" data-i18n="presetSaveBtn">Save</button>
+          <button id="presetDel" class="btn tiny" hidden data-i18n-title="presetDeleteTitle" title="Delete this preset">×</button>
+        </div>
       </div>
 
       <div class="field">
@@ -195,6 +200,7 @@
 <script src="./seed.js"></script>
 <script src="./seedsearch.js"></script>
 <script src="./searchhistory.js"></script>
+<script src="./userpresets.js"></script>
 <script src="./theme.js"></script>
 <script src="./export.js"></script>
 <script src="./app.js"></script>
