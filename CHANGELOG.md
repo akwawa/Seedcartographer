@@ -17,6 +17,11 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Grille Nether ⇄ Overworld : une couche « grille Nether » superpose en
+  pointillés orange les pas « ronds » de la dimension liée (÷8 depuis
+  l'Overworld, ×8 depuis le Nether) avec les coordonnées liées en étiquette,
+  et le HUD affiche le point sous le curseur dans les deux référentiels —
+  pour planifier les liaisons de portails (#134).
 - Marqueurs personnalisés : le bouton 📍 active un mode « poser un
   marqueur » — chaque clic sur la carte épingle un losange violet nommable,
   lié à la seed/version/dimension comme les favoris, listé dans un panneau

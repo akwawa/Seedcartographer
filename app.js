@@ -28,6 +28,7 @@ const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
 let showGrid = false;                           // coordinate-grid overlay toggle
+let showNetherGrid = false;                     // linked-dimension (portal) grid overlay
 const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
 
@@ -231,6 +232,12 @@ function buildDimSelect() {
 }
 function setDimension(dim) {
   world.dim = dim;
+  // the End has no linked dimension: hide and disarm the portal grid
+  const lbl = $('#netherToggleLbl');
+  if (lbl) {
+    lbl.hidden = dim === 1;
+    if (dim === 1) { showNetherGrid = false; $('#netherChk').checked = false; }
+  }
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = '';
   $('#pairClauses').textContent = '';
@@ -298,6 +305,7 @@ function draw() {
   });
 
   if (showGrid) drawGrid(W, H);
+  if (showNetherGrid) drawNetherGrid(W, H);
   drawScaleBar(H);
   drawRuler();
 
@@ -333,6 +341,36 @@ function drawGrid(W, H) {
   ctx.stroke();
   for (const wx of gridLines(s2wx(0), s2wx(W), step)) ctx.fillText(String(wx), w2sx(wx) + 3, 11);
   for (const wz of gridLines(s2wz(0), s2wz(H), step)) ctx.fillText(String(wz), 3, w2sy(wz) - 3);
+}
+
+// portal-planning overlay: dashed lines on "nice" steps of the LINKED
+// dimension (Nether seen from the Overworld and vice versa), labelled with
+// the linked coordinates
+function drawNetherGrid(W, H) {
+  const spec = linkedGridSpec(world.dim, view.bpp);
+  if (!spec) return;
+  const step = spec.currentStep;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(226,110,60,.55)'; ctx.lineWidth = 1;
+  ctx.setLineDash([5, 4]);
+  ctx.fillStyle = 'rgba(226,110,60,.9)'; ctx.font = '10px monospace';
+  ctx.beginPath();
+  for (const wx of gridLines(s2wx(0), s2wx(W), step)) {
+    const px = w2sx(wx);
+    ctx.moveTo(px, 0); ctx.lineTo(px, H);
+  }
+  for (const wz of gridLines(s2wz(0), s2wz(H), step)) {
+    const py = w2sy(wz);
+    ctx.moveTo(0, py); ctx.lineTo(W, py);
+  }
+  ctx.stroke();
+  for (const wx of gridLines(s2wx(0), s2wx(W), step)) {
+    ctx.fillText(`${spec.label} ${Math.round(wx / spec.factor)}`, w2sx(wx) + 3, 23);
+  }
+  for (const wz of gridLines(s2wz(0), s2wz(H), step)) {
+    ctx.fillText(String(Math.round(wz / spec.factor)), 3, w2sy(wz) + 11);
+  }
+  ctx.restore();
 }
 
 // graphic scale bar, bottom-left above the HUD
@@ -548,7 +586,10 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
-  hud.querySelector('.coords').textContent = `${Math.round(s2wx(mx))}, ${Math.round(s2wz(my))}`;
+  const hx = Math.round(s2wx(mx)), hz = Math.round(s2wz(my));
+  const linked = showNetherGrid ? convertCoords(world.dim, hx, hz) : null;
+  hud.querySelector('.coords').textContent =
+    linked ? `${hx}, ${hz} ⇄ ${linked.label} ${linked.x}, ${linked.z}` : `${hx}, ${hz}`;
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) {
     const p = pinchState();
@@ -1617,6 +1658,7 @@ function init() {
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
+  $('#netherChk').onchange = (e) => { showNetherGrid = e.target.checked; draw(); };
   const ySlider = $('#ySlider'), yVal = $('#yVal');
   ySlider.value = String(yLayer); yVal.textContent = String(yLayer);
   ySlider.oninput = () => { yVal.textContent = ySlider.value; };

@@ -784,3 +784,16 @@ test('custom markers: place on click, rename, persist, delete', async ({ page })
   await page.click('#markerList .rm');
   await expect(page.locator('#markerList .fav')).toHaveCount(0);
 });
+
+test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.check('#netherChk');
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.move(box.x + 300, box.y + 300);
+  await expect(page.locator('#hud .coords')).toContainText('⇄ Nether');
+  // unchecked: back to the single referential
+  await page.uncheck('#netherChk');
+  await page.mouse.move(box.x + 320, box.y + 300);
+  await expect(page.locator('#hud .coords')).not.toContainText('⇄');
+});
