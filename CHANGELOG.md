@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Posture mesurée : le workflow OpenSSF Scorecard évalue chaque semaine (et à
+  chaque push sur `main`) la sécurité de la chaîne d'approvisionnement du
+  dépôt, publie les résultats vers le code scanning et alimente le badge du
+  README (#182).
 - Chaîne d'approvisionnement : `lockfile-lint` vérifie en CI (et via
   `npm run lint:lockfile`) que `package-lock.json` ne résout que vers le
   registre npm en HTTPS, avec noms de paquets cohérents et intégrité sha512

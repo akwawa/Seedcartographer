@@ -1,0 +1,34 @@
+# OpenSSF Scorecard: weekly (and on-push) measurement of the repository's
+# supply-chain security posture, published to code scanning and to the
+# public Scorecard API (for the README badge).
+name: Scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write   # upload the SARIF results to code scanning
+      id-token: write          # publish_results signed attestation
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+      - uses: github/codeql-action/upload-sarif@466af0e674b5934a422135de9b2b4c6521080560 # v3.31.7
+        with:
+          sarif_file: results.sarif

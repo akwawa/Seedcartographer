@@ -1,5 +1,7 @@
 # Seedcartographer
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/akwawa/Seedcartographer/badge)](https://scorecard.dev/viewer/?uri=github.com/akwawa/Seedcartographer)
+
 Cherche, dans une seed Minecraft **Java** donnée, des endroits qui réunissent
 plusieurs critères en même temps : un biome principal, collé à un biome voisin,
 avec un certain nombre de structures à proximité. Tout le calcul de génération du
