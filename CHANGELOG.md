@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Structures sur les vignettes : les aperçus de la galerie superposent les
+  marqueurs de structures de la zone (villages, avant-postes, temples…) avec
+  les couleurs des couches de la carte ; couches slime chunks, spawn et
+  strongholds exclues (trop denses ou trop coûteuses pour une vignette) (#174).
 - Galerie en modal : le bouton « Galerie » ouvre désormais un dialogue dans
   l'app — cards avec une vignette du lieu rendue par le moteur WASM, clic qui
   applique l'entrée en direct (seed, version, dimension, vue, critères) sans

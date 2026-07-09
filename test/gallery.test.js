@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
-const { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender } = require('../gallery.js');
+const { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } = require('../gallery.js');
 const { decodeShareState, sanitizeWorldView, sanitizeCriteria } = require('../sharestate.js');
 
 const ENTRY = {
@@ -75,4 +75,18 @@ test('galleryThumbRender builds a full worker render message', () => {
     type: 'render', reqId: 7, seed: '141', mc: 28, large: true,
     dim: 0, y: 60, highlight: null, cx: e.x, cz: e.z, bpp: e.b, w: 260, h: 140
   });
+});
+
+test('galleryStructRender covers the thumbnail world box', () => {
+  const e = validateGalleryEntry(ENTRY);
+  assert.deepStrictEqual(galleryStructRender(e, 9, 260, 140, [3, 4]), {
+    type: 'structures', reqId: 9, seed: '141', mc: 28, large: false, dim: 0,
+    types: [3, 4], x0: -384 - 260, z0: -140, x1: -384 + 260, z1: 140
+  });
+});
+
+test('galleryThumbPoint projects world coordinates onto the thumbnail', () => {
+  const e = validateGalleryEntry(ENTRY);
+  assert.deepStrictEqual(galleryThumbPoint(e, 260, 140, e.x, e.z), { px: 130, py: 70 });
+  assert.deepStrictEqual(galleryThumbPoint(e, 260, 140, e.x + 2 * e.b, e.z - 4 * e.b), { px: 132, py: 66 });
 });
