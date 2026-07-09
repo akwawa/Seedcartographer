@@ -16,6 +16,12 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Modifié
+- Découplage visible : l'interface ne référence plus le dépôt GitHub — le
+  lien « GitHub » du dialogue d'aide est retiré et la licence pointe vers le
+  texte officiel sur creativecommons.org ; le crédit cubiomes (projet tiers)
+  est conservé (#178).
+
 ## [0.6.0](https://github.com/akwawa/Seedcartographer/compare/v0.5.0...v0.6.0) (2026-07-09)
 
 ### Corrigé
