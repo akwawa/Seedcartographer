@@ -293,6 +293,23 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
   await expect(page.locator('#helpDlg')).toBeHidden();
 });
 
+test('gallery modal: thumbnail cards, clicking one applies the entry', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#galleryBtn');
+  await expect(page.locator('#galleryDlg')).toBeVisible();
+  const cards = page.locator('#galleryCards .gallerycard');
+  await expect(cards).toHaveCount(4);
+  await expect(cards.first().locator('canvas.gallerythumb')).toBeVisible();
+  // the second entry (slime farm at 160,-3952) recenters the map and closes
+  await cards.nth(1).click();
+  await expect(page.locator('#galleryDlg')).toBeHidden();
+  await expect(page.locator('#seed')).toHaveValue('141');
+  await expect.poll(() => page.evaluate(
+    async () => (await decodeShareHash(location.hash.slice(1)))?.x
+  )).toBe(160);
+});
+
 test('spawn and strongholds: layers plus distance-to-spawn criterion', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

@@ -37,7 +37,7 @@
   <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
   <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
   <button id="paletteBtn" class="btn tiny palettebtn" aria-pressed="false" title="High-visibility colors" data-i18n-title="paletteTitle" data-i18n-aria="paletteTitle" aria-label="High-visibility colors">🎨</button>
-  <a class="btn tiny gallerylink" href="./gallery.html" data-i18n="galleryLink">Gallery</a>
+  <button id="galleryBtn" type="button" class="btn tiny gallerylink" data-i18n="galleryLink">Gallery</button>
   <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
 </header>
 
@@ -233,6 +233,12 @@
   </div>
 </main>
 
+<dialog id="galleryDlg" class="help gallerydlg">
+  <button id="galleryClose" class="help-close" data-i18n-title="close" title="Close">×</button>
+  <h2 data-i18n="galleryTitle">Seed gallery</h2>
+  <div id="galleryCards" class="gallerycards"><p class="muted small">…</p></div>
+  <p class="help-links"><a href="./gallery.html" data-i18n="galleryPageLink">Open as a page</a></p>
+</dialog>
 <dialog id="helpDlg" class="help">
   <button id="helpClose" class="help-close" data-i18n-title="close" title="Close">×</button>
   <h2 data-i18n="helpTitle">Help</h2>
@@ -274,6 +280,7 @@
 <script src="./palette.js"></script>
 <script src="./theme.js"></script>
 <script src="./export.js"></script>
+<script src="./gallery.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

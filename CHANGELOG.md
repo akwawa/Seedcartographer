@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Galerie en modal : le bouton « Galerie » ouvre désormais un dialogue dans
+  l'app — cards avec une vignette du lieu rendue par le moteur WASM, clic qui
+  applique l'entrée en direct (seed, version, dimension, vue, critères) sans
+  rechargement ; `gallery.html` reste accessible en lien direct (#172).
 - Statistiques d'usage : le site intègre le script [Umami](https://umami.is/)
   (auto-hébergé sur analytics.super-h.fr, sans cookies) pour compter les
   visites de façon anonyme ; le dialogue d'aide (6 langues) et le README

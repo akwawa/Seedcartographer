@@ -39,6 +39,7 @@ let showRelief = false;                         // hillshade terrain overlay (Ov
 function reliefOn() { return showRelief && world.dim === 0; }
 const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
+const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> canvas
 
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
@@ -86,6 +87,13 @@ function tileCanvasOf(d) {
   return { canvas: tmp, originX: d.originX, originZ: d.originZ, scale: d.scale, cols: d.cols, rows: d.rows };
 }
 function onTileMessage(d) {
+  const thumb = galleryThumbReqs.get(d.reqId);
+  if (thumb) {
+    // gallery card preview: scale the rendered area onto the card canvas
+    galleryThumbReqs.delete(d.reqId);
+    if (d.ok) thumb.getContext('2d').drawImage(tileCanvasOf(d).canvas, 0, 0, thumb.width, thumb.height);
+    return;
+  }
   if (d.reqId === minimapReq) {
     if (!d.ok) return;
     minimapTile = tileCanvasOf(d);
@@ -1698,6 +1706,69 @@ function exportResults(fmt) {
   else downloadFile(base + '.json', resultsToJSON(pins, meta), 'application/json');
 }
 
+// ---------- seed gallery modal ----------
+// The gallery opens in a dialog: cards built from gallery.json, each with a
+// thumbnail of the spot rendered by the engine (the worker's `render` handler
+// takes the seed/version/dimension per request, so previews never disturb the
+// current map — its next tile carries the live world again).
+let galleryEntries = null;                 // validated gallery.json, fetched once
+const galleryThumbCache = new Map();       // entry id -> thumbnail canvas
+const GALLERY_THUMB_W = 260, GALLERY_THUMB_H = 140;
+function galleryThumbCanvas(e) {
+  let cv = galleryThumbCache.get(e.id);
+  if (cv) return cv;
+  cv = document.createElement('canvas');
+  cv.width = GALLERY_THUMB_W; cv.height = GALLERY_THUMB_H;
+  cv.className = 'gallerythumb';
+  galleryThumbCache.set(e.id, cv);
+  const reqId = reqSeq++;
+  galleryThumbReqs.set(reqId, cv);
+  send(galleryThumbRender(e, reqId, GALLERY_THUMB_W, GALLERY_THUMB_H));
+  return cv;
+}
+// jump the app onto the entry: world, view, altitude and (when the entry
+// carries them) pre-filled criteria — same order as applying a user preset
+function applyGalleryEntry(e) {
+  $('#galleryDlg').close();
+  if (world.dim !== e.dim) { setDimension(e.dim); $('#dimSel').value = String(e.dim); }
+  world.seed = e.seed; $('#seed').value = e.seed;
+  world.large = e.large; $('#large').checked = e.large;
+  world.mc = e.mc; $('#mcver').value = String(e.mc);
+  yLayer = e.y; $('#ySlider').value = String(e.y); $('#yVal').textContent = String(e.y);
+  view.cx = e.x; view.cz = e.z; view.bpp = e.b;
+  if (e.c) applyCriteria(e.c);
+  curReset(); draw(); requestRender(0); syncHash();
+}
+// rebuilt on every open, so titles/descriptions follow the current language;
+// thumbnails are cached per entry and re-attached
+function buildGalleryCards() {
+  const box = $('#galleryCards');
+  box.textContent = '';
+  for (const e of galleryEntries) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'gallerycard';
+    const h = document.createElement('h3');
+    h.textContent = galleryText(e.title, currentLang);
+    const p = document.createElement('p');
+    p.textContent = galleryText(e.desc, currentLang);
+    const meta = document.createElement('p');
+    meta.className = 'mono gallerymeta';
+    meta.textContent = `seed ${e.seed} · ${e.x}, ${e.z}`;
+    card.append(galleryThumbCanvas(e), h, p, meta);
+    card.onclick = () => applyGalleryEntry(e);
+    box.appendChild(card);
+  }
+}
+function openGallery() {
+  $('#galleryDlg').showModal();
+  if (galleryEntries) { buildGalleryCards(); return; }
+  fetch('./gallery.json')
+    .then((r) => r.json())
+    .then((raw) => { galleryEntries = validateGallery(raw); buildGalleryCards(); })
+    .catch(() => { $('#galleryCards').textContent = t('galleryFailed'); });
+}
+
 // ---------- URL hash sharing ----------
 let hashSeq = 0;   // only the freshest encode may write the hash (async races)
 function syncHash() {
@@ -2007,6 +2078,8 @@ async function init() {
     + (APP_VERSION.commit ? ` (${APP_VERSION.commit})` : '');
   $('#helpBtn').onclick = () => $('#helpDlg').showModal();
   $('#helpClose').onclick = () => $('#helpDlg').close();
+  $('#galleryBtn').onclick = openGallery;
+  $('#galleryClose').onclick = () => $('#galleryDlg').close();
   buildDimSelect();
   buildFavList();
   initTheme();

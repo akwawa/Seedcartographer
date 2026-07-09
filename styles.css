@@ -277,3 +277,8 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .gallerycard h2{font-size:15px;margin:0 0 6px}
 .gallerycard p{margin:0 0 8px;font-size:13px;color:var(--muted)}
 .gallerymeta{font-size:12px}
+/* gallery modal: same cards inside a wide dialog, as clickable buttons */
+.gallerydlg{max-width:920px;width:min(92vw,920px);max-height:86vh;overflow:auto}
+.gallerydlg .gallerycard{cursor:pointer;font:inherit;text-align:left;width:100%}
+.gallerydlg .gallerycard h3{font-family:inherit;font-size:15px;text-transform:none;letter-spacing:normal;margin:0 0 6px;color:inherit}
+.gallerythumb{display:block;width:100%;height:auto;border-radius:6px;border:1px solid var(--line);margin-bottom:10px;background:#000}

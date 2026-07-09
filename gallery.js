@@ -68,6 +68,20 @@ function galleryText(field, lang) {
   return typeof field[lang] === 'string' && field[lang].trim() ? field[lang] : field.en;
 }
 
+// Worker `render` request producing a small preview of the entry's spot —
+// the same message shape the app sends for the main map and the minimap.
+/**
+ * @param {GalleryEntry} e @param {number} reqId
+ * @param {number} w @param {number} h thumbnail size in pixels
+ * @returns {object} message for the search worker
+ */
+function galleryThumbRender(e, reqId, w, h) {
+  return {
+    type: 'render', reqId, seed: e.seed, mc: e.mc, large: e.large,
+    dim: e.dim, y: e.y, highlight: null, cx: e.x, cz: e.z, bpp: e.b, w, h
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText };
+  module.exports = { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender };
 }

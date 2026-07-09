@@ -50,7 +50,8 @@ module.exports = [
         encodeShareState: 'readonly', decodeShareState: 'readonly', encodeShareHash: 'readonly', decodeShareHash: 'readonly', normalizeLegacyCriteria: 'readonly',
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly',
-        APP_VERSION: 'readonly'
+        APP_VERSION: 'readonly',
+        validateGallery: 'readonly', galleryText: 'readonly', galleryThumbRender: 'readonly'
       }
     }
   },
