@@ -29,7 +29,7 @@ jobs:
       - run: |
           mkdir _site
           cp index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js \
-             biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.html gallery.js gallery.json \
+             biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.html gallery.js gallerypage.js gallery.json \
              theme.js export.js mcfinder.js mcfinder.wasm \
              manifest.webmanifest icon.svg sw.js version.js CNAME _site/
           cp -r fonts _site/

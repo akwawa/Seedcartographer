@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Content-Security-Policy : une politique stricte (`default-src 'self'`,
+  script/connect autorisés uniquement vers analytics.super-h.fr, moteur WASM
+  via `'wasm-unsafe-eval'`, aucun style/script/objet en ligne, `frame-ancestors
+  'none'`) protège l'app et la galerie — livrée en `<meta>` (GitHub Pages) et
+  en vrai en-tête HTTP (image Docker). Le script inline de `gallery.html`
+  est extrait vers `gallerypage.js` (prérequis : une CSP stricte interdit
+  `unsafe-inline`) (#187).
 - En-têtes de sécurité nginx : l'image Docker ajoute désormais
   `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy: strict-origin-when-cross-origin`,

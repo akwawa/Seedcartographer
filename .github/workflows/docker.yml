@@ -68,6 +68,6 @@ jobs:
           for _ in $(seq 1 20); do curl -sf http://localhost:8080/ >/dev/null && break; sleep 0.5; done
           headers=$(curl -sI http://localhost:8080/)
           echo "$headers"
-          for h in 'x-content-type-options: nosniff' 'x-frame-options: DENY' 'referrer-policy: strict-origin-when-cross-origin' 'cross-origin-opener-policy: same-origin' 'permissions-policy:'; do
+          for h in 'x-content-type-options: nosniff' 'x-frame-options: DENY' 'referrer-policy: strict-origin-when-cross-origin' 'cross-origin-opener-policy: same-origin' 'permissions-policy:' 'content-security-policy:.*frame-ancestors'; do
             echo "$headers" | grep -qi "$h" || { echo "missing header: $h"; exit 1; }
           done
