@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Couverture de tests à 100 % (lignes, branches, fonctions) : test manquant
+  pour `favWorld` (favorites.js) et exclusion explicite (`node:coverage
+  disable`/`enable`) du bloc DOM de `i18n.js` (`detectLang`/`t`/`applyI18n`/
+  `setLang`, déjà exercé par la suite e2e, jamais par les tests Node). Les
+  seuils du script `coverage:branches` sont relevés à 100 % lignes +
+  branches + fonctions pour verrouiller en CI (#190).
 - SBOM et signature de l'image Docker : chaque image publiée (`main`/`latest`
   et tags `v*`) est accompagnée d'un SBOM SPDX (Syft) et signée sans clé
   (keyless, identité OIDC GitHub Actions) avec cosign ; instructions

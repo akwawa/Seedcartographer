@@ -1062,6 +1062,10 @@ const I18N = {
 
 const I18N_LANGS = [['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pt', 'Português (BR)']];
 
+// This whole block is DOM/browser glue (localStorage, navigator, document) —
+// exercised by the e2e suite, not by the Node unit tests (same treatment as
+// app.js/worker.js/gallerypage.js, see sonar.coverage.exclusions).
+/* node:coverage disable */
 function detectLang() {
   try {
     const saved = localStorage.getItem('lang');
@@ -1071,9 +1075,6 @@ function detectLang() {
   return I18N[nav] ? nav : 'en';
 }
 
-// environment fork: the DOM branch only exists in the browser (covered by
-// the e2e suite), Node unit tests always take the 'en' arm
-/* node:coverage ignore next */
 let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
 
 // Translate a key in the current language; {placeholders} are filled from params.
@@ -1103,5 +1104,6 @@ function setLang(lang) {
   try { localStorage.setItem('lang', lang); } catch { /* ignore */ }
   applyI18n();
 }
+/* node:coverage enable */
 
 if (typeof module !== 'undefined' && module.exports) module.exports = { I18N, I18N_LANGS };
