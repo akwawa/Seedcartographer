@@ -43,6 +43,9 @@ jobs:
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -57,6 +60,21 @@ jobs:
       # on GitHub API availability/quota for the actions-tag-freshness checks
       - run: pipx install zizmor==1.26.1
       - run: zizmor --offline .github/workflows/
+      # TEMP debug for #191: dump the full SonarCloud issue/hotspot stock and
+      # GitHub code-scanning alerts (CodeQL/Scorecard) for a final 0-issue
+      # verification; removed before this PR leaves draft.
+      - name: TEMP debug 191
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          echo "== SonarCloud open/confirmed issues (all statuses, incl. hotspots) =="
+          curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&issueStatuses=OPEN,CONFIRMED&ps=100" | jq '{total, issues: [.issues[] | {rule, severity, component, line, message}]}'
+          echo "== SonarCloud open security hotspots =="
+          curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/hotspots/search?projectKey=akwawa_Seedcartographer&status=TO_REVIEW&ps=100" | jq '{paging, hotspots: [.hotspots[] // empty]}'
+          echo "== GitHub code scanning alerts (open) =="
+          curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/akwawa/Seedcartographer/code-scanning/alerts?state=open&per_page=100" | jq '[.[] | {tool: .tool.name, rule: .rule.id, severity: .rule.severity, path: .most_recent_instance.location.path}]'
 
   e2e:
     runs-on: ubuntu-latest
