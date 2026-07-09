@@ -16,6 +16,11 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Modifié
+- Aide : mention que la génération (cubiomes) s'arrête à Minecraft 1.21 —
+  le contenu des sorties 26.x (nouveaux biomes, structures) n'est pas
+  encore généré ici ; traduit dans les 6 langues (#209).
+
 ## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
 
 ### Modifié
