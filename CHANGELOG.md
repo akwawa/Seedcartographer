@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Analyse statique CodeQL : le workflow `codeql.yml` exécute les requêtes
+  `security-and-quality` sur le JavaScript à chaque PR, à chaque push sur
+  `main` et chaque semaine, avec publication des résultats vers le code
+  scanning (#183).
 - Posture mesurée : le workflow OpenSSF Scorecard évalue chaque semaine (et à
   chaque push sur `main`) la sécurité de la chaîne d'approvisionnement du
   dépôt, publie les résultats vers le code scanning et alimente le badge du
