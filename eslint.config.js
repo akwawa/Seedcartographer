@@ -13,7 +13,18 @@ module.exports = [
   },
   {
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // no innerHTML/outerHTML/insertAdjacentHTML anywhere: everything the
+      // app builds from data (results, criteria rows, gallery cards…) goes
+      // through textContent/createElement, so untrusted strings (share
+      // links, imported CSV/JSON) can never be parsed as markup
+      'no-restricted-properties': ['error',
+        { property: 'innerHTML', message: 'Use textContent or DOM methods instead.' },
+        { property: 'outerHTML', message: 'Use textContent or DOM methods instead.' }
+      ],
+      'no-restricted-syntax': ['error',
+        { selector: "CallExpression[callee.property.name='insertAdjacentHTML']", message: 'Use DOM methods instead.' }
+      ]
     }
   },
   {
