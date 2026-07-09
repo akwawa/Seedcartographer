@@ -23,6 +23,9 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run lint
+      # supply chain: the lockfile may only resolve to the npm registry over
+      # HTTPS, with matching package names and sha512 integrity
+      - run: npm run lint:lockfile
       - run: npm run lint:css
       - run: npm run typecheck
       - run: npm test
