@@ -18,6 +18,13 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Corrigé
+- CI : badge OpenSSF Scorecard bloqué sur « invalid repo » — le pin
+  `github/codeql-action` utilisé par `scorecard.yml`/`codeql.yml` était trop
+  ancien et faisait échouer la vérification d'intégrité du workflow
+  (« imposter commit »), empêchant toute publication de résultats vers le
+  jeu de données public de Scorecard (#216).
+
 ### Modifié
 - Branche `dev` de staging : le travail courant d'un jalon part désormais sur
   `dev` (fusionnée vers `main` seulement en fin de jalon) — CI complète
