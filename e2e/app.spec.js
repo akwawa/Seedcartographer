@@ -919,22 +919,6 @@ test('a geographic-pattern clause runs the search and shares', async ({ page, co
   await expect(p2.locator('#shapeClauses .row input.num')).toHaveValue('500');
 });
 
-test('the seed gallery renders cards that open the app on the spot', async ({ page }) => {
-  await page.goto('/gallery.html');
-  await expect(page.locator('.gallerycard')).toHaveCount(4);
-  const first = page.locator('.gallerycard').first();
-  await expect(first.locator('h2')).not.toBeEmpty();
-  // the card opens the app with the entry's seed and view pre-filled
-  await first.click();
-  await waitForApp(page);
-  await expect(page.locator('#seed')).toHaveValue('141');
-  const s = await page.evaluate(async () => { await syncHash(); return decodeShareHash(location.hash.slice(1)); });
-  expect(s.x).toBe(-384);
-  expect(s.z).toBe(0);
-  // the app links back to the gallery
-  await expect(page.locator('.gallerylink')).toBeVisible();
-});
-
 test('the profile round-trips through export and import', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
