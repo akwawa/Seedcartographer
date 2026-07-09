@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- SBOM et signature de l'image Docker : chaque image publiée (`main`/`latest`
+  et tags `v*`) est accompagnée d'un SBOM SPDX (Syft) et signée sans clé
+  (keyless, identité OIDC GitHub Actions) avec cosign ; instructions
+  `cosign verify`/`verify-attestation` dans le README (#189).
 - Chemins hors application refusés : l'image Docker ne répond plus qu'aux
   fichiers qu'elle sert réellement — toute autre requête (sondes
   automatisées : `wp-login.php`, `.env`…) est rate-limitée (5 req/min par
