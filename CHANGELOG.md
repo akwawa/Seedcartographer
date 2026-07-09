@@ -16,11 +16,17 @@ et la release GitHub.
 
 ## [Non publié]
 
+## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
+
 ### Modifié
 - Page `gallery.html` retirée : la galerie de seeds n'est plus accessible
   qu'en modal depuis l'application (bouton « Gallery »). Le lien « Open as
   a page » et `gallerypage.js` (son script dédié) sont supprimés ; les
   cartes, `gallery.js` et `gallery.json` restent inchangés (#205).
+- Découplage visible : l'interface ne référence plus le dépôt GitHub — le
+  lien « GitHub » du dialogue d'aide est retiré et la licence pointe vers le
+  texte officiel sur creativecommons.org ; le crédit cubiomes (projet tiers)
+  est conservé (#178).
 
 ### Sécurité
 - Vérification finale du jalon 0.7.0 : passage en revue du stock complet
@@ -462,5 +468,5 @@ Première version publiée. Contenu du jalon
 - Workflows durcis : token en moindre privilège, actions épinglées par SHA,
   `npm ci --ignore-scripts` (#35).
 
-[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.5.0...HEAD
+[Non publié]: https://github.com/akwawa/Seedcartographer/compare/v0.7.0...HEAD
 [0.1.0]: https://github.com/akwawa/Seedcartographer/releases/tag/v0.1.0
