@@ -16,6 +16,15 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Ajouté
+- Suivi d'erreurs en production : les erreurs JS non attrapées, les
+  promesses rejetées et les erreurs du worker envoient un événement Umami
+  personnalisé (`error`) — message tronqué, nom de fichier seul (jamais
+  d'URL complète), aucune seed ni coordonnée. Rien n'est envoyé si Umami
+  n'est pas chargé (mode hors-ligne/dev). Logique de formatage pure et
+  testée (`errorreport.js`) ; câblage `window.onerror`/
+  `unhandledrejection`/`worker.onerror` vérifié par un test e2e (#210).
+
 ### Modifié
 - Aide : mention que la génération (cubiomes) s'arrête à Minecraft 1.21 —
   le contenu des sorties 26.x (nouveaux biomes, structures) n'est pas

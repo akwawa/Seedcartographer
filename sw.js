@@ -29,6 +29,7 @@ const ASSETS = [
   './tilegrid.js',
   './relief.js',
   './gallery.js',
+  './errorreport.js',
   './gallery.json',
   './profile.js',
   './legend.js',
