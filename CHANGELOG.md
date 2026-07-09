@@ -16,6 +16,15 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Corrigé
+- Dézoom profond : la carte se remplit désormais entièrement au-delà de
+  l'échelle moteur maximale — cache de tuiles et plafond de peinture
+  dimensionnés sur la vue courante (les tuiles visibles ne sont plus
+  évincées ni écartées du budget par les restes d'anciens niveaux de zoom),
+  contrôle de flux des requêtes de tuiles (file centre-d'abord, fenêtre de
+  4 en vol) et zoom-out de la minimap borné à ce que le moteur peut servir
+  (#176).
+
 ### Ajouté
 - Structures sur les vignettes : les aperçus de la galerie superposent les
   marqueurs de structures de la zone (villages, avant-postes, temples…) avec

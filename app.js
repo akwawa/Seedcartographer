@@ -121,9 +121,23 @@ function onTileMessage(d) {
   }
   draw();
 }
+let gridRefillTimer = null;
 function onGridTile(d) {
+  if (d.skipped) {
+    // drop the in-flight marker only if it belongs to the cancelled request:
+    // the tile may already have been re-requested with the current generation
+    if (pendingTiles.get(d.key) === d.gen) pendingTiles.delete(d.key);
+    pumpTileQueue();
+    // A cancelled batch can strand tiles of the CURRENT view: they were
+    // still marked in-flight when the new batch was requested, so its loop
+    // skipped them. Refill the gaps once the cancel acks settle — without
+    // bumping the generation, or the refill would cancel its own batch.
+    clearTimeout(gridRefillTimer);
+    gridRefillTimer = setTimeout(() => requestGridTiles(false), 60);
+    return;
+  }
   pendingTiles.delete(d.key);
-  if (d.skipped) return;   // cancelled off-screen tile, acknowledged only
+  pumpTileQueue();
   if (!d.ok) {
     searchInfo.textContent = t('tileFailed');
     searchInfo.className = 'info err';
@@ -311,8 +325,16 @@ function draw() {
     // paint every cached tile of this world under the view: known areas render
     // instantly while the fresh tile is being computed (coarse first, then fine)
     const rect = { x0: s2wx(0), z0: s2wz(0), x1: s2wx(W), z1: s2wz(H) };
-    // bounded: overdrawing the whole LRU every drag frame costs frame time
-    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer, reliefOn()), rect, TILE_PAINT_MAX)) drawTile(e);
+    // bounded: overdrawing the whole LRU every drag frame costs frame time —
+    // but the bound must cover the view (a deep zoom-out needs more tiles
+    // than the default budget, or rendered areas simply never get painted)
+    const cap = Math.max(TILE_PAINT_MAX, tilesForView(view, W, H, renderScaleFor(view.bpp)).length);
+    for (const e of tilesInView(tileCache.entries(), tileWorldKey(world, yLayer, reliefOn()), rect, cap, renderScaleFor(view.bpp))) {
+      // touching every painted tile keeps the whole visible set at the fresh
+      // end of the LRU, so evictions only ever take off-screen tiles
+      tileCache.touch(e.key);
+      drawTile(e);
+    }
   }
 
   // structure / slime layers (only points in view)
@@ -485,14 +507,14 @@ function drawMinimap() {
   if (minimapTile) {
     // the tile covers the zoomed-out view: map its world rect onto the
     // minimap canvas instead of blitting raw cells at 1:1 in the corner
-    const bpp = view.bpp * MINIMAP_ZOOM_OUT;
+    const bpp = view.bpp * minimapZoomOut(view.bpp);
     const px = (minimapTile.originX - view.cx) / bpp + mm.width / 2;
     const py = (minimapTile.originZ - view.cz) / bpp + mm.height / 2;
     c.imageSmoothingEnabled = false;
     c.drawImage(minimapTile.canvas, px, py,
       minimapTile.cols * minimapTile.scale / bpp, minimapTile.rows * minimapTile.scale / bpp);
   }
-  const r = viewportRectOnMinimap(canvas.width / dpr, canvas.height / dpr, mm.width, mm.height);
+  const r = viewportRectOnMinimap(canvas.width / dpr, canvas.height / dpr, mm.width, mm.height, minimapZoomOut(view.bpp));
   c.strokeStyle = '#f2a73b'; c.lineWidth = 1.5;
   c.strokeRect(r.x, r.y, r.w, r.h);
 }
@@ -552,7 +574,8 @@ function drawPin(sx, sy, active) {
 
 let renderTimer = null;
 let renderGen = 0;                    // tile batch generation (worker-side cancel)
-const pendingTiles = new Set();       // tile keys requested and not yet arrived
+const pendingTiles = new Map();       // in-flight tile keys -> generation they were requested with
+let tileQueue = [];                   // tiles waiting to be sent, center-first
 function requestRender(delay = 90) {
   clearTimeout(renderTimer);
   renderTimer = setTimeout(() => {
@@ -574,25 +597,51 @@ function requestRender(delay = 90) {
 }
 // progressive checkerboard: request every uncached tile of the view,
 // center-first; bumping the generation cancels older off-screen requests
-function requestGridTiles() {
-  renderGen++;
-  send({ type: 'tileGen', gen: renderGen });
+function requestGridTiles(bump = true) {
+  // bump cancels the previous batch's off-screen tiles; a gap refill keeps
+  // the current generation so in-flight view tiles are not re-cancelled
+  if (bump) {
+    renderGen++;
+    send({ type: 'tileGen', gen: renderGen });
+  }
   const W = Math.ceil(canvas.width / dpr), H = Math.ceil(canvas.height / dpr);
   const scale = renderScaleFor(view.bpp);
   const wk = tileWorldKey(world, yLayer, reliefOn());
   const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
-  for (const pos of tilesForView(view, W, H, scale)) {
+  const wanted = tilesForView(view, W, H, scale);
+  // The engine scale caps at 256 blocks/cell, so a deep zoom-out needs many
+  // more tiles than the default budget (~160 at max zoom on a 1920px canvas).
+  // Grow the cache to hold the whole view plus a pan margin — otherwise every
+  // fresh tile evicts one still on screen and the view can never fill up.
+  tileCache.setMax(Math.max(TILE_GRID_CACHE_MAX, wanted.length + 16));
+  // Rebuild the app-side queue from scratch: tiles of a previous view that
+  // were never sent simply drop out, without flooding the worker. Only a
+  // small window is in flight at any time, so the worker's FIFO stays short
+  // and a view change never leaves it grinding through stale batches.
+  tileQueue = [];
+  for (const pos of wanted) {
     const key = tileKey(wk, scale, pos.originX, pos.originZ);
     if (cached.has(key)) { tileCache.touch(key); continue; }
     if (pendingTiles.has(key)) continue;   // already in flight
-    pendingTiles.add(key);
-    send({
+    tileQueue.push({
       type: 'renderTile', gen: renderGen, key, wk, scale, relief: reliefOn(),
       originX: pos.originX, originZ: pos.originZ,
       seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer
     });
   }
+  pumpTileQueue();
   refreshLegendFromView();
+}
+// flow control: keep at most a few renders in the worker's FIFO, sending the
+// next (center-first) tile as acks arrive
+const TILE_INFLIGHT_MAX = 4;
+function pumpTileQueue() {
+  while (pendingTiles.size < TILE_INFLIGHT_MAX && tileQueue.length) {
+    const msg = tileQueue.shift();
+    if (pendingTiles.has(msg.key)) continue;
+    pendingTiles.set(msg.key, msg.gen);
+    send(msg);
+  }
 }
 // the stitched view's legend is the union of the visible tiles' biome sets
 function refreshLegendFromView() {
@@ -612,7 +661,7 @@ function requestMinimap(delay = 400) {
       type: 'render', reqId: minimapReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
       y: yLayer,
       highlight: null,
-      cx: view.cx, cz: view.cz, bpp: view.bpp * MINIMAP_ZOOM_OUT,
+      cx: view.cx, cz: view.cz, bpp: view.bpp * minimapZoomOut(view.bpp),
       w: mm.width, h: mm.height
     });
   }, delay);
@@ -1942,7 +1991,7 @@ function applyPalette(alt, persist) {
   if (persist) { try { localStorage.setItem('palette', alt ? 'alt' : 'default'); } catch { /* ignore */ } }
   send({ type: 'palette', alt });
   // every cached or in-flight tile was painted with the old table
-  tileCache.clear(); pendingTiles.clear(); minimapTile = null;
+  tileCache.clear(); pendingTiles.clear(); tileQueue = []; minimapTile = null;
   draw(); requestRender(0); requestMinimap(0);
   buildLegend(legendPresent);
 }

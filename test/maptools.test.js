@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT,
-  minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
+  minimapClickToWorld, viewportRectOnMinimap, minimapZoomOut, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
 } = require('../maptools.js');
 
 test('scaleBarSpec picks the longest 1/2/5×10^n length that fits', () => {
@@ -115,4 +115,20 @@ test('normalizeRect orders the corners and counts inclusive block spans', () => 
 test('formatRect renders the copyable coordinate summary', () => {
   assert.strictEqual(formatRect(normalizeRect({ x: 0, z: 0 }, { x: 9, z: 4 })),
     '0, 0 -> 9, 4 (10 x 5)');
+});
+
+test('minimapZoomOut shrinks the overview factor past the engine cell cap', () => {
+  assert.strictEqual(minimapZoomOut(4), MINIMAP_ZOOM_OUT);   // normal zooms: full 8x
+  assert.strictEqual(minimapZoomOut(32), MINIMAP_ZOOM_OUT);  // 32*8 = 256, still 1 cell/px
+  assert.strictEqual(minimapZoomOut(64), 4);                 // capped: 256/64
+  assert.strictEqual(minimapZoomOut(512), 1);                // never below 1x
+});
+
+test('minimap helpers honor the effective zoom-out factor', () => {
+  // at bpp 512 the factor is 1: a minimap click maps 1 block per pixel step
+  const view = { cx: 0, cz: 0, bpp: 512 };
+  assert.deepStrictEqual(minimapClickToWorld(89, 66, 176, 132, view), { x: 512, z: 0 });
+  // and the viewport rectangle covers the whole minimap width instead of 1/8
+  const r = viewportRectOnMinimap(176, 132, 176, 132, 1);
+  assert.deepStrictEqual(r, { x: 0, y: 0, w: 176, h: 132 });
 });
