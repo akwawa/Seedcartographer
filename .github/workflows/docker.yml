@@ -59,3 +59,15 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
           ignore-unfixed: true
+      # the security headers must actually reach a served response, not just
+      # exist in the conf file
+      - if: github.event_name == 'pull_request'
+        run: |
+          docker run -d --rm --name seedcarto-hdrtest -p 8080:8080 seedcartographer:scan
+          trap 'docker stop seedcarto-hdrtest' EXIT
+          for i in $(seq 1 20); do curl -sf http://localhost:8080/ >/dev/null && break; sleep 0.5; done
+          headers=$(curl -sI http://localhost:8080/)
+          echo "$headers"
+          for h in 'x-content-type-options: nosniff' 'x-frame-options: DENY' 'referrer-policy: strict-origin-when-cross-origin' 'cross-origin-opener-policy: same-origin' 'permissions-policy:'; do
+            echo "$headers" | grep -qi "$h" || { echo "missing header: $h"; exit 1; }
+          done
