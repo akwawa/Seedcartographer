@@ -33,6 +33,7 @@ function tileKey(worldKey, scale, originX, originZ) {
 /**
  * @param {number} [max] cache capacity
  * @returns {{put: (entry: {key: string}) => void, touch: (key: string) => void,
+ *            setMax: (n: number) => void,
  *            entries: () => object[], clear: () => void, size: () => number}}
  */
 function createTileCache(max = TILE_CACHE_MAX) {
@@ -41,7 +42,15 @@ function createTileCache(max = TILE_CACHE_MAX) {
     put(entry) {
       if (map.has(entry.key)) map.delete(entry.key);
       map.set(entry.key, entry);
-      if (map.size > max) map.delete(map.keys().next().value);
+      while (map.size > max) map.delete(map.keys().next().value);
+    },
+    // Deep zoom-out needs more tiles than the default capacity: the caller
+    // resizes the cache to fit the current view, so freshly rendered tiles
+    // never evict tiles that are still on screen.
+    /** @param {number} n new capacity */
+    setMax(n) {
+      max = n;
+      while (map.size > max) map.delete(map.keys().next().value);
     },
     touch(key) {
       const e = map.get(key);
@@ -62,17 +71,21 @@ function createTileCache(max = TILE_CACHE_MAX) {
  *        cache entries in LRU order (oldest first)
  * @param {string} worldKey current world identity
  * @param {{x0: number, z0: number, x1: number, z1: number}} rect view (blocks)
- * @param {number} [max] cap on tiles to paint (keeps the last, i.e. finest
- *        and freshest, of the painting order — overdraw costs frame time)
+ * @param {number} [max] cap on tiles to paint (keeps the last, i.e. freshest
+ *        and most relevant, of the painting order — overdraw costs frame time)
+ * @param {number|null} [scale] current render scale: its tiles paint last
+ *        (on top) and survive the cap, so leftover tiles of other zoom levels
+ *        can never crowd the actual view out of the paint budget
  * @returns {object[]} tiles to draw, in painting order
  */
-function tilesInView(entries, worldKey, rect, max = Infinity) {
+function tilesInView(entries, worldKey, rect, max = Infinity, scale = null) {
   const picked = entries
     .map((e, i) => ({ e, i }))
     .filter(({ e }) => e.worldKey === worldKey
       && e.originX < rect.x1 && e.originX + e.cols * e.scale > rect.x0
       && e.originZ < rect.z1 && e.originZ + e.rows * e.scale > rect.z0)
-    .sort((a, b) => (b.e.scale - a.e.scale) || (a.i - b.i))
+    .sort((a, b) => (Number(a.e.scale === scale) - Number(b.e.scale === scale))
+      || (b.e.scale - a.e.scale) || (a.i - b.i))
     .map(({ e }) => e);
   return picked.length > max ? picked.slice(picked.length - max) : picked;
 }

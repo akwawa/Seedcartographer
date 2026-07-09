@@ -57,6 +57,19 @@ function gridLines(w0, w1, step) {
 // The minimap shows the same center at a fixed zoom-out factor.
 const MINIMAP_ZOOM_OUT = 8;
 
+// Effective minimap zoom-out for a main-view zoom. The engine cell caps at
+// 256 blocks: past that, a full 8x overview means generating dozens of cells
+// per minimap pixel, which stalls the render worker for tens of seconds at
+// deep zoom-outs. Shrink the factor (down to 1x) so the overview render
+// stays around one engine cell per minimap pixel.
+/**
+ * @param {number} bpp blocks per screen pixel of the main view
+ * @returns {number} zoom-out factor to apply to the minimap
+ */
+function minimapZoomOut(bpp) {
+  return Math.max(1, Math.min(MINIMAP_ZOOM_OUT, 256 / bpp));
+}
+
 // World coordinates of a click at (px, py) on a w×h minimap.
 /**
  * @param {number} px click x on the minimap
@@ -67,7 +80,7 @@ const MINIMAP_ZOOM_OUT = 8;
  * @returns {{x: number, z: number}} world point to recenter on
  */
 function minimapClickToWorld(px, py, w, h, view) {
-  const bpp = view.bpp * MINIMAP_ZOOM_OUT;
+  const bpp = view.bpp * minimapZoomOut(view.bpp);
   return { x: Math.round(view.cx + (px - w / 2) * bpp), z: Math.round(view.cz + (py - h / 2) * bpp) };
 }
 
@@ -78,10 +91,11 @@ function minimapClickToWorld(px, py, w, h, view) {
  * @param {number} mainH main canvas height in screen pixels
  * @param {number} mmW minimap width in pixels
  * @param {number} mmH minimap height in pixels
+ * @param {number} [zoomOut] effective zoom-out factor (minimapZoomOut)
  * @returns {{x: number, y: number, w: number, h: number}}
  */
-function viewportRectOnMinimap(mainW, mainH, mmW, mmH) {
-  const w = mainW / MINIMAP_ZOOM_OUT, h = mainH / MINIMAP_ZOOM_OUT;
+function viewportRectOnMinimap(mainW, mainH, mmW, mmH, zoomOut = MINIMAP_ZOOM_OUT) {
+  const w = mainW / zoomOut, h = mainH / zoomOut;
   return { x: mmW / 2 - w / 2, y: mmH / 2 - h / 2, w, h };
 }
 
@@ -161,5 +175,5 @@ function rulerMeasure(a, b) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect };
+  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapZoomOut, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect };
 }

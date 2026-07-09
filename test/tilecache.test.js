@@ -64,3 +64,30 @@ test('tilesInView caps painting to the freshest tiles of the order', () => {
   const capped = tilesInView(entries, wk, rect, 2);
   assert.deepStrictEqual(capped.map((e) => [e.scale, e.originX]), [[4, 50], [4, 100]]);
 });
+
+test('setMax grows and shrinks the capacity, evicting oldest first', () => {
+  const c = createTileCache(2);
+  c.put({ key: 'a' }); c.put({ key: 'b' });
+  c.setMax(4);
+  c.put({ key: 'c' }); c.put({ key: 'd' });
+  assert.strictEqual(c.size(), 4);          // grown: nothing evicted
+  c.setMax(2);                              // shrink evicts the two oldest
+  assert.deepStrictEqual(c.entries().map((e) => e.key), ['c', 'd']);
+  c.put({ key: 'e' });
+  assert.deepStrictEqual(c.entries().map((e) => e.key), ['d', 'e']);
+});
+
+test('tilesInView keeps current-scale tiles under the cap and paints them last', () => {
+  const wk = 'w';
+  const mk = (key, scale) => ({ key, worldKey: wk, scale, originX: 0, originZ: 0, cols: 4, rows: 4 });
+  const entries = [mk('cur1', 16), mk('fine', 4), mk('coarse', 64), mk('cur2', 16)];
+  const rect = { x0: 0, z0: 0, x1: 10, z1: 10 };
+  // current scale 16: its tiles sort last (painted on top of the leftovers)
+  assert.deepStrictEqual(
+    tilesInView(entries, wk, rect, Infinity, 16).map((e) => e.key),
+    ['coarse', 'fine', 'cur1', 'cur2']);
+  // and the cap drops the other-scale leftovers, never the current view
+  assert.deepStrictEqual(
+    tilesInView(entries, wk, rect, 2, 16).map((e) => e.key),
+    ['cur1', 'cur2']);
+});

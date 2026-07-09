@@ -393,8 +393,9 @@ let tileGen = 0;
 function handleRenderTile(d) {
   if (d.gen < tileGen) {
     // cancelled batch: acknowledge without computing so the app can drop
-    // the request from its in-flight bookkeeping
-    postMessage({ type: 'gridTile', key: d.key, wk: d.wk, skipped: true });
+    // the request from its in-flight bookkeeping (gen echoed so the ack
+    // cannot clear a fresher request for the same tile)
+    postMessage({ type: 'gridTile', key: d.key, wk: d.wk, gen: d.gen, skipped: true });
     return;
   }
   applyWorld(d.seed, d.mc, d.large, d.dim);
