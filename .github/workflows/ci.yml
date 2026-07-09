@@ -57,14 +57,6 @@ jobs:
       # on GitHub API availability/quota for the actions-tag-freshness checks
       - run: pipx install zizmor==1.26.1
       - run: zizmor --offline .github/workflows/
-      # TEMP debug for PR #213: list the 2 new Sonar issues; removed before
-      # this PR leaves draft.
-      - name: TEMP debug 213
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sleep 100
-          curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&pullRequest=213&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true&ps=100" | jq '{total, issues: [.issues[] | {rule, severity, component, line, message}]}'
 
   e2e:
     runs-on: ubuntu-latest

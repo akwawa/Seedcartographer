@@ -22,8 +22,7 @@ function sanitizeErrorMessage(message) {
  */
 function sourceBasename(source) {
   const s = String(source == null ? '' : source).split('?')[0].split('#')[0];
-  const parts = s.split('/');
-  return parts[parts.length - 1] || '';
+  return s.split('/').at(-1) || '';
 }
 
 /**

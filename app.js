@@ -52,7 +52,7 @@ function sendErrorEvent(kind, message, source, line) {
 window.addEventListener('error', (e) => sendErrorEvent('error', e.message, e.filename, e.lineno));
 window.addEventListener('unhandledrejection', (e) => {
   const reason = e.reason;
-  sendErrorEvent('promise', (reason && reason.message) || reason);
+  sendErrorEvent('promise', reason?.message || reason);
 });
 
 // ---------- worker plumbing ----------
