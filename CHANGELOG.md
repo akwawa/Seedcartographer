@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Audit des workflows : `zizmor` analyse `.github/workflows/` dans le job
+  `static` de la CI (injections, permissions excessives, persistance de
+  crédentiels…) — correction du seul type de finding détecté :
+  `persist-credentials: false` sur chaque `actions/checkout` qui n'a pas
+  besoin de pousser (aucun de nos workflows ne pousse avec ce credential :
+  release-please, `gh release create` et le déploiement Pages utilisent
+  leurs propres jetons) (#184).
 - Interdiction d'innerHTML : les quatre derniers usages (vidage de listes de
   résultats et de couches de structures) passent par `textContent`, et une
   règle ESLint (`no-restricted-properties`/`no-restricted-syntax`) bannit
