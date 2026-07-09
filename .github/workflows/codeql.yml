@@ -1,0 +1,28 @@
+# CodeQL static analysis (JavaScript): security-and-quality query pack, on
+# every PR, on push to main, and weekly.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 5 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write   # upload the analysis results to code scanning
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: github/codeql-action/init@466af0e674b5934a422135de9b2b4c6521080560 # v3.31.7
+        with:
+          languages: javascript
+          queries: security-and-quality
+      - uses: github/codeql-action/analyze@466af0e674b5934a422135de9b2b4c6521080560 # v3.31.7
