@@ -50,6 +50,13 @@ docker build -t seedcartographer .
 docker run --rm -p 8080:8080 seedcartographer
 ```
 
+L'image ne sert que les fichiers de l'application : toute requête vers un
+autre chemin (sondes automatisées — `wp-login.php`, `.env`…) est
+rate-limitée puis la connexion est fermée sans réponse (`nginx/default.conf`).
+Pour un bannissement plus durable des clients qui persistent, l'exemple
+`deploy/docker-compose.yml` ajoute un conteneur fail2ban qui lit les logs
+nginx et bannit l'IP au niveau hôte (jail et filtre dans `deploy/fail2ban/`).
+
 ## Utilisation
 
 1. Saisis une **seed** en haut (numérique ou texte) et clique sur **Load seed**.

@@ -71,3 +71,10 @@ jobs:
           for h in 'x-content-type-options: nosniff' 'x-frame-options: DENY' 'referrer-policy: strict-origin-when-cross-origin' 'cross-origin-opener-policy: same-origin' 'permissions-policy:' 'content-security-policy:.*frame-ancestors'; do
             echo "$headers" | grep -qi "$h" || { echo "missing header: $h"; exit 1; }
           done
+          # a declared file still serves normally, but a path outside the
+          # app's own files (scanner probe) gets no response at all (444)
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/gallery.html)
+          [ "$code" = 200 ] || { echo "gallery.html should serve, got $code"; exit 1; }
+          if curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/wp-login.php 2>/dev/null; then
+            echo "expected the connection to be closed for an unknown path"; exit 1
+          fi

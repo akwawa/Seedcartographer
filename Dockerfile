@@ -9,5 +9,8 @@ COPY index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js 
      manifest.webmanifest icon.svg sw.js /usr/share/nginx/html/
 COPY fonts/ /usr/share/nginx/html/fonts/
 COPY nginx/security-headers.conf /etc/nginx/conf.d/security-headers.conf
+# replaces the base image's routing: anything outside the app's own files
+# is rate-limited then dropped (see nginx/default.conf)
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080

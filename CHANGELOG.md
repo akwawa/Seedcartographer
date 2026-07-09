@@ -17,6 +17,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Chemins hors application refusés : l'image Docker ne répond plus qu'aux
+  fichiers qu'elle sert réellement — toute autre requête (sondes
+  automatisées : `wp-login.php`, `.env`…) est rate-limitée (5 req/min par
+  IP) puis la connexion est fermée sans réponse (444), au lieu d'un 404
+  exploitable ; exemple de déploiement `deploy/docker-compose.yml` avec un
+  conteneur fail2ban qui bannit au niveau hôte les clients qui persistent
+  (documenté dans le README) (#188).
 - Content-Security-Policy : une politique stricte (`default-src 'self'`,
   script/connect autorisés uniquement vers analytics.super-h.fr, moteur WASM
   via `'wasm-unsafe-eval'`, aucun style/script/objet en ligne, `frame-ancestors

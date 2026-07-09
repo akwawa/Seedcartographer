@@ -1,0 +1,30 @@
+# Example deployment behind fail2ban: nginx logs to a bind-mounted file
+# (instead of stdout only) so fail2ban can tail it, and the jail below bans
+# clients that keep hitting paths outside the app (see nginx/default.conf —
+# those already get rate-limited and dropped with 444; fail2ban adds a
+# longer, host-level ban on top).
+services:
+  app:
+    image: ghcr.io/akwawa/seedcartographer:latest
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    volumes:
+      - nginx-logs:/var/log/nginx
+    logging:
+      driver: json-file
+
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - nginx-logs:/var/log/nginx:ro
+      - ./fail2ban/jail.local:/data/jail.d/seedcarto.local:ro
+      - ./fail2ban/filter.d:/data/filter.d:ro
+
+volumes:
+  nginx-logs:
