@@ -14,6 +14,44 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
+
+
+### Ajouté
+
+* add a security policy with private vulnerability reporting ([6bab25c](https://github.com/akwawa/Seedcartographer/commit/6bab25c347897cb383d2ed5667266a79650fbbaa))
+* add a security policy with private vulnerability reporting ([4f41ce1](https://github.com/akwawa/Seedcartographer/commit/4f41ce1b1d8a3885d6fef7c5c5a9b201596bc68d)), closes [#180](https://github.com/akwawa/Seedcartographer/issues/180)
+* add a strict Content-Security-Policy ([b545ba0](https://github.com/akwawa/Seedcartographer/commit/b545ba0208f62c2bb64789ba85970be713db02f8))
+* add a strict Content-Security-Policy ([4a27304](https://github.com/akwawa/Seedcartographer/commit/4a273041f7f79b7b09d34b17a2cfe0f43f0a9a98)), closes [#187](https://github.com/akwawa/Seedcartographer/issues/187)
+* add security response headers to the served app ([39bc980](https://github.com/akwawa/Seedcartographer/commit/39bc980153c1502cbd7c3bf27fc15bbb65e295e5))
+* add security response headers to the served app ([13d6d2b](https://github.com/akwawa/Seedcartographer/commit/13d6d2b0cc54be117226e554a28adeef9a288b63)), closes [#186](https://github.com/akwawa/Seedcartographer/issues/186)
+* audit GitHub Actions workflows with zizmor ([16a011e](https://github.com/akwawa/Seedcartographer/commit/16a011ee5052315272027689ba3eafc64f2a5fc8))
+* audit GitHub Actions workflows with zizmor ([57cee41](https://github.com/akwawa/Seedcartographer/commit/57cee4173223c43a15264c9cf0e37e8c1350feff)), closes [#184](https://github.com/akwawa/Seedcartographer/issues/184)
+* drop the repository links from the app UI ([d2c2391](https://github.com/akwawa/Seedcartographer/commit/d2c23912da9b504007c231b904f082ffe1d32286))
+* drop the repository links from the app UI ([2594798](https://github.com/akwawa/Seedcartographer/commit/25947980b475200b99d04c53d12b7929b8d17e6f)), closes [#178](https://github.com/akwawa/Seedcartographer/issues/178)
+* drop unknown paths in the Docker image instead of 404 ([#201](https://github.com/akwawa/Seedcartographer/issues/201)) ([5fe3ced](https://github.com/akwawa/Seedcartographer/commit/5fe3cedcdf0fd78af13ccdad79eb87b3855dcb83)), closes [#188](https://github.com/akwawa/Seedcartographer/issues/188)
+* lint the lockfile provenance in CI ([5fad9d0](https://github.com/akwawa/Seedcartographer/commit/5fad9d062a20e81257dcbda3127e88aeb5faa29a))
+* lint the lockfile provenance in CI ([30b30cf](https://github.com/akwawa/Seedcartographer/commit/30b30cfb7d02f83dc26eab98cfa792cd9267dd2f)), closes [#181](https://github.com/akwawa/Seedcartographer/issues/181)
+* measure the supply-chain posture with OpenSSF Scorecard ([637fda7](https://github.com/akwawa/Seedcartographer/commit/637fda7cc9b233880885d80baefb7d285aa94caf))
+* measure the supply-chain posture with OpenSSF Scorecard ([fa81135](https://github.com/akwawa/Seedcartographer/commit/fa81135a5b706c21c5c7d69e73df0e11837a4fc0)), closes [#182](https://github.com/akwawa/Seedcartographer/issues/182)
+* run CodeQL security-and-quality analysis on JavaScript ([4cfb7e1](https://github.com/akwawa/Seedcartographer/commit/4cfb7e1f5cb0d78902004398e616316f3aa4f0fa))
+* run CodeQL security-and-quality analysis on JavaScript ([b28875e](https://github.com/akwawa/Seedcartographer/commit/b28875e09fecec9e973244c86fd0aba38215382b)), closes [#183](https://github.com/akwawa/Seedcartographer/issues/183)
+* SBOM (Syft) et signature cosign de l'image Docker ([#202](https://github.com/akwawa/Seedcartographer/issues/202)) ([0392c94](https://github.com/akwawa/Seedcartographer/commit/0392c94c9612f18a66e718d076ce2acc8578b818)), closes [#189](https://github.com/akwawa/Seedcartographer/issues/189)
+
+
+### Corrigé
+
+* ban innerHTML across the codebase ([4f50624](https://github.com/akwawa/Seedcartographer/commit/4f50624a14458432b24053b1887fc719549b68e1))
+* ban innerHTML across the codebase ([553ec8a](https://github.com/akwawa/Seedcartographer/commit/553ec8ae52af2f8a1f35b7294225adc845efb2d0)), closes [#185](https://github.com/akwawa/Seedcartographer/issues/185)
+* exclude gallerypage.js from Sonar coverage ([3f2795a](https://github.com/akwawa/Seedcartographer/commit/3f2795aa925abfb5e8c94dc347e588e78758120b))
+* silence shellcheck unused-variable warning in the header check ([f81af10](https://github.com/akwawa/Seedcartographer/commit/f81af107163a2edd4e7b63b4e11f7657d267c1c4))
+* use specific workflow permissions in the scorecard workflow ([6e3c567](https://github.com/akwawa/Seedcartographer/commit/6e3c567487e31e3fc2f78e8d6f3c3f074a1d8a7e))
+
+
+### Modifié
+
+* retire la page gallery.html et ses liens d'accès ([#206](https://github.com/akwawa/Seedcartographer/issues/206)) ([58dca34](https://github.com/akwawa/Seedcartographer/commit/58dca343e38a248f95d39b6a69203870ce611897)), closes [#205](https://github.com/akwawa/Seedcartographer/issues/205)
+
 ## [Non publié]
 
 ### Modifié
