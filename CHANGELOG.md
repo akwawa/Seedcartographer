@@ -16,6 +16,11 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Sécurité
+- Politique de sécurité : `SECURITY.md` documente les versions supportées et
+  le signalement privé des vulnérabilités (GitHub private vulnerability
+  reporting) avec des délais de réponse indicatifs (#180).
+
 ### Modifié
 - Découplage visible : l'interface ne référence plus le dépôt GitHub — le
   lien « GitHub » du dialogue d'aide est retiré et la licence pointe vers le
