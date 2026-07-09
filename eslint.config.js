@@ -119,15 +119,6 @@ module.exports = [
     languageOptions: { globals: { require: 'readonly', encodeShareState: 'readonly' } }
   },
   {
-    // gallery.html's script, extracted so a strict CSP applies (no inline
-    // script); consumes gallery.js's exports
-    files: ['gallerypage.js'],
-    languageOptions: {
-      sourceType: 'script',
-      globals: { ...globals.browser, validateGallery: 'readonly', galleryEntryHash: 'readonly', galleryText: 'readonly' }
-    }
-  },
-  {
     // sharestate.js runs in the browser (btoa/atob) and in Node tests
     // (Buffer); the compression codec uses WHATWG globals present in both
     files: ['sharestate.js'],

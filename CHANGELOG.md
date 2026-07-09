@@ -16,6 +16,12 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Modifié
+- Page `gallery.html` retirée : la galerie de seeds n'est plus accessible
+  qu'en modal depuis l'application (bouton « Gallery »). Le lien « Open as
+  a page » et `gallerypage.js` (son script dédié) sont supprimés ; les
+  cartes, `gallery.js` et `gallery.json` restent inchangés (#205).
+
 ### Sécurité
 - Vérification finale du jalon 0.7.0 : passage en revue du stock complet
   SonarCloud et des alertes de code scanning. Correction des 4 derniers
