@@ -43,9 +43,6 @@ jobs:
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-      security-events: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -60,29 +57,6 @@ jobs:
       # on GitHub API availability/quota for the actions-tag-freshness checks
       - run: pipx install zizmor==1.26.1
       - run: zizmor --offline .github/workflows/
-      # TEMP debug for #191: dump the full SonarCloud issue/hotspot stock and
-      # GitHub code-scanning alerts (CodeQL/Scorecard) for a final 0-issue
-      # verification; removed before this PR leaves draft.
-      - name: TEMP debug 191
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # the sonar job's own analysis takes ~80-90s; wait for it so this
-          # dump reflects the re-analysis triggered by this same push
-          sleep 110
-          echo "== SonarCloud open/confirmed issues (all statuses, incl. hotspots) =="
-          curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&issueStatuses=OPEN,CONFIRMED&ps=100" | jq '{total, issues: [.issues[] | {rule, severity, component, line, message}]}'
-          echo "== SonarCloud open security hotspots =="
-          curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/hotspots/search?projectKey=akwawa_Seedcartographer&status=TO_REVIEW&ps=100" | jq '{paging, hotspots: [.hotspots[] // empty]}'
-          echo "== GitHub code scanning alerts (open) =="
-          curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/akwawa/Seedcartographer/code-scanning/alerts?state=open&per_page=100" | jq '[.[] | {number, tool: .tool.name, rule: .rule.id, severity: .rule.severity, path: .most_recent_instance.location.path, start_line: .most_recent_instance.location.start_line, message: .most_recent_instance.message.text}]'
-          # Alert #1 (js/unused-local-variable on setLang, i18n.js:1101) is a
-          # false positive: CodeQL analyzes i18n.js in isolation and cannot
-          # see that setLang is called from app.js as a cross-file global
-          # (same limitation already documented for tsc — see tsconfig.json).
-          echo "== dismissing alert #1 as a false positive =="
-          curl -sS -X PATCH -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/akwawa/Seedcartographer/code-scanning/alerts/1" -d '{"state":"dismissed","dismissed_reason":"false positive","dismissed_comment":"setLang is called from app.js (langSel.onchange) as a cross-file global set via a plain <script> tag, not an ES module import — CodeQL analyzes i18n.js in isolation and cannot see that call site. Same limitation as tsc (see tsconfig.json exclusions)."}' | jq '{number, state, dismissed_reason}'
 
   e2e:
     runs-on: ubuntu-latest
