@@ -42,12 +42,25 @@ let minimapReq = 0, minimapTile = null;         // overview minimap tile
 const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> {e, cv}
 const galleryStructReqs = new Map();            // in-flight thumbnail structures: reqId -> {e, cv, colors}
 
+// Privacy-preserving error reporting: a small, PII-free event sent to Umami
+// (if loaded) so production crashes are visible without a third-party SDK —
+// never includes the seed, coordinates or any user input (see errorreport.js).
+function sendErrorEvent(kind, message, source, line) {
+  if (typeof umami === 'undefined' || typeof umami.track !== 'function') return;
+  try { umami.track('error', formatErrorEvent(kind, message, source, line)); } catch { /* ignore */ }
+}
+window.addEventListener('error', (e) => sendErrorEvent('error', e.message, e.filename, e.lineno));
+window.addEventListener('unhandledrejection', (e) => {
+  const reason = e.reason;
+  sendErrorEvent('promise', reason?.message || reason);
+});
+
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
 for (const w of [worker, searchWorker]) {
   w.engineReady = false;
   w.pending = [];
-  w.onerror = (e) => console.error('WORKER ERROR:', e.message, e.filename, e.lineno);
+  w.onerror = (e) => { console.error('WORKER ERROR:', e.message, e.filename, e.lineno); sendErrorEvent('worker', e.message, e.filename, e.lineno); };
   w.onmessageerror = (e) => console.error('WORKER MSGERROR', e);
 }
 function post(w, msg, transfer) {
