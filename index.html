@@ -191,6 +191,16 @@
         <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" hidden>
       </div>
       <output id="profileInfo" class="muted small"></output>
+      <p class="muted small" data-i18n="syncLede">Or move it to another device without a file: a sync code to copy on one device and paste on the other.</p>
+      <div class="export">
+        <button id="syncCodeShow" class="btn tiny" data-i18n="syncCodeShow">Get sync code</button>
+        <button id="syncCodePaste" class="btn tiny" data-i18n="syncCodePaste">Paste sync code</button>
+      </div>
+      <div id="syncCodeBox" class="syncbox" hidden>
+        <textarea id="syncCodeText" class="mono synccode" rows="3" data-i18n-aria="syncCodeArea" aria-label="Sync code"></textarea>
+        <button id="syncCodeCopy" class="btn tiny" data-i18n="syncCodeCopy">Copy</button>
+        <button id="syncCodeApply" class="btn tiny" hidden data-i18n="syncCodeApply">Apply</button>
+      </div>
     </section>
 
     <section class="card">

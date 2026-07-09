@@ -941,6 +941,30 @@ test('the profile round-trips through export and import', async ({ page }) => {
   expect(dl.suggestedFilename()).toBe('seedcartographer-profile.json');
 });
 
+test('the profile also round-trips through a copy/paste sync code', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.setInputFiles('#profileImportFile', {
+    name: 'profile.json', mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      kind: 'seedcartographer-profile', version: 1,
+      favorites: [], userPresets: [{ id: 1, name: 'sync preset', dim: 0, c: { m: [5] } }],
+      history: [], markers: []
+    }))
+  });
+  await page.click('#syncCodeShow');
+  await expect(page.locator('#syncCodeBox')).toBeVisible();
+  const code = await page.locator('#syncCodeText').inputValue();
+  expect(code.length).toBeGreaterThan(0);
+  // simulate a second device: reload (fresh in-memory state, same localStorage
+  // in this test context) then paste the code back in
+  await page.click('#syncCodePaste');
+  await page.locator('#syncCodeText').fill(code);
+  await page.click('#syncCodeApply');
+  await expect(page.locator('#profileInfo')).toContainText('1');
+  await expect(page.locator('#syncCodeBox')).toBeHidden();
+});
+
 test('the relief overlay reshades the map tiles and is Overworld-only', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

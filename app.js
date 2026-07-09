@@ -2163,6 +2163,28 @@ async function init() {
     if (f) f.text().then(importProfileText);
     profileImportInput.value = '';
   };
+  // sync code: same profile payload as export/import, moved via copy/paste
+  // (a compressed 'z.' code, same codec as share links) instead of a file —
+  // handy between devices with no easy file transfer.
+  const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
+  $('#syncCodeShow').onclick = () => {
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers })))
+      .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
+  };
+  $('#syncCodePaste').onclick = () => {
+    syncText.value = '';
+    syncBox.hidden = false;
+    syncApply.hidden = false;
+    syncText.focus();
+  };
+  $('#syncCodeCopy').onclick = () => { copyText(syncText.value).catch(() => {}); };
+  syncApply.onclick = () => {
+    decodeShareHash(syncText.value.trim()).then((decoded) => {
+      if (decoded == null) { $('#profileInfo').textContent = t('profileInvalid'); return; }
+      importProfileText(JSON.stringify(decoded));
+      syncBox.hidden = true;
+    });
+  };
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {
     const collapsed = document.body.classList.toggle('panel-collapsed');
