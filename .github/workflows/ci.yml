@@ -74,7 +74,7 @@ jobs:
           echo "== SonarCloud open security hotspots =="
           curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/hotspots/search?projectKey=akwawa_Seedcartographer&status=TO_REVIEW&ps=100" | jq '{paging, hotspots: [.hotspots[] // empty]}'
           echo "== GitHub code scanning alerts (open) =="
-          curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/akwawa/Seedcartographer/code-scanning/alerts?state=open&per_page=100" | jq '[.[] | {tool: .tool.name, rule: .rule.id, severity: .rule.severity, path: .most_recent_instance.location.path}]'
+          curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/akwawa/Seedcartographer/code-scanning/alerts?state=open&per_page=100" | jq '[.[] | {number, tool: .tool.name, rule: .rule.id, severity: .rule.severity, path: .most_recent_instance.location.path, start_line: .most_recent_instance.location.start_line, message: .most_recent_instance.message.text}]'
 
   e2e:
     runs-on: ubuntu-latest
