@@ -7,6 +7,8 @@ projet adhère au [versionnage sémantique](https://semver.org/lang/fr/).
 
 **Règle de contribution** : chaque merge request ajoute son entrée dans la
 section « Non publié » (catégories : Ajouté / Modifié / Corrigé / Sécurité).
+Le travail courant d'un jalon part sur la branche `dev` (une MR par ticket,
+base `dev`) ; `dev` n'est fusionnée vers `main` qu'une fois le jalon terminé.
 Les releases sont automatisées par
 [release-please](https://github.com/googleapis/release-please) : une MR de
 release maintient le bump de version et une section générée depuis les
@@ -15,6 +17,15 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 et la release GitHub.
 
 ## [Non publié]
+
+### Modifié
+- Branche `dev` de staging : le travail courant d'un jalon part désormais sur
+  `dev` (fusionnée vers `main` seulement en fin de jalon) — CI complète
+  (tests, lint, Sonar, e2e, wasm, Lighthouse) sur push vers `dev` comme vers
+  `main` ; image Docker publiée sous le tag `dev` ; GitHub Pages déploie en
+  plus une prévisualisation sous `/dev/` à chaque déploiement, reconstruite
+  depuis les deux branches à chaque fois pour que l'une n'écrase jamais
+  l'autre (#207).
 
 ## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
 
