@@ -68,7 +68,9 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 5
+          # the sonar job's own analysis takes ~80-90s; wait for it so this
+          # dump reflects the re-analysis triggered by this same push
+          sleep 110
           echo "== SonarCloud open/confirmed issues (all statuses, incl. hotspots) =="
           curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&issueStatuses=OPEN,CONFIRMED&ps=100" | jq '{total, issues: [.issues[] | {rule, severity, component, line, message}]}'
           echo "== SonarCloud open security hotspots =="
