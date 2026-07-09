@@ -16,6 +16,8 @@ et la release GitHub.
 
 ## [Non publié]
 
+## [0.6.0](https://github.com/akwawa/Seedcartographer/compare/v0.5.0...v0.6.0) (2026-07-09)
+
 ### Corrigé
 - Dézoom profond : la carte se remplit désormais entièrement au-delà de
   l'échelle moteur maximale — cache de tuiles et plafond de peinture
