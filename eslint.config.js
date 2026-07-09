@@ -51,7 +51,8 @@ module.exports = [
         sanitizeCriteria: 'readonly', sanitizeWorldView: 'readonly', worldToScreen: 'readonly', screenToWorld: 'readonly',
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly',
         APP_VERSION: 'readonly',
-        validateGallery: 'readonly', galleryText: 'readonly', galleryThumbRender: 'readonly'
+        validateGallery: 'readonly', galleryText: 'readonly', galleryThumbRender: 'readonly',
+        galleryStructRender: 'readonly', galleryThumbPoint: 'readonly'
       }
     }
   },

@@ -39,7 +39,8 @@ let showRelief = false;                         // hillshade terrain overlay (Ov
 function reliefOn() { return showRelief && world.dim === 0; }
 const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
-const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> canvas
+const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> {e, cv}
+const galleryStructReqs = new Map();            // in-flight thumbnail structures: reqId -> {e, cv, colors}
 
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
@@ -89,9 +90,13 @@ function tileCanvasOf(d) {
 function onTileMessage(d) {
   const thumb = galleryThumbReqs.get(d.reqId);
   if (thumb) {
-    // gallery card preview: scale the rendered area onto the card canvas
+    // gallery card preview: scale the rendered area onto the card canvas,
+    // then overlay the structure markers of the spot
     galleryThumbReqs.delete(d.reqId);
-    if (d.ok) thumb.getContext('2d').drawImage(tileCanvasOf(d).canvas, 0, 0, thumb.width, thumb.height);
+    if (d.ok) {
+      thumb.cv.getContext('2d').drawImage(tileCanvasOf(d).canvas, 0, 0, thumb.cv.width, thumb.cv.height);
+      requestGalleryStructs(thumb.e, thumb.cv);
+    }
     return;
   }
   if (d.reqId === minimapReq) {
@@ -139,6 +144,9 @@ worker.onmessage = (e) => {
   if (d.type === 'tile') { onTileMessage(d); return; }
   if (d.type === 'gridTile') { onGridTile(d); return; }
   if (d.type === 'structures') {
+    // thumbnail requests are routed to their card and must never clobber
+    // the main map's layer points
+    if (galleryStructReqs.has(d.reqId)) { drawGalleryStructs(d); return; }
     d.groups.forEach((g) => { const t = structToggles.find((s) => s.type === g.type); if (t) t.points = g.points; });
     draw();
     return;
@@ -1722,9 +1730,35 @@ function galleryThumbCanvas(e) {
   cv.className = 'gallerythumb';
   galleryThumbCache.set(e.id, cv);
   const reqId = reqSeq++;
-  galleryThumbReqs.set(reqId, cv);
+  galleryThumbReqs.set(reqId, { e, cv });
   send(galleryThumbRender(e, reqId, GALLERY_THUMB_W, GALLERY_THUMB_H));
   return cv;
+}
+// once the preview pixels are in, overlay the spot's structures — box-scoped
+// marker layers only: slime chunks would flood a thumbnail this small, and
+// the spawn/stronghold layers are world-global engine calls that cost seconds
+// per card without ever landing inside the preview box
+function requestGalleryStructs(e, cv) {
+  const skip = new Set([SLIME_STRUCT_TYPE, SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE]);
+  const layers = structToggles.filter((tg) => tg.dim === e.dim && !skip.has(tg.type));
+  if (!layers.length) return;
+  const reqId = reqSeq++;
+  galleryStructReqs.set(reqId, { e, cv, colors: new Map(layers.map((tg) => [tg.type, tg.color])) });
+  send(galleryStructRender(e, reqId, GALLERY_THUMB_W, GALLERY_THUMB_H, layers.map((tg) => tg.type)));
+}
+function drawGalleryStructs(d) {
+  const req = galleryStructReqs.get(d.reqId);
+  galleryStructReqs.delete(d.reqId);
+  const c2 = req.cv.getContext('2d');
+  c2.strokeStyle = 'rgba(0,0,0,.55)'; c2.lineWidth = 1;
+  for (const g of d.groups) {
+    c2.fillStyle = req.colors.get(g.type) || '#fff';
+    for (const [x, z] of g.points) {
+      const { px, py } = galleryThumbPoint(req.e, req.cv.width, req.cv.height, x, z);
+      if (px < 0 || py < 0 || px > req.cv.width || py > req.cv.height) continue;
+      c2.beginPath(); c2.rect(px - 3, py - 3, 6, 6); c2.fill(); c2.stroke();
+    }
+  }
 }
 // jump the app onto the entry: world, view, altitude and (when the entry
 // carries them) pre-filled criteria — same order as applying a user preset

@@ -82,6 +82,32 @@ function galleryThumbRender(e, reqId, w, h) {
   };
 }
 
+// Worker `structures` request covering the thumbnail's world box — same
+// message shape the app sends for the main map's structure layers.
+/**
+ * @param {GalleryEntry} e @param {number} reqId
+ * @param {number} w @param {number} h thumbnail size in pixels
+ * @param {number[]} types structure types to collect
+ * @returns {object} message for the search worker
+ */
+function galleryStructRender(e, reqId, w, h, types) {
+  return {
+    type: 'structures', reqId, seed: e.seed, mc: e.mc, large: e.large, dim: e.dim, types,
+    x0: Math.floor(e.x - w * e.b / 2), z0: Math.floor(e.z - h * e.b / 2),
+    x1: Math.ceil(e.x + w * e.b / 2), z1: Math.ceil(e.z + h * e.b / 2)
+  };
+}
+
+// World coordinates -> thumbnail pixel, for drawing markers on the preview.
+/**
+ * @param {GalleryEntry} e @param {number} w @param {number} h thumbnail size
+ * @param {number} x @param {number} z world block coordinates
+ * @returns {{px: number, py: number}} pixel position on the thumbnail
+ */
+function galleryThumbPoint(e, w, h, x, z) {
+  return { px: (x - e.x) / e.b + w / 2, py: (z - e.z) / e.b + h / 2 };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender };
+  module.exports = { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint };
 }
