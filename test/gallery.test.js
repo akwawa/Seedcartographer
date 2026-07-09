@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
-const { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText } = require('../gallery.js');
+const { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender } = require('../gallery.js');
 const { decodeShareState, sanitizeWorldView, sanitizeCriteria } = require('../sharestate.js');
 
 const ENTRY = {
@@ -67,4 +67,12 @@ test('galleryText falls back to English', () => {
   assert.strictEqual(galleryText({ en: 'hello', fr: 'bonjour' }, 'fr'), 'bonjour');
   assert.strictEqual(galleryText({ en: 'hello', fr: 'bonjour' }, 'de'), 'hello');
   assert.strictEqual(galleryText({ en: 'hello', de: ' ' }, 'de'), 'hello');
+});
+
+test('galleryThumbRender builds a full worker render message', () => {
+  const e = validateGalleryEntry({ ...ENTRY, large: true, c: { mb: [5] } });
+  assert.deepStrictEqual(galleryThumbRender(e, 7, 260, 140), {
+    type: 'render', reqId: 7, seed: '141', mc: 28, large: true,
+    dim: 0, y: 60, highlight: null, cx: e.x, cz: e.z, bpp: e.b, w: 260, h: 140
+  });
 });
