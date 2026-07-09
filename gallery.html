@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://analytics.super-h.fr 'wasm-unsafe-eval'; connect-src 'self' https://analytics.super-h.fr; worker-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Seedcartographer — seed gallery</title>
 <meta name="theme-color" content="#0c1016">
@@ -24,34 +25,6 @@
 </main>
 <script src="./sharestate.js"></script>
 <script src="./gallery.js"></script>
-<script>
-'use strict';
-// tiny standalone page: fetch the editorial file, validate it with the same
-// logic the test suite runs, and render one card per entry
-const GALLERY_LANG = (navigator.language || 'en').slice(0, 2);
-fetch('./gallery.json')
-  .then((r) => r.json())
-  .then((raw) => {
-    const list = document.getElementById('galleryList');
-    list.textContent = '';
-    for (const e of validateGallery(raw)) {
-      const card = document.createElement('a');
-      card.className = 'gallerycard';
-      card.href = './index.html#' + galleryEntryHash(e);
-      const h = document.createElement('h2');
-      h.textContent = galleryText(e.title, GALLERY_LANG);
-      const p = document.createElement('p');
-      p.textContent = galleryText(e.desc, GALLERY_LANG);
-      const meta = document.createElement('p');
-      meta.className = 'mono gallerymeta';
-      meta.textContent = `seed ${e.seed} · ${e.x}, ${e.z}`;
-      card.append(h, p, meta);
-      list.appendChild(card);
-    }
-  })
-  .catch(() => {
-    document.getElementById('galleryList').textContent = 'gallery.json could not be loaded.';
-  });
-</script>
+<script src="./gallerypage.js"></script>
 </body>
 </html>
