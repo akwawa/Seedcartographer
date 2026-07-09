@@ -288,7 +288,7 @@ function setDimension(dim) {
   structToggles.forEach((tg) => { tg.on = false; tg.points = null; });
   buildStructToggleUI();
   hidePopup();
-  pins = []; basePins = []; resultsEl.innerHTML = ''; $('#exportBtns').hidden = true; $('#sortCtl').hidden = true;
+  pins = []; basePins = []; resultsEl.textContent = ''; $('#exportBtns').hidden = true; $('#sortCtl').hidden = true;
   curReset(); draw(); requestRender(0); syncHash();
 }
 
@@ -1257,7 +1257,7 @@ function onSearchResult(d) {
   basePins = d.hits; lastSpawn = d.spawn || null; selected = -1;
   applySort();
   hidePopup();
-  resultsEl.innerHTML = '';
+  resultsEl.textContent = '';
   $('#exportBtns').hidden = !pins.length;
   $('#sortCtl').hidden = !pins.length;
   if (d.error === 'cancelled') {
@@ -1291,7 +1291,7 @@ function applySort() {
   }
 }
 function renderResultsList() {
-  resultsEl.innerHTML = '';
+  resultsEl.textContent = '';
   pins.forEach((p, i) => {
     const li = document.createElement('button');
     li.className = 'result'; li.dataset.i = i;
@@ -1611,7 +1611,7 @@ function resolveStructConsts(defs) {
   send({ type: 'structConsts', indices: defs.map((d) => d[0]) });
 }
 function buildStructToggleUI() {
-  const box = $('#structLayers'); box.innerHTML = '';
+  const box = $('#structLayers'); box.textContent = '';
   structsOfDim().forEach((tg, i) => {
     const id = 'sl' + i;
     const row = document.createElement('label'); row.className = 'layer';

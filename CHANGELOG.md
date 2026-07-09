@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Interdiction d'innerHTML : les quatre derniers usages (vidage de listes de
+  résultats et de couches de structures) passent par `textContent`, et une
+  règle ESLint (`no-restricted-properties`/`no-restricted-syntax`) bannit
+  `innerHTML`, `outerHTML` et `insertAdjacentHTML` sur tout le projet — les
+  chaînes non fiables (liens de partage, imports CSV/JSON) ne peuvent plus
+  être interprétées comme du HTML (#185).
 - Analyse statique CodeQL : le workflow `codeql.yml` exécute les requêtes
   `security-and-quality` sur le JavaScript à chaque PR, à chaque push sur
   `main` et chaque semaine, avec publication des résultats vers le code
