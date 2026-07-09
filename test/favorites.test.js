@@ -2,11 +2,16 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  FAV_MAX, addFavorite, findFavorite, removeFavorite,
+  FAV_MAX, favWorld, addFavorite, findFavorite, removeFavorite,
   updateFavoriteNote, favoritesFor, parseFavorites
 } = require('../favorites.js');
 
 const spot = { seed: '141', mc: 28, large: false, dim: 0, x: -384, z: 0 };
+
+test('favWorld extracts the world a favorite is bound to', () => {
+  const fav = addFavorite([], spot)[0];
+  assert.deepStrictEqual(favWorld(fav), { seed: '141', mc: 28, large: false, dim: 0 });
+});
 
 test('addFavorite assigns unique ids and keeps the list immutable', () => {
   const l1 = addFavorite([], spot);
