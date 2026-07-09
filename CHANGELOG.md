@@ -14,52 +14,9 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [0.6.0](https://github.com/akwawa/Seedcartographer/compare/v0.5.0...v0.6.0) (2026-07-09)
-
-
-### Ajouté
-
-* add anonymous Umami usage statistics and disclose them ([0b46289](https://github.com/akwawa/Seedcartographer/commit/0b46289946e7932aefda995420af9dc4e1d7bf7d))
-* add anonymous Umami usage statistics and disclose them ([1ebb768](https://github.com/akwawa/Seedcartographer/commit/1ebb76867e4d322bf03e3de8259e3a80a39a675d)), closes [#168](https://github.com/akwawa/Seedcartographer/issues/168)
-* afficher la version déployée dans l'aide ([1de140d](https://github.com/akwawa/Seedcartographer/commit/1de140d7fbf46cb4e2019849892cee64c93af576))
-* biome-share criteria (percentage of area within a radius) ([209c36d](https://github.com/akwawa/Seedcartographer/commit/209c36d04b055b5104c080d651002f46579efff3)), closes [#142](https://github.com/akwawa/Seedcartographer/issues/142)
-* compress the share-link hash with CompressionStream ([f4d51e4](https://github.com/akwawa/Seedcartographer/commit/f4d51e41a90bd13b6f086fd3fab872e1deba3820)), closes [#141](https://github.com/akwawa/Seedcartographer/issues/141)
-* critères de biomes en pourcentage de zone ([e41c9ed](https://github.com/akwawa/Seedcartographer/commit/e41c9edec0b44294d54961f081b8414c9f05fd27))
-* critères multi-Y (biome en profondeur ET en surface) ([dea7e37](https://github.com/akwawa/Seedcartographer/commit/dea7e37b400ec632be4c424e6f4d798a8411bdb0))
-* domaine personnalisé seedcarto.com ([2db7a3b](https://github.com/akwawa/Seedcartographer/commit/2db7a3bdd4da1c5ecf3b857b0e9cc4b0e15479be))
-* embedded gallery of remarkable seeds ([947f234](https://github.com/akwawa/Seedcartographer/commit/947f234728f53dc198cbde2439c90e5bdc9dd5c4)), closes [#144](https://github.com/akwawa/Seedcartographer/issues/144)
-* export/import complet du profil ([08a9693](https://github.com/akwawa/Seedcartographer/commit/08a9693e4293d794fbdfeda40363e0f674a5e5e2))
-* galerie de seeds remarquables ([7de37bd](https://github.com/akwawa/Seedcartographer/commit/7de37bd3f556a799fbebde8a718a1de253a1897e))
-* geographic-pattern criteria (island, lagoon, enclave) ([c042a1c](https://github.com/akwawa/Seedcartographer/commit/c042a1c44bd72d849d5987cebd19032bfb42261d)), closes [#146](https://github.com/akwawa/Seedcartographer/issues/146)
-* motifs géographiques (île, baie/lagon, enclave) ([0a83f13](https://github.com/akwawa/Seedcartographer/commit/0a83f13a7edbc297a9b36a7a0ecda92b44cf7bb1))
-* open the seed gallery in an in-app modal with rendered thumbnails ([ceb3dc8](https://github.com/akwawa/Seedcartographer/commit/ceb3dc84296e2de582e03fa35cd4bf486d2005bb))
-* open the seed gallery in an in-app modal with rendered thumbnails ([b755648](https://github.com/akwawa/Seedcartographer/commit/b7556481583db70104b231b055e81ee1d81960c8)), closes [#172](https://github.com/akwawa/Seedcartographer/issues/172)
-* overlay structure markers on gallery thumbnails ([c6dae08](https://github.com/akwawa/Seedcartographer/commit/c6dae088eafc9e26b3cde11768995c968c011ce2))
-* overlay structure markers on gallery thumbnails ([664a5d9](https://github.com/akwawa/Seedcartographer/commit/664a5d9c0b2c092d2541e7bc5b4f6fe6fbc61444)), closes [#174](https://github.com/akwawa/Seedcartographer/issues/174)
-* per-clause Y layer for adjacent-biome criteria ([5963717](https://github.com/akwawa/Seedcartographer/commit/59637172151d13d29ab356c00a730999ca115686)), closes [#145](https://github.com/akwawa/Seedcartographer/issues/145)
-* permaliens compressés (hash de partage deflate) ([7aa03f0](https://github.com/akwawa/Seedcartographer/commit/7aa03f061b57f0d5c36b4e630028557d3e78c386))
-* recherche multi-seeds reprenable ([d777d26](https://github.com/akwawa/Seedcartographer/commit/d777d26a05033b2e132147964817df67f10c44aa))
-* resumable multi-seed search ([855573b](https://github.com/akwawa/Seedcartographer/commit/855573bcdb25a00045f920f50c6ade41a78e97b8)), closes [#143](https://github.com/akwawa/Seedcartographer/issues/143)
-* serve the site under seedcarto.com ([0b7616e](https://github.com/akwawa/Seedcartographer/commit/0b7616e06662247dcd3663b406af7ad7f1e310f1)), closes [#166](https://github.com/akwawa/Seedcartographer/issues/166)
-* show the deployed version in the help dialog ([429fcb5](https://github.com/akwawa/Seedcartographer/commit/429fcb52d2631b1d3f20311754601bf1fd7d8f96)), closes [#167](https://github.com/akwawa/Seedcartographer/issues/167)
-
-
-### Corrigé
-
-* address the sonar findings on the shape scan ([911c53a](https://github.com/akwawa/Seedcartographer/commit/911c53a6c95d1f324b63ac8d609812ecdb52e5c1))
-* canonicalize the app-version target path ([33ef5f3](https://github.com/akwawa/Seedcartographer/commit/33ef5f391037d5ec3749d68f8b53e55692958567))
-* declare the WHATWG globals used by the share-hash codec ([c4f2034](https://github.com/akwawa/Seedcartographer/commit/c4f20343c7dcd64795b3d78c7f1be58f7c1e6f17))
-* extract the scan loop and the main-grid generation ([bbfe485](https://github.com/akwawa/Seedcartographer/commit/bbfe4857b28a1e971d5939ce0d0cd16b7e446544))
-* fill the whole viewport at deep zoom-outs ([560c209](https://github.com/akwawa/Seedcartographer/commit/560c20933d556cf2d13abf638f587a8fb344bc93))
-* fill the whole viewport at deep zoom-outs ([cb5feb9](https://github.com/akwawa/Seedcartographer/commit/cb5feb9ff6e1dc8bd96b8f5557d1fb359c358a07)), closes [#176](https://github.com/akwawa/Seedcartographer/issues/176)
-* keep the gallery dimension whitelist in a Set ([aaa1ace](https://github.com/akwawa/Seedcartographer/commit/aaa1ace5fb290606ca3e25ae96d2a41d6e7f2383))
-* pass the grid context to floodComponent as one object ([bc1afa5](https://github.com/akwawa/Seedcartographer/commit/bc1afa55c264989cb080f9be5d00a7e6dd7625e7))
-* read the git commit without spawning a subprocess ([5793e5a](https://github.com/akwawa/Seedcartographer/commit/5793e5a5a4804fb3b354cda43bd3bde061d3b671)), closes [#167](https://github.com/akwawa/Seedcartographer/issues/167)
-* split the multi-Y additions under the complexity threshold ([2a20624](https://github.com/akwawa/Seedcartographer/commit/2a206246a11a5110977b5a3618ca8a7b4bf5f675))
-* use code-point string APIs in the share-hash codec ([985972c](https://github.com/akwawa/Seedcartographer/commit/985972c1e213b0b6865d047c7db0bebe6e20501e))
-* use includes() for the null check in parseSeedRun ([9cb34c2](https://github.com/akwawa/Seedcartographer/commit/9cb34c25db701095c7ec4134b639d2f256536319))
-
 ## [Non publié]
+
+## [0.6.0](https://github.com/akwawa/Seedcartographer/compare/v0.5.0...v0.6.0) (2026-07-09)
 
 ### Corrigé
 - Dézoom profond : la carte se remplit désormais entièrement au-delà de
