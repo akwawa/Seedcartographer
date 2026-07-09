@@ -17,6 +17,10 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Chaîne d'approvisionnement : `lockfile-lint` vérifie en CI (et via
+  `npm run lint:lockfile`) que `package-lock.json` ne résout que vers le
+  registre npm en HTTPS, avec noms de paquets cohérents et intégrité sha512
+  (#181).
 - Politique de sécurité : `SECURITY.md` documente les versions supportées et
   le signalement privé des vulnérabilités (GitHub private vulnerability
   reporting) avec des délais de réponse indicatifs (#180).
