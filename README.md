@@ -57,6 +57,22 @@ Pour un bannissement plus durable des clients qui persistent, l'exemple
 `deploy/docker-compose.yml` ajoute un conteneur fail2ban qui lit les logs
 nginx et bannit l'IP au niveau hôte (jail et filtre dans `deploy/fail2ban/`).
 
+Chaque image publiée (`main`/`latest` et tags `v*`) est accompagnée d'un SBOM
+(SPDX) et signée sans clé (keyless, via l'identité OIDC de GitHub Actions)
+avec [cosign](https://github.com/sigstore/cosign). Pour vérifier la
+signature et récupérer le SBOM :
+
+```bash
+cosign verify ghcr.io/akwawa/seedcartographer:latest \
+  --certificate-identity-regexp 'https://github.com/akwawa/Seedcartographer/.github/workflows/docker.yml@.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+cosign verify-attestation ghcr.io/akwawa/seedcartographer:latest \
+  --type spdxjson \
+  --certificate-identity-regexp 'https://github.com/akwawa/Seedcartographer/.github/workflows/docker.yml@.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 ## Utilisation
 
 1. Saisis une **seed** en haut (numérique ou texte) et clique sur **Load seed**.
