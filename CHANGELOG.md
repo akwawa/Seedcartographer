@@ -17,6 +17,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Code de synchronisation pour le profil : dans le panneau Profil, « Obtenir
+  le code » encode favoris/presets/historique/marqueurs en un code
+  compressé (même codec que les liens de partage) à copier ; « Coller un
+  code » sur l'autre appareil le décode et fusionne (mêmes règles que
+  l'import fichier existant). Aucun serveur, aucun compte — tout reste
+  dans le navigateur (#211).
 - Suivi d'erreurs en production : les erreurs JS non attrapées, les
   promesses rejetées et les erreurs du worker envoient un événement Umami
   personnalisé (`error`) — message tronqué, nom de fichier seul (jamais
