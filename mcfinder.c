@@ -161,9 +161,12 @@ int listQuadHuts(int x0, int z0, int x1, int z1, int *out, int maxN){
     int r1x = (int)floorf((float)x1/regBlocks) + 1;
     int r0z = (int)floorf((float)z0/regBlocks) - 1;
     int r1z = (int)floorf((float)z1/regBlocks) + 1;
+    // maxN is checked once via an early return rather than duplicated in
+    // both loop headers (Sonar c:S886 flags the latter as error-prone).
     int n = 0;
-    for(int rz = r0z; rz <= r1z && n < maxN; rz++){
-        for(int rx = r0x; rx <= r1x && n < maxN; rx++){
+    for(int rz = r0z; rz <= r1z; rz++){
+        for(int rx = r0x; rx <= r1x; rx++){
+            if(n >= maxN) return n;
             // isQuadBase* applies the structure salt itself: pass the
             // transposed raw 48-bit world seed so the four regions
             // (rx..rx+1, rz..rz+1) land on (0,0)
@@ -192,9 +195,12 @@ int listStructures(int structType, int x0, int z0, int x1, int z1,
     int r1x = (int)floorf((float)x1/regBlocks) + 1;
     int r0z = (int)floorf((float)z0/regBlocks) - 1;
     int r1z = (int)floorf((float)z1/regBlocks) + 1;
+    // maxN is checked once via an early return rather than duplicated in
+    // both loop headers (Sonar c:S886 flags the latter as error-prone).
     int n = 0;
-    for(int rz = r0z; rz <= r1z && n < maxN; rz++){
-        for(int rx = r0x; rx <= r1x && n < maxN; rx++){
+    for(int rz = r0z; rz <= r1z; rz++){
+        for(int rx = r0x; rx <= r1x; rx++){
+            if(n >= maxN) return n;
             Pos p;
             if(!getStructurePos(structType, MC, SEED, rx, rz, &p)) continue;
             if(p.x < x0 || p.x > x1 || p.z < z0 || p.z > z1) continue;

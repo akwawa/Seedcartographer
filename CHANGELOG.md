@@ -17,6 +17,17 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- Vérification finale du jalon 0.7.0 : passage en revue du stock complet
+  SonarCloud et des alertes de code scanning. Correction des 4 derniers
+  points ouverts (`c:S886`, boucles imbriquées `mcfinder.c` — bornage
+  `maxN` dupliqué dans les deux en-têtes de boucle remplacé par un retour
+  anticipé unique ; `mcfinder.wasm`/`mcfinder.js` reconstruits à l'identique
+  avec l'emsdk épinglé, tests unitaires et e2e complets au vert). Seule
+  alerte CodeQL restante (`js/unused-local-variable` sur `setLang`,
+  `i18n.js`) classée faux positif et rejetée : `setLang` est appelée
+  depuis `app.js` en tant que global inter-fichiers via balise `<script>`
+  (non un import ES), invisible à l'analyse mono-fichier de CodeQL — même
+  limitation déjà documentée pour `tsc` (#191).
 - Couverture de tests à 100 % (lignes, branches, fonctions) : test manquant
   pour `favWorld` (favorites.js) et exclusion explicite (`node:coverage
   disable`/`enable`) du bloc DOM de `i18n.js` (`detectLang`/`t`/`applyI18n`/
