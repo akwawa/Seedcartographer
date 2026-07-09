@@ -17,6 +17,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Sécurité
+- En-têtes de sécurité nginx : l'image Docker ajoute désormais
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin`,
+  `Cross-Origin-Opener-Policy: same-origin` et une `Permissions-Policy`
+  restrictive (aucune fonctionnalité n'a besoin de caméra, micro,
+  géolocalisation…) sur toutes les réponses (conf versionnée
+  `nginx/security-headers.conf`, vérifiée par un test qui lance l'image et
+  interroge une vraie réponse HTTP) (#186).
 - Audit des workflows : `zizmor` analyse `.github/workflows/` dans le job
   `static` de la CI (injections, permissions excessives, persistance de
   crédentiels…) — correction du seul type de finding détecté :

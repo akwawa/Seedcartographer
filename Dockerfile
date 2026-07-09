@@ -8,5 +8,6 @@ COPY index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js 
      theme.js export.js mcfinder.js mcfinder.wasm \
      manifest.webmanifest icon.svg sw.js /usr/share/nginx/html/
 COPY fonts/ /usr/share/nginx/html/fonts/
+COPY nginx/security-headers.conf /etc/nginx/conf.d/security-headers.conf
 
 EXPOSE 8080
