@@ -1,0 +1,11 @@
+[seedcarto-scan]
+enabled = true
+filter = seedcarto-scan
+logpath = /var/log/nginx/access.log
+port = 8080
+# nginx's own limit_req already throttles a single client to 5 req/min on
+# unknown paths (see nginx/default.conf); this is the longer-lived,
+# host-level ban for a client that keeps probing regardless.
+maxretry = 5
+findtime = 600
+bantime = 86400
