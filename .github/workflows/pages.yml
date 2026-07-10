@@ -2,7 +2,7 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -22,21 +22,42 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # every deploy rebuilds BOTH main (site root) and dev (staging, under
+      # /dev/) regardless of which branch triggered it, so a push to either
+      # one never wipes out the other's published copy
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: main
+          path: build-main
+          persist-credentials: false
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: dev
+          path: build-dev
           persist-credentials: false
       # publish only the runtime files (same set as the Docker image)
-      - run: |
-          mkdir _site
+      - name: Build main into the site root
+        working-directory: build-main
+        run: |
+          mkdir -p ../_site
           cp index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js \
              biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.js gallery.json errorreport.js \
              theme.js export.js mcfinder.js mcfinder.wasm \
-             manifest.webmanifest icon.svg sw.js version.js CNAME _site/
-          cp -r fonts _site/
-      # stamp the service-worker cache version with a content hash of the assets
-      # stamp the deployed version (release + commit) shown in the help dialog
-      - run: node scripts/app-version.js _site
-      - run: node scripts/sw-version.js _site
+             manifest.webmanifest icon.svg sw.js version.js CNAME ../_site/
+          cp -r fonts ../_site/
+          node scripts/app-version.js ../_site
+          node scripts/sw-version.js ../_site
+      - name: Build dev into /dev/ (staging preview)
+        working-directory: build-dev
+        run: |
+          mkdir -p ../_site/dev
+          cp index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js \
+             biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.js gallery.json \
+             theme.js export.js mcfinder.js mcfinder.wasm \
+             manifest.webmanifest icon.svg sw.js version.js ../_site/dev/
+          cp -r fonts ../_site/dev/
+          node scripts/app-version.js ../_site/dev
+          node scripts/sw-version.js ../_site/dev
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

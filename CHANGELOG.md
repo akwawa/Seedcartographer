@@ -7,6 +7,8 @@ projet adhère au [versionnage sémantique](https://semver.org/lang/fr/).
 
 **Règle de contribution** : chaque merge request ajoute son entrée dans la
 section « Non publié » (catégories : Ajouté / Modifié / Corrigé / Sécurité).
+Le travail courant d'un jalon part sur la branche `dev` (une MR par ticket,
+base `dev`) ; `dev` n'est fusionnée vers `main` qu'une fois le jalon terminé.
 Les releases sont automatisées par
 [release-please](https://github.com/googleapis/release-please) : une MR de
 release maintient le bump de version et une section générée depuis les
@@ -35,6 +37,20 @@ et la release GitHub.
 - Aide : mention que la génération (cubiomes) s'arrête à Minecraft 1.21 —
   le contenu des sorties 26.x (nouveaux biomes, structures) n'est pas
   encore généré ici ; traduit dans les 6 langues (#209).
+- Branche `dev` de staging : le travail courant d'un jalon part désormais sur
+  `dev` (fusionnée vers `main` seulement en fin de jalon) — CI complète
+  (tests, lint, Sonar, e2e, wasm, Lighthouse) sur push vers `dev` comme vers
+  `main` ; image Docker publiée sous le tag `dev` ; GitHub Pages déploie en
+  plus une prévisualisation sous `/dev/` à chaque déploiement, reconstruite
+  depuis les deux branches à chaque fois pour que l'une n'écrase jamais
+  l'autre (#207).
+
+### Corrigé
+- CI : badge OpenSSF Scorecard bloqué sur « invalid repo » — le pin
+  `github/codeql-action` utilisé par `scorecard.yml`/`codeql.yml` était trop
+  ancien et faisait échouer la vérification d'intégrité du workflow
+  (« imposter commit »), empêchant toute publication de résultats vers le
+  jeu de données public de Scorecard (#216).
 
 ## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
 
