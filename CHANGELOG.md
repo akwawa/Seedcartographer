@@ -51,6 +51,11 @@ et la release GitHub.
   ancien et faisait échouer la vérification d'intégrité du workflow
   (« imposter commit »), empêchant toute publication de résultats vers le
   jeu de données public de Scorecard (#216).
+- CI : job Docker (`docker.yml`) qui échouait systématiquement à l'étape SBOM
+  — les étapes SBOM/cosign reconstruisaient la référence d'image avec la
+  casse réelle du dépôt (`.../Seedcartographer`) au lieu de la forme en
+  minuscules réellement poussée sur GHCR ; `syft`/cosign ne pouvaient donc
+  jamais résoudre l'image à signer (#218).
 
 ## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
 
