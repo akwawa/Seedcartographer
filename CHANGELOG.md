@@ -16,6 +16,21 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
+
+
+### Ajouté
+
+* branche dev de staging avec CI et déploiement complets ([#208](https://github.com/akwawa/Seedcartographer/issues/208)) ([e100c89](https://github.com/akwawa/Seedcartographer/commit/e100c8958f932055b677925053a103a08d154ff6)), closes [#207](https://github.com/akwawa/Seedcartographer/issues/207)
+* code de synchronisation pour transférer le profil entre appareils ([#214](https://github.com/akwawa/Seedcartographer/issues/214)) ([c274751](https://github.com/akwawa/Seedcartographer/commit/c274751ed4db944c3010474564d002666c0f9d85)), closes [#211](https://github.com/akwawa/Seedcartographer/issues/211)
+* suivi d'erreurs en production via événements Umami ([#213](https://github.com/akwawa/Seedcartographer/issues/213)) ([8130da9](https://github.com/akwawa/Seedcartographer/commit/8130da944ff16966eb4e6c3f0df7debbe98dc42c))
+
+
+### Corrigé
+
+* **ci:** lowercase GHCR image ref for SBOM/cosign steps ([#219](https://github.com/akwawa/Seedcartographer/issues/219)) ([04ce853](https://github.com/akwawa/Seedcartographer/commit/04ce853c182c6c96d363588366823269d036c2a8)), closes [#218](https://github.com/akwawa/Seedcartographer/issues/218)
+* **ci:** re-pin github/codeql-action to v3.37.0 to fix Scorecard publish ([#217](https://github.com/akwawa/Seedcartographer/issues/217)) ([6a760c7](https://github.com/akwawa/Seedcartographer/commit/6a760c7b7cc3d64c078c0bf0660ca8e362f3779e)), closes [#216](https://github.com/akwawa/Seedcartographer/issues/216)
+
 ## [Non publié]
 
 ### Ajouté
