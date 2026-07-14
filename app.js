@@ -42,12 +42,25 @@ let minimapReq = 0, minimapTile = null;         // overview minimap tile
 const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> {e, cv}
 const galleryStructReqs = new Map();            // in-flight thumbnail structures: reqId -> {e, cv, colors}
 
+// Privacy-preserving error reporting: a small, PII-free event sent to Umami
+// (if loaded) so production crashes are visible without a third-party SDK —
+// never includes the seed, coordinates or any user input (see errorreport.js).
+function sendErrorEvent(kind, message, source, line) {
+  if (typeof umami === 'undefined' || typeof umami.track !== 'function') return;
+  try { umami.track('error', formatErrorEvent(kind, message, source, line)); } catch { /* ignore */ }
+}
+window.addEventListener('error', (e) => sendErrorEvent('error', e.message, e.filename, e.lineno));
+window.addEventListener('unhandledrejection', (e) => {
+  const reason = e.reason;
+  sendErrorEvent('promise', reason?.message || reason);
+});
+
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
 for (const w of [worker, searchWorker]) {
   w.engineReady = false;
   w.pending = [];
-  w.onerror = (e) => console.error('WORKER ERROR:', e.message, e.filename, e.lineno);
+  w.onerror = (e) => { console.error('WORKER ERROR:', e.message, e.filename, e.lineno); sendErrorEvent('worker', e.message, e.filename, e.lineno); };
   w.onmessageerror = (e) => console.error('WORKER MSGERROR', e);
 }
 function post(w, msg, transfer) {
@@ -2149,6 +2162,28 @@ async function init() {
     const f = profileImportInput.files[0];
     if (f) f.text().then(importProfileText);
     profileImportInput.value = '';
+  };
+  // sync code: same profile payload as export/import, moved via copy/paste
+  // (a compressed 'z.' code, same codec as share links) instead of a file —
+  // handy between devices with no easy file transfer.
+  const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
+  $('#syncCodeShow').onclick = () => {
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers })))
+      .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
+  };
+  $('#syncCodePaste').onclick = () => {
+    syncText.value = '';
+    syncBox.hidden = false;
+    syncApply.hidden = false;
+    syncText.focus();
+  };
+  $('#syncCodeCopy').onclick = () => { copyText(syncText.value).catch(() => {}); };
+  syncApply.onclick = () => {
+    decodeShareHash(syncText.value.trim()).then((decoded) => {
+      if (decoded == null) { $('#profileInfo').textContent = t('profileInvalid'); return; }
+      importProfileText(JSON.stringify(decoded));
+      syncBox.hidden = true;
+    });
   };
   // small screens: the criteria panel folds away so the map fills the screen
   $('#panelToggle').onclick = () => {

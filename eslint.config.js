@@ -63,7 +63,11 @@ module.exports = [
         THEME_COLORS: 'readonly', resolveTheme: 'readonly', otherTheme: 'readonly',
         APP_VERSION: 'readonly',
         validateGallery: 'readonly', galleryText: 'readonly', galleryThumbRender: 'readonly',
-        galleryStructRender: 'readonly', galleryThumbPoint: 'readonly'
+        galleryStructRender: 'readonly', galleryThumbPoint: 'readonly',
+        // provided by errorreport.js, loaded first
+        formatErrorEvent: 'readonly',
+        // provided by the Umami analytics script tag (index.html), if loaded
+        umami: 'readonly'
       }
     }
   },
@@ -157,7 +161,7 @@ module.exports = [
     }
   },
   {
-    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js', 'shapes.js', 'version.js'],
+    files: ['seed.js', 'search.js', 'slime.js', 'markers.js', 'presets.js', 'favorites.js', 'legend.js', 'theme.js', 'maptools.js', 'tilecache.js', 'sharestate.js', 'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'profile.js', 'gallery.js', 'shapes.js', 'version.js', 'errorreport.js'],
     languageOptions: {
       sourceType: 'script',
       globals: { module: 'readonly' }

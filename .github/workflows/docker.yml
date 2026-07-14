@@ -30,10 +30,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # GHCR/OCI refs must be lowercase; github.repository preserves the
+      # repo's actual case, so it can't be reused as-is for the sbom/cosign
+      # steps below (docker/metadata-action lowercases it internally, but
+      # only for its own tags output)
+      - id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ steps.repo.outputs.lower }}
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -51,7 +57,7 @@ jobs:
       - uses: anchore/sbom-action@8e94d75ddd33f69f691467e42275782e4bfefe84 # v0.20.9
         if: github.event_name != 'pull_request'
         with:
-          image: ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}
+          image: ghcr.io/${{ steps.repo.outputs.lower }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: sbom.spdx.json
           upload-artifact: false
@@ -60,7 +66,7 @@ jobs:
       - if: github.event_name != 'pull_request'
         env:
           COSIGN_EXPERIMENTAL: '1'
-          IMAGE_REF: ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}
+          IMAGE_REF: ghcr.io/${{ steps.repo.outputs.lower }}@${{ steps.build.outputs.digest }}
         run: |
           cosign sign --yes "$IMAGE_REF"
           cosign attest --yes --predicate sbom.spdx.json --type spdxjson "$IMAGE_REF"

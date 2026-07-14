@@ -18,14 +18,25 @@ et la release GitHub.
 
 ## [Non publié]
 
-### Corrigé
-- CI : badge OpenSSF Scorecard bloqué sur « invalid repo » — le pin
-  `github/codeql-action` utilisé par `scorecard.yml`/`codeql.yml` était trop
-  ancien et faisait échouer la vérification d'intégrité du workflow
-  (« imposter commit »), empêchant toute publication de résultats vers le
-  jeu de données public de Scorecard (#216).
+### Ajouté
+- Code de synchronisation pour le profil : dans le panneau Profil, « Obtenir
+  le code » encode favoris/presets/historique/marqueurs en un code
+  compressé (même codec que les liens de partage) à copier ; « Coller un
+  code » sur l'autre appareil le décode et fusionne (mêmes règles que
+  l'import fichier existant). Aucun serveur, aucun compte — tout reste
+  dans le navigateur (#211).
+- Suivi d'erreurs en production : les erreurs JS non attrapées, les
+  promesses rejetées et les erreurs du worker envoient un événement Umami
+  personnalisé (`error`) — message tronqué, nom de fichier seul (jamais
+  d'URL complète), aucune seed ni coordonnée. Rien n'est envoyé si Umami
+  n'est pas chargé (mode hors-ligne/dev). Logique de formatage pure et
+  testée (`errorreport.js`) ; câblage `window.onerror`/
+  `unhandledrejection`/`worker.onerror` vérifié par un test e2e (#210).
 
 ### Modifié
+- Aide : mention que la génération (cubiomes) s'arrête à Minecraft 1.21 —
+  le contenu des sorties 26.x (nouveaux biomes, structures) n'est pas
+  encore généré ici ; traduit dans les 6 langues (#209).
 - Branche `dev` de staging : le travail courant d'un jalon part désormais sur
   `dev` (fusionnée vers `main` seulement en fin de jalon) — CI complète
   (tests, lint, Sonar, e2e, wasm, Lighthouse) sur push vers `dev` comme vers
@@ -33,6 +44,18 @@ et la release GitHub.
   plus une prévisualisation sous `/dev/` à chaque déploiement, reconstruite
   depuis les deux branches à chaque fois pour que l'une n'écrase jamais
   l'autre (#207).
+
+### Corrigé
+- CI : badge OpenSSF Scorecard bloqué sur « invalid repo » — le pin
+  `github/codeql-action` utilisé par `scorecard.yml`/`codeql.yml` était trop
+  ancien et faisait échouer la vérification d'intégrité du workflow
+  (« imposter commit »), empêchant toute publication de résultats vers le
+  jeu de données public de Scorecard (#216).
+- CI : job Docker (`docker.yml`) qui échouait systématiquement à l'étape SBOM
+  — les étapes SBOM/cosign reconstruisaient la référence d'image avec la
+  casse réelle du dépôt (`.../Seedcartographer`) au lieu de la forme en
+  minuscules réellement poussée sur GHCR ; `syft`/cosign ne pouvaient donc
+  jamais résoudre l'image à signer (#218).
 
 ## [0.7.0](https://github.com/akwawa/Seedcartographer/compare/v0.6.0...v0.7.0) (2026-07-09)
 

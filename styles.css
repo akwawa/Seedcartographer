@@ -117,6 +117,9 @@ main{flex:1 1 auto;display:flex;min-height:0}
 
 .export{display:flex;gap:6px;margin-bottom:8px}
 .export[hidden]{display:none}
+.syncbox{display:flex;flex-direction:column;gap:6px}
+.syncbox[hidden]{display:none}
+.synccode{width:100%;resize:vertical;font-size:11px}
 
 /* ---------- results ---------- */
 .results{display:flex;flex-direction:column;gap:6px}
