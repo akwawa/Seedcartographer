@@ -16,7 +16,7 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [Non publié]
+## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
 
 ### Ajouté
 - Code de synchronisation pour le profil : dans le panneau Profil, « Obtenir
