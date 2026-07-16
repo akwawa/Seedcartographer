@@ -24,6 +24,13 @@ et la release GitHub.
   rafraîchit) automatiquement une issue quand l'amont avance — pour ne pas
   rater l'arrivée du support des versions 26.x (#225).
 
+### Modifié
+- Migration ES modules, étape 1 : la couche de test Node passe en modules
+  ES natifs (`test/*.test.mjs`, `import` pour les builtins Node,
+  `createRequire` pour charger les sources encore double-mode CommonJS).
+  Aucun changement côté navigateur : les sources restent chargées par
+  balises `<script>` classiques et `importScripts` (#224).
+
 ## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
 
 ### Ajouté
