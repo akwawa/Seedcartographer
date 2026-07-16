@@ -172,9 +172,18 @@ module.exports = [
     }
   },
   {
-    files: ['test/**/*.js', 'scripts/**/*.js', 'eslint.config.js', 'playwright.config.js'],
+    files: ['scripts/**/*.js', 'eslint.config.js', 'playwright.config.js'],
     languageOptions: {
       sourceType: 'commonjs',
+      globals: { ...globals.node }
+    }
+  },
+  {
+    // Node tests are ES modules; the double-mode app sources they exercise
+    // are still CommonJS, loaded through createRequire (see #224, MR 1)
+    files: ['test/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
       globals: { ...globals.node }
     }
   },
