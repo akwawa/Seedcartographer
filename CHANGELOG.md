@@ -41,6 +41,17 @@ et la release GitHub.
   palette, tilegrid, relief) restent des scripts classiques à globals
   jusqu'à l'étape 3 ; les tests Node importent désormais directement les
   sources converties (#224).
+- Migration ES modules, étape 3 (finale) : `worker.js` devient un module
+  worker (`new Worker(..., { type: 'module' })`, `import` au lieu
+  d'`importScripts`) et la glue Emscripten est rebâtie en module ES
+  (`-sEXPORT_ES6=1` dans `build.sh`, emsdk 6.0.2). Les huit derniers
+  fichiers classiques (seed, shapes, search, slime, markers, palette,
+  tilegrid, relief) passent en `export` natif ; `app.js` les importe
+  explicitement — ce qui corrige au passage l'import manquant de
+  `sortHitsByDist` (tri des résultats par distance au spawn) — et
+  `index.html` ne charge plus que le module `app.js`. Plus aucun
+  `createRequire` dans les tests Node, plus de top-level await dans
+  `seedsearch.js` (#224).
 
 ## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
 

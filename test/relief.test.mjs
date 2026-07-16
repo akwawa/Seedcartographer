@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { reliefSampleStep, hillshade, upsampleShade, RELIEF_MIN, RELIEF_MAX } = require('../relief.js');
+import { reliefSampleStep, hillshade, upsampleShade, RELIEF_MIN, RELIEF_MAX } from '../relief.js';
 
 test('reliefSampleStep is finer at close zoom, coarser far out', () => {
   assert.strictEqual(reliefSampleStep(4), 4);

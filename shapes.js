@@ -1,9 +1,8 @@
 // shapes.js — geographic-pattern detection on a biome grid: island (land
 // enclosed by water), lagoon/bay (water enclosed by land) and enclave
 // (biome A enclosed by biome B), via bounded connected-component analysis.
-// Pure, shared between worker.js (importScripts, via search.js) and the
-// Node test suite (require).
-'use strict';
+// Pure ES module shared between worker.js (via search.js) and the Node
+// test suite.
 
 // water biome ids (cubiomes): oceans, deep oceans, rivers and their frozen
 // variants — everything a boat floats on
@@ -123,9 +122,4 @@ function shapePass(shapes, shapeAll, g, ci, cj) {
   return pass;
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    WATER_BIOMES, SHAPE_KINDS, SHAPE_MAX_BLOCKS,
-    floodComponent, prepShapeClauses, shapeClauseOk, shapePass
-  };
-}
+export { WATER_BIOMES, SHAPE_KINDS, SHAPE_MAX_BLOCKS, floodComponent, prepShapeClauses, shapeClauseOk, shapePass };

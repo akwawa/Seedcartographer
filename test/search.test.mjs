@@ -1,8 +1,8 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { scanGrid, sortHitsByDist } = require('../search.js');
+import { scanGrid, sortHitsByDist } from '../search.js';
+import { pairMidpoints } from '../search.js';
+import { SEARCH_MAX_HITS } from '../search.js';
 
 // Small synthetic world: SC=16, grid origin at 0/0, scan the whole grid.
 const SC = 16;
@@ -151,8 +151,7 @@ test('surface clause filters candidates and only samples passing cells', () => {
 });
 
 test('pairMidpoints yields midpoints of distinct close pairs only', () => {
-  const { pairMidpoints } = require('../search.js');
-  const a = [[0, 0], [1000, 1000]];
+    const a = [[0, 0], [1000, 1000]];
   const b = [[100, 0], [5000, 5000], [0, 0]];
   // (0,0)-(100,0) is the only pair within 200; identical points are skipped
   assert.deepStrictEqual(pairMidpoints(a, b, 200), [[50, 0]]);
@@ -182,7 +181,6 @@ test('inMain structure clauses only count structures on main-set cells', () => {
   assert.ok(scanGrid(params).length > 0);
 });
 
-const { SEARCH_MAX_HITS } = require('../search.js');
 
 test('or-mode structure clauses reject a cell when none matches', () => {
   const grid = [7, 7, 7, 7];

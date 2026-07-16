@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { seedToBigInt } = require('../seed.js');
+import { seedToBigInt } from '../seed.js';
 
 test('numeric seeds pass through as 64-bit integers', () => {
   assert.strictEqual(seedToBigInt('141'), 141n);

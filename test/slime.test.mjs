@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { isSlimeChunk, slimeChunksInBox, SLIME_STRUCT_TYPE } = require('../slime.js');
+import { isSlimeChunk, slimeChunksInBox, SLIME_STRUCT_TYPE } from '../slime.js';
 
 // fixtures cross-checked against an independent Java-Random implementation
 test('known slime chunks for seed 141', () => {

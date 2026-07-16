@@ -1,8 +1,7 @@
 // app.js — UI, map rendering, search orchestration. Talks to worker.js.
-// ES module: the pure-logic helpers are explicit imports below. The files
-// shared with worker.js via importScripts (seed.js, slime.js, markers.js,
-// palette.js, tilegrid.js — see #224 MR 3) cannot carry `export`, so they
-// stay classic <script> tags in index.html and are still read as globals.
+// ES module: every pure-logic helper is an explicit import below; the
+// worker-shared modules (seed.js, slime.js, markers.js, palette.js,
+// tilegrid.js, search.js) are plain ES modules too (#224 MR 3).
 import { t, applyI18n, setLang, currentLang, I18N_LANGS } from './i18n.js';
 import { biomeLabel } from './biomes.js';
 import { convertCoords } from './coords.js';
@@ -31,12 +30,17 @@ import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
 import { resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV } from './export.js';
 import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
+import { sortHitsByDist } from './search.js';
+import { SLIME_STRUCT_TYPE } from './slime.js';
+import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
+import { altRgb } from './palette.js';
+import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
 // the sliced search job on the other, so a long search never delays a tile
 // render or a biome probe (at the cost of a second WASM instance in memory).
-const worker = new Worker('./worker.js');
-const searchWorker = new Worker('./worker.js');
+const worker = new Worker('./worker.js', { type: 'module' });
+const searchWorker = new Worker('./worker.js', { type: 'module' });
 let MC_NEWEST = 28;
 let reqSeq = 1;
 
@@ -1102,7 +1106,7 @@ let seedMsgBase = null, seedStart = '0', seedMode = 'random';
 function getSeedPool() {
   const target = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
   while (seedPool.length < target) {
-    const w = new Worker('./worker.js');
+    const w = new Worker('./worker.js', { type: 'module' });
     w.engineReady = false; w.pending = []; w.idle = true;
     w.onerror = (e) => console.error('SEED WORKER ERROR:', e.message);
     w.onmessage = (e) => {

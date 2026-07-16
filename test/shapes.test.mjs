@@ -1,9 +1,7 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { WATER_BIOMES, floodComponent, prepShapeClauses, shapeClauseOk, shapePass } = require('../shapes.js');
-const { scanGrid } = require('../search.js');
+import { WATER_BIOMES, floodComponent, prepShapeClauses, shapeClauseOk, shapePass } from '../shapes.js';
+import { scanGrid } from '../search.js';
 
 const SC = 16;
 const LAND = 1, PLAINS = 1, DESERT = 2, OCEAN = 0;

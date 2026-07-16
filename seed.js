@@ -1,6 +1,5 @@
 // seed.js — converts the seed input string to a 64-bit world seed.
-// Shared between worker.js (importScripts) and the Node test suite (require).
-'use strict';
+// ES module shared between worker.js and the Node test suite.
 
 // Java String.hashCode, then sign-extended to 64 bits — matches Minecraft.
 /**
@@ -21,4 +20,4 @@ function seedToBigInt(s) {
   return BigInt(h); // signed 32-bit -> BigInt is already sign-correct
 }
 
-if (typeof module !== 'undefined' && module.exports) module.exports = { seedToBigInt };
+export { seedToBigInt };

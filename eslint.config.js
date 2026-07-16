@@ -1,7 +1,5 @@
-// ESLint flat config. The page is an ES module graph rooted at app.js; only
-// the files shared with worker.js via importScripts (seed.js, search.js,
-// shapes.js, slime.js, markers.js, palette.js, tilegrid.js, relief.js) stay
-// plain scripts sharing globals, declared per environment below (#224).
+// ESLint flat config. The whole app is an ES module graph rooted at app.js
+// and worker.js (module worker); the Node tests import the same files (#224).
 'use strict';
 const globals = require('globals');
 const js = require('@eslint/js');
@@ -34,15 +32,6 @@ module.exports = [
       sourceType: 'module',
       globals: {
         ...globals.browser,
-        // classic scripts shared with worker.js (importScripts), loaded first
-        seedToBigInt: 'readonly',                                          // seed.js
-        SLIME_STRUCT_TYPE: 'readonly',                                     // slime.js
-        SPAWN_STRUCT_TYPE: 'readonly', STRONGHOLD_STRUCT_TYPE: 'readonly', // markers.js
-        QUADHUT_STRUCT_TYPE: 'readonly',
-        altRgb: 'readonly',                                                // palette.js
-        TILE_GRID_CACHE_MAX: 'readonly', TILE_PAINT_MAX: 'readonly',       // tilegrid.js
-        renderScaleFor: 'readonly', tilesForView: 'readonly', unionPresent: 'readonly',
-        sortHitsByDist: 'readonly',                                        // search.js
         // provided by the Umami analytics script tag (index.html), if loaded
         umami: 'readonly'
       }
@@ -55,18 +44,13 @@ module.exports = [
       'legend.js', 'maptools.js', 'tilecache.js', 'sharestate.js',
       'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js',
       'profile.js', 'gallery.js', 'theme.js', 'export.js', 'version.js',
-      'errorreport.js'
+      'errorreport.js', 'seed.js', 'search.js', 'shapes.js', 'slime.js',
+      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js'
     ],
     languageOptions: {
       sourceType: 'module',
       globals: { ...globals.browser }
     }
-  },
-  {
-    // search.js consumes shapes.js (importScripts in the worker, require in
-    // Node)
-    files: ['search.js'],
-    languageOptions: { globals: { require: 'readonly', prepShapeClauses: 'readonly', shapePass: 'readonly', globalThis: 'readonly' } }
   },
   {
     // sharestate.js runs in the browser (btoa/atob) and in Node tests (Buffer)
@@ -83,37 +67,8 @@ module.exports = [
   {
     files: ['worker.js'],
     languageOptions: {
-      sourceType: 'script',
-      globals: {
-        ...globals.worker,
-        createMcFinder: 'readonly',   // mcfinder.js glue
-        seedToBigInt: 'readonly',     // seed.js
-        scanGrid: 'readonly',         // search.js
-        SEARCH_MAX_CELLS: 'readonly',
-        SEARCH_MAX_HITS: 'readonly',
-        slimeChunksInBox: 'readonly', // slime.js
-        SLIME_STRUCT_TYPE: 'readonly',
-        pairMidpoints: 'readonly',    // search.js
-        altBiomeColors: 'readonly',   // palette.js
-        TILE_CELLS: 'readonly',       // tilegrid.js
-        reliefSampleStep: 'readonly', // relief.js
-        hillshade: 'readonly',
-        upsampleShade: 'readonly',
-        SPAWN_STRUCT_TYPE: 'readonly',       // markers.js
-        STRONGHOLD_STRUCT_TYPE: 'readonly',
-        QUADHUT_STRUCT_TYPE: 'readonly'
-      }
-    }
-  },
-  {
-    files: ['seed.js', 'search.js', 'shapes.js', 'slime.js', 'markers.js', 'palette.js', 'tilegrid.js', 'relief.js'],
-    languageOptions: {
-      sourceType: 'script',
-      globals: { module: 'readonly' }
-    },
-    rules: {
-      // define the API consumed by worker.js via importScripts
-      'no-unused-vars': 'off'
+      sourceType: 'module',
+      globals: { ...globals.worker }
     }
   },
   {
@@ -124,8 +79,7 @@ module.exports = [
     }
   },
   {
-    // Node tests are ES modules; the converted app sources are imported
-    // directly, the worker-shared CommonJS ones through createRequire (#224)
+    // Node tests are ES modules importing the app sources directly (#224)
     files: ['test/**/*.mjs'],
     languageOptions: {
       sourceType: 'module',

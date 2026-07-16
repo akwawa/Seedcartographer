@@ -267,15 +267,8 @@
   </p>
 </dialog>
 
-<!-- Classic scripts: files shared with worker.js via importScripts (see #224
-     MR 3) cannot carry `export`, so they keep exposing globals and must run
-     before the app module (classic scripts always execute before modules). -->
-<script src="./slime.js"></script>
-<script src="./markers.js"></script>
-<script src="./tilegrid.js"></script>
-<script src="./seed.js"></script>
-<script src="./palette.js"></script>
-<!-- Everything else is an ES module imported (directly or transitively) by app.js. -->
+<!-- The whole app is an ES module graph imported (directly or transitively)
+     by app.js; worker.js is a module worker sharing the same files (#224). -->
 <script type="module" src="./app.js"></script>
 </body>
 </html>
