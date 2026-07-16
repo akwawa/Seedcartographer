@@ -23,6 +23,7 @@ emcc mcfinder.c \
   -O3 \
   -sWASM=1 \
   -sMODULARIZE=1 \
+  -sEXPORT_ES6=1 \
   -sEXPORT_NAME=createMcFinder \
   -sWASM_BIGINT=1 \
   -sALLOW_MEMORY_GROWTH=1 \

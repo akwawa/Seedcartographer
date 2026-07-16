@@ -1,9 +1,8 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
 import { BIOME_NAMES, biomeLabel, prettifyBiome } from '../biomes.js';
 import { currentLang } from '../i18n.js';
+import { readFileSync } from 'node:fs';
 
 test('all translated languages cover exactly the same biome set', () => {
   const langs = Object.keys(BIOME_NAMES);
@@ -51,7 +50,7 @@ test('biomeLabel defaults to the UI language exported by i18n.js', () => {
 
 test('every language translates the full cubiomes biome list', () => {
   // canonical name list straight from the pinned cubiomes submodule
-  const src = require('node:fs').readFileSync('cubiomes/util.c', 'utf8');
+  const src = readFileSync('cubiomes/util.c', 'utf8');
   const body = src.match(/biome2str[^{]*\{([^]*?)\n\}/)[1];
   const names = [...new Set([...body.matchAll(/return "(\w+)"/g)].map((m) => m[1]))];
   assert.ok(names.length >= 100);

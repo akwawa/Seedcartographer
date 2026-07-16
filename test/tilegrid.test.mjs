@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { TILE_CELLS, renderScaleFor, tilesForView, unionPresent } = require('../tilegrid.js');
+import { TILE_CELLS, renderScaleFor, tilesForView, unionPresent } from '../tilegrid.js';
 
 test('renderScaleFor mirrors the worker scale ladder', () => {
   assert.strictEqual(renderScaleFor(0.5), 4);

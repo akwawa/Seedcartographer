@@ -1,12 +1,11 @@
 // palette.js — high-visibility (colorblind-friendly) biome colors. Pure,
-// shared between worker.js (importScripts, tile painting), app.js (script
-// tag, legend and dropdown swatches) and the Node test suite (require).
+// ES module shared between worker.js (tile painting), app.js (legend and
+// dropdown swatches) and the Node test suite.
 //
 // The alternative palette cycles the Okabe–Ito colorblind-safe hues by biome
 // id and modulates each hue by the ORIGINAL color's luminance, so the
 // land/water/elevation structure of the default map survives while every
 // hue stays distinguishable under the common color-vision deficiencies.
-'use strict';
 
 /** @type {Array<[number, number, number]>} Okabe–Ito palette (Ito & Okabe, 2008) */
 const OKABE_ITO = [
@@ -43,6 +42,4 @@ function altBiomeColors(baseTable) {
   return out;
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { OKABE_ITO, altRgb, altBiomeColors };
-}
+export { OKABE_ITO, altRgb, altBiomeColors };

@@ -1,12 +1,8 @@
 // seedsearch.js — pure planning logic for the multi-seed search: candidate
 // seed generation (sequential range or random) and batch distribution over a
-// worker pool. Shared between app.js (script tag) and the Node test suite.
+// worker pool. ES module shared between app.js and the Node test suite.
 
-// Browser: seed.js stays a classic script (shared with worker.js via
-// importScripts, see #224 MR 3) and is loaded before this module, so its
-// global is already there and the dynamic import never runs; Node tests:
-// import the CommonJS module lazily (top-level await).
-const toSeed = /** @type {any} */ (globalThis).seedToBigInt || (await import('./seed.js')).seedToBigInt;
+import { seedToBigInt as toSeed } from './seed.js';
 
 export const SEED_SEARCH_MAX_TOTAL = 100000;   // seeds tested per run, sanity cap
 export const SEED_SEARCH_MAX_FOUND = 50;       // candidate list cap

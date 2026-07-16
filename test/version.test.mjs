@@ -1,11 +1,10 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
 import { APP_VERSION } from '../version.js';
-const { stampAppVersion, stampDir } = require('../scripts/app-version.js');
 import fs from 'node:fs';
 import path from 'node:path';
+import { stampAppVersion, stampDir } from '../scripts/app-version.js';
+import { gitShortCommit } from '../scripts/app-version.js';
 
 test('the checked-in version.js is the dev placeholder', () => {
   assert.deepStrictEqual(APP_VERSION, { version: 'dev', commit: '' });
@@ -31,8 +30,7 @@ test('stampDir stamps a copy of version.js from package.json', () => {
 });
 
 test('gitShortCommit reads HEAD, loose refs, packed-refs and rejects junk', () => {
-  const { gitShortCommit } = require('../scripts/app-version.js');
-  const dir = fs.mkdtempSync(path.resolve(import.meta.dirname, '..', '.tmp-swv-'));
+    const dir = fs.mkdtempSync(path.resolve(import.meta.dirname, '..', '.tmp-swv-'));
   const sha = 'a'.repeat(40);
   // detached HEAD: the sha is right in HEAD
   fs.writeFileSync(path.join(dir, 'HEAD'), sha + '\n');

@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { buildGrid, buildPoints, runScenario, bench } = require('../scripts/bench-scan.js');
+import { buildGrid, buildPoints, runScenario, bench } from '../scripts/bench-scan.js';
 
 test('the synthetic grid is deterministic and uses only the given biomes', () => {
   const a = buildGrid(50, 50, [1, 44]);

@@ -1,7 +1,6 @@
 // slime.js — slime-chunk math, straight from the seed (Java RNG), no cubiomes
-// involved. Shared between worker.js (importScripts), app.js (script tag,
-// for the SLIME_STRUCT_TYPE constant) and the Node test suite (require).
-'use strict';
+// involved. ES module shared between worker.js, app.js (for the
+// SLIME_STRUCT_TYPE constant) and the Node test suite.
 
 // synthetic "structure" type routed to this module instead of the WASM engine
 // by worker.js; must never collide with a cubiomes StructureType enum value
@@ -66,6 +65,4 @@ function slimeChunksInBox(worldSeed, x0, z0, x1, z1, max) {
   return out;
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { isSlimeChunk, slimeChunksInBox, SLIME_STRUCT_TYPE };
-}
+export { isSlimeChunk, slimeChunksInBox, SLIME_STRUCT_TYPE };

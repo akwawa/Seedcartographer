@@ -1,7 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { seedToBigInt } from '../seed.js';
 import {
   SEED_SEARCH_MAX_TOTAL, sequentialSeeds, randomSeeds, planBatches,
   originDist, compareCandidates, insertCandidate, serializeSeedRun, parseSeedRun
@@ -14,7 +13,7 @@ test('sequentialSeeds counts from the start seed with 64-bit wraparound', () => 
   assert.deepStrictEqual(sequentialSeeds('9223372036854775807', 0, 2),
     ['9223372036854775807', '-9223372036854775808']);
   // a text seed starts from its Java hash, like Minecraft
-  assert.strictEqual(sequentialSeeds('herobrine', 0, 1)[0], String(require('../seed.js').seedToBigInt('herobrine')));
+  assert.strictEqual(sequentialSeeds('herobrine', 0, 1)[0], String(seedToBigInt('herobrine')));
 });
 
 test('randomSeeds builds signed 64-bit seeds from the rand callback', () => {

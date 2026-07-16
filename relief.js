@@ -1,9 +1,7 @@
 // relief.js — pure hillshade math for the terrain relief layer (Overworld).
 // The worker samples the engine's approximate surface height on a coarse
 // grid over each tile, this module turns those heights into per-cell shade
-// multipliers. Shared between worker.js (importScripts) and the Node test
-// suite (require).
-'use strict';
+// multipliers. ES module shared between worker.js and the Node test suite.
 
 // Sampling step in tile cells: heights are sampled every STEP cells and
 // upsampled bilinearly, keeping the engine-call cost per tile bounded.
@@ -75,6 +73,4 @@ function upsampleShade(shade, sCols, sRows, step, cols, rows) {
   return out;
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { reliefSampleStep, hillshade, upsampleShade, RELIEF_MIN, RELIEF_MAX };
-}
+export { reliefSampleStep, hillshade, upsampleShade, RELIEF_MIN, RELIEF_MAX };

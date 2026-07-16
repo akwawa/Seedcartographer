@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { OKABE_ITO, altRgb, altBiomeColors } = require('../palette.js');
+import { OKABE_ITO, altRgb, altBiomeColors } from '../palette.js';
 
 test('altRgb shades a safe hue by the base luminance', () => {
   // black stays dark but never fully black (hue must stay readable)

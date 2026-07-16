@@ -1,10 +1,8 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
-const { parseAssets, contentVersion, stampVersion, stampDir } = require('../scripts/sw-version.js');
+import { parseAssets, contentVersion, stampVersion, stampDir } from '../scripts/sw-version.js';
 
 const SW = "const VERSION = 'seedcartographer-dev';\nconst ASSETS = [\n  './',\n  './index.html',\n  './app.js'\n];\n";
 
