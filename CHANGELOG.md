@@ -30,6 +30,17 @@ et la release GitHub.
   `createRequire` pour charger les sources encore double-mode CommonJS).
   Aucun changement côté navigateur : les sources restent chargées par
   balises `<script>` classiques et `importScripts` (#224).
+- Migration ES modules, étape 2 : la page principale passe en modules ES —
+  `index.html` charge `app.js` via `<script type="module">` et `app.js`
+  importe explicitement ses dépendances pure-logique (i18n, biomes, coords,
+  presets, favoris, légende, outils carte, caches de tuiles, partage,
+  recherche de seeds, historique, presets/marqueurs utilisateur, profil,
+  galerie, thème, export, version, rapport d'erreurs), qui perdent leur
+  garde CommonJS au profit d'`export`. Les fichiers partagés avec
+  `worker.js` via `importScripts` (seed, shapes, search, slime, markers,
+  palette, tilegrid, relief) restent des scripts classiques à globals
+  jusqu'à l'étape 3 ; les tests Node importent désormais directement les
+  sources converties (#224).
 
 ## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
 

@@ -1,9 +1,8 @@
 // favorites.js — pinned places with free-text notes. Pure list operations,
 // shared between app.js (script tag, backed by localStorage) and the Node
 // test suite (require). No data ever leaves the browser.
-'use strict';
 
-const FAV_MAX = 200;   // sanity cap so localStorage cannot grow unbounded
+export const FAV_MAX = 200;   // sanity cap so localStorage cannot grow unbounded
 
 // a favorite is bound to the exact world it was found in
 /**
@@ -14,7 +13,7 @@ const FAV_MAX = 200;   // sanity cap so localStorage cannot grow unbounded
  * @param {Favorite} f
  * @returns {World} the world the favorite is bound to
  */
-function favWorld(f) {
+export function favWorld(f) {
   return { seed: String(f.seed), mc: f.mc, large: !!f.large, dim: f.dim };
 }
 /**
@@ -41,7 +40,7 @@ function nextFavId(list) {
  * @param {World & {x: number, z: number, note?: string}} fav spot to pin
  * @returns {Favorite[]} new list (input untouched)
  */
-function addFavorite(list, fav) {
+export function addFavorite(list, fav) {
   if (list.length >= FAV_MAX) return list;
   if (findFavorite(list, fav, fav) !== undefined) return list;
   return [...list, { ...fav, note: fav.note || '', id: nextFavId(list) }];
@@ -53,7 +52,7 @@ function addFavorite(list, fav) {
  * @param {{x: number, z: number}} spot
  * @returns {Favorite|undefined}
  */
-function findFavorite(list, world, spot) {
+export function findFavorite(list, world, spot) {
   return list.find((f) => sameWorld(f, world) && f.x === spot.x && f.z === spot.z);
 }
 
@@ -62,7 +61,7 @@ function findFavorite(list, world, spot) {
  * @param {number} id
  * @returns {Favorite[]} new list without the favorite
  */
-function removeFavorite(list, id) {
+export function removeFavorite(list, id) {
   return list.filter((f) => f.id !== id);
 }
 
@@ -72,7 +71,7 @@ function removeFavorite(list, id) {
  * @param {string} note
  * @returns {Favorite[]} new list with the note replaced
  */
-function updateFavoriteNote(list, id, note) {
+export function updateFavoriteNote(list, id, note) {
   return list.map((f) => (f.id === id ? { ...f, note: String(note) } : f));
 }
 
@@ -81,7 +80,7 @@ function updateFavoriteNote(list, id, note) {
  * @param {World} world
  * @returns {Favorite[]} favorites bound to this exact world
  */
-function favoritesFor(list, world) {
+export function favoritesFor(list, world) {
   return list.filter((f) => sameWorld(f, world));
 }
 
@@ -105,7 +104,7 @@ function normalizeFavorite(f) {
  * @param {string|null} json raw localStorage payload
  * @returns {Favorite[]} well-formed favorites only
  */
-function parseFavorites(json) {
+export function parseFavorites(json) {
   let raw;
   try { raw = JSON.parse(json); } catch { return []; }
   if (!Array.isArray(raw)) return [];
@@ -115,11 +114,4 @@ function parseFavorites(json) {
     if (fav && !byId.has(fav.id)) byId.set(fav.id, fav);
   }
   return [...byId.values()];
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    FAV_MAX, favWorld, addFavorite, findFavorite, removeFavorite,
-    updateFavoriteNote, favoritesFor, parseFavorites
-  };
 }

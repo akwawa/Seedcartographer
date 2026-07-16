@@ -1,10 +1,11 @@
 // biomes.js — cubiomes technical biome id -> localized display name.
 // English falls back to prettified technical names (which match the official
-// English names); FR/ES/DE carry explicit tables. Loaded after i18n.js;
-// also required by the Node test suite.
-'use strict';
+// English names); FR/ES/DE carry explicit tables. ES module, circular with
+// i18n.js (each only calls the other's bindings at call time); also imported
+// by the Node test suite.
+import { currentLang } from './i18n.js';
 
-const BIOME_NAMES = {
+export const BIOME_NAMES = {
   fr: {
     badlands: 'Badlands',
     badlands_plateau: 'Plateau de badlands',
@@ -548,17 +549,13 @@ const BIOME_NAMES = {
 };
 
 // "cherry_grove" -> "Cherry Grove"; matches the official English biome names.
-function prettifyBiome(name) {
+export function prettifyBiome(name) {
   return String(name).split('_').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 }
 
 // Localized label for a technical biome name; lang defaults to the UI
 // language (currentLang from i18n.js), unknown entries fall back to English.
-function biomeLabel(name, lang) {
-  const l = lang || (typeof currentLang !== 'undefined' ? currentLang : 'en');
+export function biomeLabel(name, lang) {
+  const l = lang || currentLang();
   return BIOME_NAMES[l]?.[name] || prettifyBiome(name);
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { BIOME_NAMES, biomeLabel, prettifyBiome };
 }

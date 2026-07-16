@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { parseLocationsCSV, splitCSVLine, resultsToCSV } = require('../export.js');
+import { parseLocationsCSV, splitCSVLine, resultsToCSV } from '../export.js';
 
 test('round-trip: the CSV export parses back into the same pins', () => {
   const hits = [{ x: 128, z: -256, count: 3 }, { x: -1024, z: 512, count: 0 }];

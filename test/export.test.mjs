@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { resultsToCSV, resultsToJSON, csvField } = require('../export.js');
+import { resultsToCSV, resultsToJSON, csvField } from '../export.js';
 
 const HITS = [{ x: 128, z: -256, count: 3 }, { x: -1024, z: 512, count: 0 }];
 const META = { seed: '141', mcLabel: '1.21', large: false, criteria: { mainBiomes: [185] } };

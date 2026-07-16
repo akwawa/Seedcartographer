@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const {
+import {
   encodeShareState, decodeShareState, encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
   sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
-} = require('../sharestate.js');
+} from '../sharestate.js';
 
 test('share state round-trips through the hash encoding', () => {
   const state = { s: '141', m: 28, l: 0, d: 0, y: 60, x: -392, z: 56, b: 2.2, c: { mb: [185] } };

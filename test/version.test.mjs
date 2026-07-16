@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { APP_VERSION } = require('../version.js');
+import { APP_VERSION } from '../version.js';
 const { stampAppVersion, stampDir } = require('../scripts/app-version.js');
 import fs from 'node:fs';
 import path from 'node:path';

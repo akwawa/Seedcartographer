@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { I18N, I18N_LANGS } = require('../i18n.js');
+import { I18N, I18N_LANGS } from '../i18n.js';
 
 test('every locale in the language picker has a translation table', () => {
   for (const [code] of I18N_LANGS) assert.ok(I18N[code], `missing table for ${code}`);

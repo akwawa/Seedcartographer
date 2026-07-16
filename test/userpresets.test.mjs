@@ -1,10 +1,8 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const {
+import {
   USER_PRESET_MAX, USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets
-} = require('../userpresets.js');
+} from '../userpresets.js';
 
 const crit = { mb: [185], am: 'and' };
 

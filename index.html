@@ -267,30 +267,15 @@
   </p>
 </dialog>
 
-<script src="./i18n.js"></script>
-<script src="./biomes.js"></script>
-<script src="./coords.js"></script>
+<!-- Classic scripts: files shared with worker.js via importScripts (see #224
+     MR 3) cannot carry `export`, so they keep exposing globals and must run
+     before the app module (classic scripts always execute before modules). -->
 <script src="./slime.js"></script>
 <script src="./markers.js"></script>
-<script src="./presets.js"></script>
-<script src="./favorites.js"></script>
-<script src="./legend.js"></script>
-<script src="./maptools.js"></script>
-<script src="./tilecache.js"></script>
 <script src="./tilegrid.js"></script>
-<script src="./sharestate.js"></script>
 <script src="./seed.js"></script>
-<script src="./seedsearch.js"></script>
-<script src="./searchhistory.js"></script>
-<script src="./userpresets.js"></script>
-<script src="./usermarkers.js"></script>
-<script src="./version.js"></script>
-<script src="./profile.js"></script>
 <script src="./palette.js"></script>
-<script src="./theme.js"></script>
-<script src="./export.js"></script>
-<script src="./gallery.js"></script>
-<script src="./errorreport.js"></script>
-<script src="./app.js"></script>
+<!-- Everything else is an ES module imported (directly or transitively) by app.js. -->
+<script type="module" src="./app.js"></script>
 </body>
 </html>

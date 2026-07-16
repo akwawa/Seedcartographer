@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { mapCartoucheLines, exportFileName } = require('../export.js');
+import { mapCartoucheLines, exportFileName } from '../export.js';
 
 test('cartouche lines describe seed, version, dimension and center', () => {
   const lines = mapCartoucheLines({

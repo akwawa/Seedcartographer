@@ -2,7 +2,6 @@
 // forms: base64 state (de)serialization, sanitization of attacker-controlled
 // hash values, legacy-link migration and view/world coordinate transforms.
 // Shared between app.js (script tag) and the Node test suite (require).
-'use strict';
 
 // btoa/atob exist in browsers AND in Node >= 16 (the test runtime), so the
 // Buffer fallback only runs on exotic runtimes: excluded from coverage.
@@ -15,14 +14,14 @@ const b64decode = typeof atob === 'function' ? atob : (/** @type {string} */ s) 
  * @param {object} state plain JSON-serializable share state
  * @returns {string} hash payload (without the leading '#')
  */
-function encodeShareState(state) {
+export function encodeShareState(state) {
   return b64encode(encodeURIComponent(JSON.stringify(state)));
 }
 /**
  * @param {string} hash payload (without the leading '#'), untrusted
  * @returns {any|null} parsed state, or null when malformed
  */
-function decodeShareState(hash) {
+export function decodeShareState(hash) {
   try { return JSON.parse(decodeURIComponent(b64decode(hash))); } catch { return null; }
 }
 
@@ -40,7 +39,7 @@ function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
  * @param {any} c criteria in either the current or the legacy shape
  * @returns {any} criteria in the current shape
  */
-function normalizeLegacyCriteria(c) {
+export function normalizeLegacyCriteria(c) {
   if (c?.a === undefined) return c;
   return {
     mb: [c.a], am: 'and',
@@ -64,7 +63,7 @@ function normalizeLegacyCriteria(c) {
  *            rg: number|null, sp: number|null, s0: number|null, s1: number|null}|null}
  *          clean criteria, or null when nothing was provided
  */
-function sanitizeCriteria(c, maxRows) {
+export function sanitizeCriteria(c, maxRows) {
   if (!c || typeof c !== 'object') return null;
   const rows = (/** @type {any} */ v) => (Array.isArray(v) ? v : []).slice(0, maxRows);
   const mb = rows(c.mb).map(intOrNull).filter((b) => b !== null);
@@ -117,7 +116,7 @@ function sanitizeCriteria(c, maxRows) {
  * @returns {{seed: string, mc: number|null, large: boolean, dim: number,
  *            y: number|null, cx: number|null, cz: number|null, bpp: number|null}|null}
  */
-function sanitizeWorldView(h) {
+export function sanitizeWorldView(h) {
   if (!h || typeof h !== 'object') return null;
   const dim = intOrNull(h.d);
   const y = intOrNull(h.y);
@@ -142,7 +141,7 @@ function sanitizeWorldView(h) {
  * @param {number} wz world z
  * @returns {{x: number, y: number}} screen point
  */
-function worldToScreen(view, W, H, wx, wz) {
+export function worldToScreen(view, W, H, wx, wz) {
   return { x: (wx - view.cx) / view.bpp + W / 2, y: (wz - view.cz) / view.bpp + H / 2 };
 }
 /**
@@ -153,7 +152,7 @@ function worldToScreen(view, W, H, wx, wz) {
  * @param {number} py screen y
  * @returns {{x: number, z: number}} world point
  */
-function screenToWorld(view, W, H, px, py) {
+export function screenToWorld(view, W, H, px, py) {
   return { x: view.cx + (px - W / 2) * view.bpp, z: view.cz + (py - H / 2) * view.bpp };
 }
 
@@ -190,7 +189,7 @@ async function pipeBytes(bytes, stream) {
  * @param {object} state plain JSON-serializable share state
  * @returns {Promise<string>} hash payload (without the leading '#')
  */
-async function encodeShareHash(state) {
+export async function encodeShareHash(state) {
   const CS = /** @type {any} */ (globalThis).CompressionStream;
   if (typeof CS !== 'function') return encodeShareState(state);
   const raw = new TextEncoder().encode(JSON.stringify(state));
@@ -200,7 +199,7 @@ async function encodeShareHash(state) {
  * @param {string} hash payload (without the leading '#'), untrusted
  * @returns {Promise<any|null>} parsed state, or null when malformed
  */
-async function decodeShareHash(hash) {
+export async function decodeShareHash(hash) {
   const h = String(hash ?? '');
   if (!h.startsWith(SHARE_COMPRESSED_PREFIX)) return decodeShareState(h);
   const DS = /** @type {any} */ (globalThis).DecompressionStream;
@@ -209,11 +208,4 @@ async function decodeShareHash(hash) {
     const raw = await pipeBytes(b64ToBytes(h.slice(SHARE_COMPRESSED_PREFIX.length)), new DS('deflate-raw'));
     return JSON.parse(new TextDecoder().decode(raw));
   } catch { return null; }
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    encodeShareState, decodeShareState, encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
-    sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
-  };
 }

@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const {
+import {
   scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT,
   minimapClickToWorld, viewportRectOnMinimap, minimapZoomOut, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
-} = require('../maptools.js');
+} from '../maptools.js';
 
 test('scaleBarSpec picks the longest 1/2/5×10^n length that fits', () => {
   assert.deepStrictEqual(scaleBarSpec(2.2, 140), { blocks: 200, px: 200 / 2.2 });

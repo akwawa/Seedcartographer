@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { convertCoords } = require('../coords.js');
+import { convertCoords } from '../coords.js';
 
 test('Overworld coordinates divide by 8 towards the Nether (floored)', () => {
   assert.deepStrictEqual(convertCoords(0, -384, 0), { label: 'Nether', x: -48, z: 0 });

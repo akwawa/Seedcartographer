@@ -5,10 +5,9 @@
 // app.js), except structure clauses reference the STABLE structure index
 // (`si`, the order of structDefs/structToggles) instead of the engine enum
 // value, which is only known at runtime: presetCriteria() resolves them.
-'use strict';
 
 // biome ids are the cubiomes enum values (cubiomes/biomes.h)
-const PRESETS = [
+export const PRESETS = [
   {
     id: 'cherry-ocean',
     labelKey: 'presetCherryOcean',
@@ -48,14 +47,10 @@ const PRESETS = [
  * @param {number[]} structTypes stable structure index -> engine enum value
  * @returns {object} criteria in the share-link `c` shape
  */
-function presetCriteria(preset, structTypes) {
+export function presetCriteria(preset, structTypes) {
   const { mb, am, ac, sm, rg, sp } = preset.c;
   const sc = preset.c.sc
     .filter((s) => Number.isInteger(structTypes[s.si]))
     .map((s) => ({ t: structTypes[s.si], mn: s.mn, r: s.r }));
   return { mb: [...mb], am, ac: ac.map((a) => ({ ...a })), sm, sc, rg, sp };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PRESETS, presetCriteria };
 }

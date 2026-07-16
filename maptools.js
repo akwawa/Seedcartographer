@@ -1,7 +1,6 @@
 // maptools.js — pure helpers for the map navigation aids: graphic scale bar,
 // adaptive coordinate grid and overview minimap. Shared between app.js
 // (script tag) and the Node test suite (require).
-'use strict';
 
 // Longest "nice" length (1, 2 or 5 × 10^n blocks) that fits in maxPx screen
 // pixels at bpp blocks-per-pixel.
@@ -10,7 +9,7 @@
  * @param {number} [maxPx] maximum bar length in screen pixels
  * @returns {{blocks: number, px: number}} bar length in blocks and pixels
  */
-function scaleBarSpec(bpp, maxPx = 140) {
+export function scaleBarSpec(bpp, maxPx = 140) {
   const maxBlocks = Math.max(1, maxPx * bpp);
   let best = 1;
   for (let pow = 1; pow <= 1e8; pow *= 10) {
@@ -33,7 +32,7 @@ const GRID_STEPS = [
  * @param {number} [minPx] minimum spacing between lines in screen pixels
  * @returns {{step: number, kind: string}} grid spacing in blocks
  */
-function gridSpec(bpp, minPx = 24) {
+export function gridSpec(bpp, minPx = 24) {
   for (const [step, kind] of GRID_STEPS) {
     if (step / bpp >= minPx) return { step, kind };
   }
@@ -48,14 +47,14 @@ function gridSpec(bpp, minPx = 24) {
  * @param {number} step grid spacing
  * @returns {number[]} grid line coordinates
  */
-function gridLines(w0, w1, step) {
+export function gridLines(w0, w1, step) {
   const out = [];
   for (let v = Math.ceil(w0 / step) * step; v <= w1; v += step) out.push(v);
   return out;
 }
 
 // The minimap shows the same center at a fixed zoom-out factor.
-const MINIMAP_ZOOM_OUT = 8;
+export const MINIMAP_ZOOM_OUT = 8;
 
 // Effective minimap zoom-out for a main-view zoom. The engine cell caps at
 // 256 blocks: past that, a full 8x overview means generating dozens of cells
@@ -66,7 +65,7 @@ const MINIMAP_ZOOM_OUT = 8;
  * @param {number} bpp blocks per screen pixel of the main view
  * @returns {number} zoom-out factor to apply to the minimap
  */
-function minimapZoomOut(bpp) {
+export function minimapZoomOut(bpp) {
   return Math.max(1, Math.min(MINIMAP_ZOOM_OUT, 256 / bpp));
 }
 
@@ -79,7 +78,7 @@ function minimapZoomOut(bpp) {
  * @param {{cx: number, cz: number, bpp: number}} view the main view
  * @returns {{x: number, z: number}} world point to recenter on
  */
-function minimapClickToWorld(px, py, w, h, view) {
+export function minimapClickToWorld(px, py, w, h, view) {
   const bpp = view.bpp * minimapZoomOut(view.bpp);
   return { x: Math.round(view.cx + (px - w / 2) * bpp), z: Math.round(view.cz + (py - h / 2) * bpp) };
 }
@@ -94,7 +93,7 @@ function minimapClickToWorld(px, py, w, h, view) {
  * @param {number} [zoomOut] effective zoom-out factor (minimapZoomOut)
  * @returns {{x: number, y: number, w: number, h: number}}
  */
-function viewportRectOnMinimap(mainW, mainH, mmW, mmH, zoomOut = MINIMAP_ZOOM_OUT) {
+export function viewportRectOnMinimap(mainW, mainH, mmW, mmH, zoomOut = MINIMAP_ZOOM_OUT) {
   const w = mainW / zoomOut, h = mainH / zoomOut;
   return { x: mmW / 2 - w / 2, y: mmH / 2 - h / 2, w, h };
 }
@@ -109,7 +108,7 @@ function viewportRectOnMinimap(mainW, mainH, mmW, mmH, zoomOut = MINIMAP_ZOOM_OU
  * @returns {{currentStep: number, factor: number, label: string}|null}
  *          factor converts current-dim blocks to linked-dim blocks (x / factor)
  */
-function linkedGridSpec(dim, bpp, minPx = 48) {
+export function linkedGridSpec(dim, bpp, minPx = 48) {
   if (dim !== 0 && dim !== -1) return null;
   const factor = dim === 0 ? 8 : 1 / 8;   // linked -> current scale
   // pick a nice step in the linked dimension, seen at its apparent zoom
@@ -118,7 +117,7 @@ function linkedGridSpec(dim, bpp, minPx = 48) {
 }
 
 // Farthest coordinate reachable in Java (the world border).
-const GOTO_LIMIT = 29999984;
+export const GOTO_LIMIT = 29999984;
 
 // Parse a "go to" input — two integers separated by a comma, semicolon or
 // whitespace ("100, -250", "100 -250"…). Returns null when the text is not
@@ -127,7 +126,7 @@ const GOTO_LIMIT = 29999984;
  * @param {string} str raw field content
  * @returns {{x: number, z: number}|null} world point, or null when invalid
  */
-function parseGotoInput(str) {
+export function parseGotoInput(str) {
   // the separator alternation is unambiguous (comma/semicolon vs pure
   // whitespace), so the regex cannot backtrack super-linearly
   const m = /^\s*(-?\d+)(?:\s*[,;]\s*|\s+)(-?\d+)\s*$/.exec(String(str ?? ''));
@@ -144,7 +143,7 @@ function parseGotoInput(str) {
  * @param {{x: number, z: number}} b opposite corner
  * @returns {{x0: number, z0: number, x1: number, z1: number, w: number, h: number}}
  */
-function normalizeRect(a, b) {
+export function normalizeRect(a, b) {
   const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x);
   const z0 = Math.min(a.z, b.z), z1 = Math.max(a.z, b.z);
   return { x0, z0, x1, z1, w: x1 - x0 + 1, h: z1 - z0 + 1 };
@@ -155,7 +154,7 @@ function normalizeRect(a, b) {
  * @param {{x0: number, z0: number, x1: number, z1: number, w: number, h: number}} r
  * @returns {string}
  */
-function formatRect(r) {
+export function formatRect(r) {
   return `${r.x0}, ${r.z0} -> ${r.x1}, ${r.z1} (${r.w} x ${r.h})`;
 }
 
@@ -166,14 +165,10 @@ function formatRect(r) {
  * @param {{x: number, z: number}} b second endpoint
  * @returns {{dist: number, dx: number, dz: number}}
  */
-function rulerMeasure(a, b) {
+export function rulerMeasure(a, b) {
   return {
     dist: Math.round(Math.hypot(b.x - a.x, b.z - a.z)),
     dx: Math.abs(b.x - a.x),
     dz: Math.abs(b.z - a.z)
   };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scaleBarSpec, gridSpec, gridLines, MINIMAP_ZOOM_OUT, minimapZoomOut, minimapClickToWorld, viewportRectOnMinimap, parseGotoInput, GOTO_LIMIT, rulerMeasure, linkedGridSpec, normalizeRect, formatRect };
 }
