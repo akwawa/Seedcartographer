@@ -44,7 +44,7 @@ test('biomeLabel defaults to English outside the browser and prettify keeps empt
 test('biomeLabel defaults to the UI language exported by i18n.js', () => {
   // biomes.js imports the live `currentLang` binding from i18n.js; outside a
   // browser (no document) i18n.js initializes it to 'en'
-  assert.strictEqual(currentLang, 'en');
+  assert.strictEqual(currentLang(), 'en');
   assert.strictEqual(biomeLabel('cherry_grove'), 'Cherry Grove');
   assert.strictEqual(biomeLabel('cherry_grove', 'fr'), BIOME_NAMES.fr.cherry_grove);
 });

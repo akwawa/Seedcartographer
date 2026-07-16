@@ -1876,9 +1876,9 @@ function buildGalleryCards() {
     card.type = 'button';
     card.className = 'gallerycard';
     const h = document.createElement('h3');
-    h.textContent = galleryText(e.title, currentLang);
+    h.textContent = galleryText(e.title, currentLang());
     const p = document.createElement('p');
-    p.textContent = galleryText(e.desc, currentLang);
+    p.textContent = galleryText(e.desc, currentLang());
     const meta = document.createElement('p');
     meta.className = 'mono gallerymeta';
     meta.textContent = `seed ${e.seed} · ${e.x}, ${e.z}`;
@@ -2125,7 +2125,7 @@ async function init() {
     o.value = code; o.textContent = name;
     langSel.appendChild(o);
   }
-  langSel.value = currentLang;
+  langSel.value = currentLang();
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };

@@ -1106,18 +1106,21 @@ function detectLang() {
   return I18N[nav] ? nav : 'en';
 }
 
-export let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
+// the active language stays private and mutable; consumers read it through
+// currentLang() so no mutable binding is ever exported (sonar S6861)
+let activeLang = typeof document !== 'undefined' ? detectLang() : 'en';
+export function currentLang() { return activeLang; }
 
 // Translate a key in the current language; {placeholders} are filled from params.
 export function t(key, params) {
-  let s = I18N[currentLang]?.[key] ?? I18N.en[key] ?? key;
+  let s = I18N[activeLang]?.[key] ?? I18N.en[key] ?? key;
   if (params) for (const k of Object.keys(params)) s = s.replaceAll('{' + k + '}', params[k]);
   return s;
 }
 
 // Apply translations to all elements carrying data-i18n / data-i18n-title.
 export function applyI18n() {
-  document.documentElement.lang = currentLang;
+  document.documentElement.lang = activeLang;
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
@@ -1129,7 +1132,7 @@ export function applyI18n() {
 
 export function setLang(lang) {
   if (!I18N[lang]) return;
-  currentLang = lang;
+  activeLang = lang;
   try { localStorage.setItem('lang', lang); } catch { /* ignore */ }
   applyI18n();
 }

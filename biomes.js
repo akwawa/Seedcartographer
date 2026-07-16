@@ -556,6 +556,6 @@ export function prettifyBiome(name) {
 // Localized label for a technical biome name; lang defaults to the UI
 // language (currentLang from i18n.js), unknown entries fall back to English.
 export function biomeLabel(name, lang) {
-  const l = lang || currentLang;
+  const l = lang || currentLang();
   return BIOME_NAMES[l]?.[name] || prettifyBiome(name);
 }
