@@ -6,9 +6,9 @@
 //   node scripts/app-version.js <site-dir>
 //
 // The checked-in version.js keeps a fixed dev placeholder for local serving.
-'use strict';
-const fs = require('node:fs');
-const path = require('node:path');
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
 
 // The tool only ever works below the invoking process's working directory
 // (the CI workspace / staging dir): the CLI argument is canonicalized and
@@ -32,7 +32,7 @@ function insideCwd(abs) {
  * @param {string} gitDir the .git directory
  * @returns {string} 7-char commit hash, or ''
  */
-function gitShortCommit(gitDir) {
+export function gitShortCommit(gitDir) {
   try {
     const head = fs.readFileSync(path.join(gitDir, 'HEAD'), 'utf8').trim();
     const sha = head.startsWith('ref: ') ? refSha(gitDir, head.slice(5)) : head;
@@ -59,7 +59,7 @@ function refSha(gitDir, ref) {
  * @param {string} commit short commit hash
  * @returns {string} rewritten source
  */
-function stampAppVersion(source, version, commit) {
+export function stampAppVersion(source, version, commit) {
   const line = `const APP_VERSION = { version: '${version}', commit: '${commit}' };`;
   const out = source.replace(/const APP_VERSION = \{[^}]*\};/, line);
   if (out === source) throw new Error('APP_VERSION line not found in version.js');
@@ -71,7 +71,7 @@ function stampAppVersion(source, version, commit) {
  * @param {string} dir site directory containing version.js
  * @returns {{version: string, commit: string}} the stamped values
  */
-function stampDir(dir) {
+export function stampDir(dir) {
   const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
   const commit = gitShortCommit(path.resolve('.git'));
   const root = insideCwd(fs.realpathSync(path.resolve(dir)));
@@ -81,9 +81,7 @@ function stampDir(dir) {
 }
 
 /* node:coverage ignore next 4 -- CLI entry point, exercised by CI deploys */
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const { version, commit } = stampDir(process.argv[2] || '.');
   console.log(`${version} (${commit || 'no commit'})`);
 }
-
-module.exports = { stampAppVersion, stampDir, gitShortCommit };

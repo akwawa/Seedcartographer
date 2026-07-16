@@ -7,9 +7,9 @@
 // The scenario is a demanding one: a 5000-block radius scan over a noisy
 // land/water grid with an island clause — every land candidate triggers a
 // bounded flood fill.
-'use strict';
-const { performance } = require('node:perf_hooks');
-const { scanGrid } = require('../search.js');
+import { performance } from 'node:perf_hooks';
+import process from 'node:process';
+import { scanGrid } from '../search.js';
 
 // deterministic pseudo-random grid (LCG): island-rich land/water noise
 /** @param {number} cols @param {number} rows @returns {Int32Array} */
