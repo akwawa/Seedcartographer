@@ -16,6 +16,14 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Veille cubiomes : un workflow hebdomadaire (`cubiomes-watch.yml`) compare le
+  HEAD amont de Cubitect/cubiomes au submodule épinglé et ouvre (ou
+  rafraîchit) automatiquement une issue quand l'amont avance — pour ne pas
+  rater l'arrivée du support des versions 26.x (#225).
+
 ## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
 
 ### Ajouté
