@@ -1,0 +1,50 @@
+# Weekly watch of the cubiomes upstream: when its HEAD moves past our pinned
+# submodule (e.g. 26.x biome support lands), open/refresh a tracking issue so
+# the update ticket can be scheduled (see #225).
+name: Cubiomes watch
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write   # open/comment the tracking issue when upstream moves
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Compare the pinned submodule with the cubiomes upstream HEAD
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          pinned=$(git rev-parse HEAD:cubiomes)
+          upstream=$(git ls-remote https://github.com/Cubitect/cubiomes.git HEAD | cut -f1)
+          echo "pinned:   $pinned"
+          echo "upstream: $upstream"
+          if [ "$pinned" = "$upstream" ]; then
+            echo "Submodule is up to date with upstream."
+            exit 0
+          fi
+          title='cubiomes amont a avancé : mettre à jour le submodule'
+          body=$(printf '%s\n\n%s\n\n%s\n\n%s' \
+            "L'amont [Cubitect/cubiomes](https://github.com/Cubitect/cubiomes) est à \`$upstream\` alors que le submodule épingle \`$pinned\`." \
+            "Comparer : https://github.com/Cubitect/cubiomes/compare/$pinned...$upstream" \
+            "À faire (voir #225) : mettre à jour le submodule, reconstruire \`mcfinder.wasm\`/\`mcfinder.js\` avec l'emsdk épinglé, valider en CI (job \`wasm\`), et ajuster la mention de limite 26.x dans l'aide si le support a avancé." \
+            "_Issue ouverte automatiquement par le workflow « Cubiomes watch »._")
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Issue #$existing already open; leaving a refresh comment."
+            gh issue comment "$existing" --body "Toujours d'actualité : l'amont est maintenant à \`$upstream\` (submodule : \`$pinned\`)."
+          else
+            gh issue create --title "$title" --body "$body" --label enhancement
+          fi
