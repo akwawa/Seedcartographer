@@ -7,9 +7,9 @@
 //
 // The scenario mirrors a demanding real search: 5000-block radius at 16-block
 // cells with an adjacency clause and a structure clause.
-'use strict';
-const { performance } = require('node:perf_hooks');
-const { scanGrid } = require('../search.js');
+import { performance } from 'node:perf_hooks';
+import process from 'node:process';
+import { scanGrid } from '../search.js';
 
 // deterministic pseudo-random biome grid (LCG): benchmark inputs must not
 // vary between runs or machines
@@ -19,7 +19,7 @@ const { scanGrid } = require('../search.js');
  * @param {number[]} biomes biome ids to draw from
  * @returns {Int32Array} cols*rows biome grid
  */
-function buildGrid(cols, rows, biomes) {
+export function buildGrid(cols, rows, biomes) {
   const grid = new Int32Array(cols * rows);
   let state = 42;
   for (let i = 0; i < grid.length; i++) {
@@ -35,7 +35,7 @@ function buildGrid(cols, rows, biomes) {
  * @param {number} extent half-size of the block box
  * @returns {Array<[number, number]>} [x, z] block positions
  */
-function buildPoints(count, extent) {
+export function buildPoints(count, extent) {
   /** @type {Array<[number, number]>} */
   const points = [];
   const stride = Math.floor((2 * extent) / Math.sqrt(count));
@@ -52,7 +52,7 @@ function buildPoints(count, extent) {
  * @param {{range?: number, SC?: number, step?: number}} [options]
  * @returns {{ms: number, hits: number}} wall time and hit count
  */
-function runScenario({ range = 5000, SC = 16, step = 48 } = {}) {
+export function runScenario({ range = 5000, SC = 16, step = 48 } = {}) {
   const pad = 400;
   const gx0 = Math.floor((-range - pad) / SC), gz0 = gx0;
   const cols = Math.ceil((range + pad) / SC) - gx0 + 2;
@@ -77,7 +77,7 @@ function runScenario({ range = 5000, SC = 16, step = 48 } = {}) {
  * @param {number} [iterations]
  * @returns {{best: number, hits: number}} best wall time over N runs
  */
-function bench(options, iterations = 5) {
+export function bench(options, iterations = 5) {
   let best = Infinity, hits = -1;
   for (let i = 0; i < iterations; i++) {
     const r = runScenario(options);
@@ -87,7 +87,7 @@ function bench(options, iterations = 5) {
   return { best, hits };
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const budget = Number.parseInt(process.env.BENCH_BUDGET_MS || '2000', 10);
   const { best, hits } = bench();
   console.log(`scanGrid benchmark: best of 5 = ${best.toFixed(1)} ms (${hits} hits, budget ${budget} ms)`);
@@ -100,5 +100,3 @@ if (require.main === module) {
     process.exit(1);
   }
 }
-
-module.exports = { buildGrid, buildPoints, runScenario, bench };

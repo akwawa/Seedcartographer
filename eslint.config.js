@@ -1,10 +1,9 @@
 // ESLint flat config. The whole app is an ES module graph rooted at app.js
 // and worker.js (module worker); the Node tests import the same files (#224).
-'use strict';
-const globals = require('globals');
-const js = require('@eslint/js');
+import globals from 'globals';
+import js from '@eslint/js';
 
-module.exports = [
+export default [
   js.configs.recommended,
   {
     // Emscripten-generated glue and the Stryker mutation sandbox
@@ -74,7 +73,7 @@ module.exports = [
   {
     files: ['scripts/**/*.js', 'eslint.config.js', 'playwright.config.js'],
     languageOptions: {
-      sourceType: 'commonjs',
+      sourceType: 'module',
       globals: { ...globals.node }
     }
   },
@@ -91,7 +90,7 @@ module.exports = [
     // execute in the browser page, where the app's globals exist
     files: ['e2e/**/*.js'],
     languageOptions: {
-      sourceType: 'commonjs',
+      sourceType: 'module',
       globals: { ...globals.node, ...globals.browser, syncHash: 'readonly', decodeShareHash: 'readonly' }
     }
   }

@@ -25,6 +25,11 @@ et la release GitHub.
   rater l'arrivée du support des versions 26.x (#225).
 
 ### Modifié
+- Migration ES modules, étape finale : `"type": "module"` officialisé dans
+  `package.json` (fin du warning Node `MODULE_TYPELESS_PACKAGE_JSON`) ; les
+  derniers fichiers CommonJS (`eslint.config.js`, `playwright.config.js`,
+  `scripts/*.js`, specs Playwright `e2e/*.js`) passent en `import`/`export`
+  natifs (#224).
 - Migration ES modules, étape 1 : la couche de test Node passe en modules
   ES natifs (`test/*.test.mjs`, `import` pour les builtins Node,
   `createRequire` pour charger les sources encore double-mode CommonJS).
