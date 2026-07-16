@@ -7,10 +7,9 @@
 // (share-link `c` shape, engine enum structure types) plus the dimension the
 // criteria belong to; replaying goes through the same sanitizeCriteria path
 // as share links.
-'use strict';
 
-const USER_PRESET_MAX = 30;      // sanity cap so localStorage cannot grow unbounded
-const USER_PRESET_NAME_MAX = 40; // display cap for free-text names
+export const USER_PRESET_MAX = 30;      // sanity cap so localStorage cannot grow unbounded
+export const USER_PRESET_NAME_MAX = 40; // display cap for free-text names
 
 /**
  * @typedef {{id: number, name: string, dim: number, c: object}} UserPreset
@@ -31,7 +30,7 @@ function nextUserPresetId(list) {
  * @param {object} crit criteria in the share-link `c` shape
  * @returns {UserPreset[]} new list (input untouched)
  */
-function addUserPreset(list, name, dim, crit) {
+export function addUserPreset(list, name, dim, crit) {
   const n = String(name ?? '').trim().slice(0, USER_PRESET_NAME_MAX);
   if (!n) return list;
   const existing = list.find((p) => p.name === n);
@@ -45,7 +44,7 @@ function addUserPreset(list, name, dim, crit) {
  * @param {number} id preset to remove
  * @returns {UserPreset[]} new list (input untouched)
  */
-function removeUserPreset(list, id) {
+export function removeUserPreset(list, id) {
   return list.filter((p) => p.id !== id);
 }
 
@@ -56,7 +55,7 @@ function removeUserPreset(list, id) {
  * @param {string|null} json raw localStorage payload
  * @returns {UserPreset[]} well-formed presets only
  */
-function parseUserPresets(json) {
+export function parseUserPresets(json) {
   let raw;
   try { raw = JSON.parse(String(json)); } catch { return []; }
   if (!Array.isArray(raw)) return [];
@@ -69,8 +68,4 @@ function parseUserPresets(json) {
     if (!byId.has(id)) byId.set(id, { id, name, dim, c: p.c });
   }
   return [...byId.values()];
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { USER_PRESET_MAX, USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets };
 }

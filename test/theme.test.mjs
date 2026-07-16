@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { THEME_COLORS, resolveTheme, otherTheme } = require('../theme.js');
+import { THEME_COLORS, resolveTheme, otherTheme } from '../theme.js';
 
 test('a stored choice always wins', () => {
   assert.strictEqual(resolveTheme('light', false), 'light');

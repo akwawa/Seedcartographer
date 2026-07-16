@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { HISTORY_MAX, addHistoryEntry, parseHistory } = require('../searchhistory.js');
+import { HISTORY_MAX, addHistoryEntry, parseHistory } from '../searchhistory.js';
 
 const entry = (seed, cx = 0, extra = {}) => ({
   seed, mc: 30, large: false, dim: 0, cx, cz: 0, crit: { mb: [185] }, at: 1, ...extra

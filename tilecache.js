@@ -2,9 +2,8 @@
 // redraw already-known areas instantly while fresh tiles are computed.
 // Pure bookkeeping (no canvas API): shared between app.js (script tag) and
 // the Node test suite (require).
-'use strict';
 
-const TILE_CACHE_MAX = 24;   // tiles kept; ~viewport-sized each, so a few MB
+export const TILE_CACHE_MAX = 24;   // tiles kept; ~viewport-sized each, so a few MB
 
 // World identity of a tile: any of these changing makes cached pixels stale.
 /**
@@ -13,7 +12,7 @@ const TILE_CACHE_MAX = 24;   // tiles kept; ~viewport-sized each, so a few MB
  * @param {boolean} [relief] hillshade overlay baked into the pixels
  * @returns {string}
  */
-function tileWorldKey(world, y, relief = false) {
+export function tileWorldKey(world, y, relief = false) {
   return `${world.seed}|${world.mc}|${world.large ? 1 : 0}|${world.dim}|${y}${relief ? '|r' : ''}`;
 }
 
@@ -24,7 +23,7 @@ function tileWorldKey(world, y, relief = false) {
  * @param {number} originZ tile NW corner (blocks)
  * @returns {string}
  */
-function tileKey(worldKey, scale, originX, originZ) {
+export function tileKey(worldKey, scale, originX, originZ) {
   return `${worldKey}|${scale}|${originX}|${originZ}`;
 }
 
@@ -36,7 +35,7 @@ function tileKey(worldKey, scale, originX, originZ) {
  *            setMax: (n: number) => void,
  *            entries: () => object[], clear: () => void, size: () => number}}
  */
-function createTileCache(max = TILE_CACHE_MAX) {
+export function createTileCache(max = TILE_CACHE_MAX) {
   const map = new Map();
   return {
     put(entry) {
@@ -78,7 +77,7 @@ function createTileCache(max = TILE_CACHE_MAX) {
  *        can never crowd the actual view out of the paint budget
  * @returns {object[]} tiles to draw, in painting order
  */
-function tilesInView(entries, worldKey, rect, max = Infinity, scale = null) {
+export function tilesInView(entries, worldKey, rect, max = Infinity, scale = null) {
   const picked = entries
     .map((e, i) => ({ e, i }))
     .filter(({ e }) => e.worldKey === worldKey
@@ -88,8 +87,4 @@ function tilesInView(entries, worldKey, rect, max = Infinity, scale = null) {
       || (b.e.scale - a.e.scale) || (a.i - b.i))
     .map(({ e }) => e);
   return picked.length > max ? picked.slice(picked.length - max) : picked;
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { TILE_CACHE_MAX, tileWorldKey, tileKey, createTileCache, tilesInView };
 }

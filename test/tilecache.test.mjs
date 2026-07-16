@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { tileWorldKey, tileKey, createTileCache, tilesInView } = require('../tilecache.js');
+import { tileWorldKey, tileKey, createTileCache, tilesInView } from '../tilecache.js';
 
 const W = { seed: '141', mc: 28, large: false, dim: 0 };
 

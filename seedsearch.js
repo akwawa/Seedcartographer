@@ -1,13 +1,15 @@
 // seedsearch.js — pure planning logic for the multi-seed search: candidate
 // seed generation (sequential range or random) and batch distribution over a
 // worker pool. Shared between app.js (script tag) and the Node test suite.
-'use strict';
 
-// Browser: seed.js is loaded first (script tag); Node tests: require directly.
-const toSeed = /** @type {any} */ (globalThis).seedToBigInt || require('./seed.js').seedToBigInt;
+// Browser: seed.js stays a classic script (shared with worker.js via
+// importScripts, see #224 MR 3) and is loaded before this module, so its
+// global is already there and the dynamic import never runs; Node tests:
+// import the CommonJS module lazily (top-level await).
+const toSeed = /** @type {any} */ (globalThis).seedToBigInt || (await import('./seed.js')).seedToBigInt;
 
-const SEED_SEARCH_MAX_TOTAL = 100000;   // seeds tested per run, sanity cap
-const SEED_SEARCH_MAX_FOUND = 50;       // candidate list cap
+export const SEED_SEARCH_MAX_TOTAL = 100000;   // seeds tested per run, sanity cap
+export const SEED_SEARCH_MAX_FOUND = 50;       // candidate list cap
 
 // `count` consecutive seeds starting at `start + offset` (64-bit wraparound).
 // A textual start seed is hashed exactly like Minecraft would.
@@ -17,7 +19,7 @@ const SEED_SEARCH_MAX_FOUND = 50;       // candidate list cap
  * @param {number} count how many seeds
  * @returns {string[]} decimal signed 64-bit seed strings
  */
-function sequentialSeeds(start, offset, count) {
+export function sequentialSeeds(start, offset, count) {
   const base = toSeed(start);
   const out = [];
   for (let i = 0; i < count; i++) {
@@ -32,7 +34,7 @@ function sequentialSeeds(start, offset, count) {
  * @param {() => number} rand uniform [0,1) source
  * @returns {string[]} decimal signed 64-bit seed strings
  */
-function randomSeeds(count, rand) {
+export function randomSeeds(count, rand) {
   const out = [];
   for (let i = 0; i < count; i++) {
     const hi = BigInt(Math.floor(rand() * 0x100000000));
@@ -48,7 +50,7 @@ function randomSeeds(count, rand) {
  * @param {number} batchSize seeds per worker message
  * @returns {Array<{offset: number, count: number}>}
  */
-function planBatches(total, batchSize) {
+export function planBatches(total, batchSize) {
   const t = Math.max(0, Math.min(SEED_SEARCH_MAX_TOTAL, Math.floor(total)));
   const size = Math.max(1, Math.floor(batchSize));
   const out = [];
@@ -64,7 +66,7 @@ function planBatches(total, batchSize) {
  * @param {{x: number, z: number}} hit
  * @returns {number}
  */
-function originDist(hit) {
+export function originDist(hit) {
   return Math.round(Math.hypot(hit.x, hit.z));
 }
 
@@ -76,7 +78,7 @@ function originDist(hit) {
  * @param {SeedCandidate} b
  * @returns {number}
  */
-function compareCandidates(a, b) {
+export function compareCandidates(a, b) {
   return (b.count - a.count) || (a.dist - b.dist) || a.seed.localeCompare(b.seed);
 }
 
@@ -90,7 +92,7 @@ function compareCandidates(a, b) {
  * @param {number} [cap] list cap
  * @returns {T[]}
  */
-function insertCandidate(list, cand, cap = SEED_SEARCH_MAX_FOUND) {
+export function insertCandidate(list, cand, cap = SEED_SEARCH_MAX_FOUND) {
   return [...list.filter((c) => c.seed !== cand.seed), cand].sort(compareCandidates).slice(0, cap);
 }
 
@@ -108,7 +110,7 @@ function insertCandidate(list, cand, cap = SEED_SEARCH_MAX_FOUND) {
  */
 
 /** @param {SeedRun} run @returns {string} JSON payload for localStorage */
-function serializeSeedRun(run) {
+export function serializeSeedRun(run) {
   return JSON.stringify({ ...run, v: 1 });
 }
 
@@ -124,7 +126,7 @@ function seedRunInt(v) {
  * @param {string|null} json raw localStorage payload
  * @returns {SeedRun|null} the run, or null when absent/malformed/finished
  */
-function parseSeedRun(json) {
+export function parseSeedRun(json) {
   let r;
   try { r = JSON.parse(String(json)); } catch { return null; }
   if (!r || typeof r !== 'object' || r.v !== 1) return null;
@@ -152,14 +154,5 @@ function parseSeedRun(json) {
     v: 1, mode: r.mode, start: String(r.start), total, radius, step,
     mc, large: !!r.large, dim, y, crit: r.crit, scanned,
     batches: /** @type {Array<{offset: number, count: number}>} */ (batches), candidates
-  };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND,
-    sequentialSeeds, randomSeeds, planBatches,
-    originDist, compareCandidates, insertCandidate,
-    serializeSeedRun, parseSeedRun
   };
 }

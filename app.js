@@ -1,5 +1,36 @@
 // app.js — UI, map rendering, search orchestration. Talks to worker.js.
-'use strict';
+// ES module: the pure-logic helpers are explicit imports below. The files
+// shared with worker.js via importScripts (seed.js, slime.js, markers.js,
+// palette.js, tilegrid.js — see #224 MR 3) cannot carry `export`, so they
+// stay classic <script> tags in index.html and are still read as globals.
+import { t, applyI18n, setLang, currentLang, I18N_LANGS } from './i18n.js';
+import { biomeLabel } from './biomes.js';
+import { convertCoords } from './coords.js';
+import { PRESETS, presetCriteria } from './presets.js';
+import { parseFavorites, addFavorite, findFavorite, removeFavorite, updateFavoriteNote, favoritesFor } from './favorites.js';
+import { legendEntries } from './legend.js';
+import {
+  scaleBarSpec, gridSpec, gridLines, minimapZoomOut, minimapClickToWorld,
+  viewportRectOnMinimap, parseGotoInput, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
+} from './maptools.js';
+import { tileWorldKey, tileKey, createTileCache, tilesInView } from './tilecache.js';
+import {
+  encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
+  sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
+} from './sharestate.js';
+import {
+  SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND, sequentialSeeds, randomSeeds,
+  planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun
+} from './seedsearch.js';
+import { addHistoryEntry, parseHistory } from './searchhistory.js';
+import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
+import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
+import { exportProfile, parseProfile, mergeProfile } from './profile.js';
+import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
+import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
+import { resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV } from './export.js';
+import { APP_VERSION } from './version.js';
+import { formatErrorEvent } from './errorreport.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
 // the sliced search job on the other, so a long search never delays a tile
@@ -2211,4 +2242,8 @@ async function init() {
   }
 }
 function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); buildMarkerList(); }
+// As a module, app.js no longer leaks its bindings into the page scope; the
+// e2e suite reads these few (share-link round-trips, ruler state, tile-cache
+// settling), so expose them explicitly. All are consts mutated in place.
+Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles });
 init();

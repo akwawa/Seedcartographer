@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { PROFILE_KIND, exportProfile, parseProfile, mergeProfile } = require('../profile.js');
+import { PROFILE_KIND, exportProfile, parseProfile, mergeProfile } from '../profile.js';
 
 const FAV = { id: 1, seed: '141', mc: 22, large: false, dim: 0, x: 100, z: -50, note: 'base' };
 const PRESET = { id: 1, name: 'cerisiers', dim: 0, c: { m: [5] } };

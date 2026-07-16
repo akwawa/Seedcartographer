@@ -2,10 +2,10 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const {
+import {
   SEED_SEARCH_MAX_TOTAL, sequentialSeeds, randomSeeds, planBatches,
   originDist, compareCandidates, insertCandidate, serializeSeedRun, parseSeedRun
-} = require('../seedsearch.js');
+} from '../seedsearch.js';
 
 test('sequentialSeeds counts from the start seed with 64-bit wraparound', () => {
   assert.deepStrictEqual(sequentialSeeds('141', 0, 3), ['141', '142', '143']);

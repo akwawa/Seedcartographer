@@ -2,7 +2,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { BIOME_NAMES, biomeLabel, prettifyBiome } = require('../biomes.js');
+import { BIOME_NAMES, biomeLabel, prettifyBiome } from '../biomes.js';
+import { currentLang } from '../i18n.js';
 
 test('all translated languages cover exactly the same biome set', () => {
   const langs = Object.keys(BIOME_NAMES);
@@ -40,15 +41,12 @@ test('biomeLabel defaults to English outside the browser and prettify keeps empt
   assert.strictEqual(prettifyBiome('a__b'), 'A  B');
 });
 
-test('biomeLabel picks up the UI language global when it exists', () => {
-  // biomes.js reads the bare `currentLang` binding (set by i18n.js in the
-  // browser); a global property is visible to that lookup in Node too
-  globalThis.currentLang = 'fr';
-  try {
-    assert.strictEqual(biomeLabel('cherry_grove'), BIOME_NAMES.fr.cherry_grove);
-  } finally {
-    delete globalThis.currentLang;
-  }
+test('biomeLabel defaults to the UI language exported by i18n.js', () => {
+  // biomes.js imports the live `currentLang` binding from i18n.js; outside a
+  // browser (no document) i18n.js initializes it to 'en'
+  assert.strictEqual(currentLang, 'en');
+  assert.strictEqual(biomeLabel('cherry_grove'), 'Cherry Grove');
+  assert.strictEqual(biomeLabel('cherry_grove', 'fr'), BIOME_NAMES.fr.cherry_grove);
 });
 
 test('every language translates the full cubiomes biome list', () => {

@@ -1,10 +1,8 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import { test } from 'node:test';
 import assert from 'node:assert';
-const {
+import {
   MARKER_MAX, addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers
-} = require('../usermarkers.js');
+} from '../usermarkers.js';
 
 const W = { seed: '141', mc: 30, large: false, dim: 0 };
 const at = (x, z, name) => ({ ...W, x, z, name });

@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { sanitizeErrorMessage, sourceBasename, formatErrorEvent } = require('../errorreport.js');
+import { sanitizeErrorMessage, sourceBasename, formatErrorEvent } from '../errorreport.js';
 
 test('sanitizeErrorMessage collapses whitespace and truncates', () => {
   assert.strictEqual(sanitizeErrorMessage('  hello\n\tworld  '), 'hello world');

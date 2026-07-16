@@ -1,9 +1,7 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { PRESETS, presetCriteria } = require('../presets.js');
-const { I18N, I18N_LANGS } = require('../i18n.js');
+import { PRESETS, presetCriteria } from '../presets.js';
+import { I18N, I18N_LANGS } from '../i18n.js';
 
 test('presets are well-formed', () => {
   const ids = new Set();

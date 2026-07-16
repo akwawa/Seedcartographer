@@ -1,8 +1,9 @@
-// i18n.js — UI translations. Loaded before app.js; also required by the tests.
+// i18n.js — UI translations. ES module imported by app.js; also imported by
+// the Node tests.
 // Biome names come from the cubiomes engine and are intentionally not translated.
-'use strict';
+import { biomeLabel } from './biomes.js';
 
-const I18N = {
+export const I18N = {
   en: {
     copyConverted: "Copy the converted coordinates",
     dimension: "Dimension",
@@ -1090,7 +1091,7 @@ const I18N = {
   },
 };
 
-const I18N_LANGS = [['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pt', 'Português (BR)']];
+export const I18N_LANGS = [['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pt', 'Português (BR)']];
 
 // This whole block is DOM/browser glue (localStorage, navigator, document) —
 // exercised by the e2e suite, not by the Node unit tests (same treatment as
@@ -1105,35 +1106,31 @@ function detectLang() {
   return I18N[nav] ? nav : 'en';
 }
 
-let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
+export let currentLang = typeof document !== 'undefined' ? detectLang() : 'en';
 
 // Translate a key in the current language; {placeholders} are filled from params.
-function t(key, params) {
+export function t(key, params) {
   let s = I18N[currentLang]?.[key] ?? I18N.en[key] ?? key;
   if (params) for (const k of Object.keys(params)) s = s.replaceAll('{' + k + '}', params[k]);
   return s;
 }
 
 // Apply translations to all elements carrying data-i18n / data-i18n-title.
-function applyI18n() {
+export function applyI18n() {
   document.documentElement.lang = currentLang;
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.setAttribute('placeholder', t(el.dataset.i18nPh)); });
   document.querySelectorAll('[data-i18n-label]').forEach((el) => { el.setAttribute('label', t(el.dataset.i18nLabel)); });
-  // biome option labels (biomes.js, loaded after this file)
-  if (typeof biomeLabel === 'function') {
-    document.querySelectorAll('[data-biome]').forEach((el) => { el.textContent = biomeLabel(el.dataset.biome); });
-  }
+  // biome option labels (biomes.js)
+  document.querySelectorAll('[data-biome]').forEach((el) => { el.textContent = biomeLabel(el.dataset.biome); });
 }
 
-function setLang(lang) {
+export function setLang(lang) {
   if (!I18N[lang]) return;
   currentLang = lang;
   try { localStorage.setItem('lang', lang); } catch { /* ignore */ }
   applyI18n();
 }
 /* node:coverage enable */
-
-if (typeof module !== 'undefined' && module.exports) module.exports = { I18N, I18N_LANGS };

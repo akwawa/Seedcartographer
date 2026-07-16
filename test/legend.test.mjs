@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const { legendEntries } = require('../legend.js');
+import { legendEntries } from '../legend.js';
 
 const biomes = [
   { id: 1, name: 'plains', rgb: [140, 180, 90] },

@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
-const {
+import {
   FAV_MAX, favWorld, addFavorite, findFavorite, removeFavorite,
   updateFavoriteNote, favoritesFor, parseFavorites
-} = require('../favorites.js');
+} from '../favorites.js';
 
 const spot = { seed: '141', mc: 28, large: false, dim: 0, x: -384, z: 0 };
 

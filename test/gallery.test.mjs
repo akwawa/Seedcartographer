@@ -1,10 +1,8 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
 import test from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
-const { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } = require('../gallery.js');
-const { decodeShareState, sanitizeWorldView, sanitizeCriteria } = require('../sharestate.js');
+import { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from '../gallery.js';
+import { decodeShareState, sanitizeWorldView, sanitizeCriteria } from '../sharestate.js';
 
 const ENTRY = {
   id: 'spot-1', seed: '141', mc: 28, large: false, dim: 0,
