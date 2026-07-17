@@ -2180,6 +2180,26 @@ function startTour() {
 // from the event, then run the returned action. Handlers that already
 // consumed the key (canvas pan/zoom, tour bubble, criteria rows…) call
 // preventDefault first, so this never doubles them up.
+// 'close' cascades: dialogs first, then the active tool / pin popup
+function closeTopmost() {
+  const help = $('#helpDlg'), gallery = $('#galleryDlg');
+  if (help.open) { help.close(); return; }
+  if (gallery.open) { gallery.close(); return; }
+  if (ruler.on) setRulerOn(false);
+  if (markerMode) setMarkerMode(false);
+  if (sel.on) setSelOn(false);
+  hidePopup();
+}
+const KEY_ACTIONS = {
+  'skip-tour': () => endTour(),
+  search: () => { if (!searchBusy) runSearch(); },
+  'zoom-in': () => zoomBy(1 / 1.3),
+  'zoom-out': () => zoomBy(1.3),
+  goto: () => $('#gotoInput').focus(),
+  ruler: () => setRulerOn(!ruler.on),
+  help: () => $('#helpDlg').showModal(),
+  close: closeTopmost
+};
 document.addEventListener('keydown', (e) => {
   if (e.defaultPrevented) return;
   const el = /** @type {Element} */ (e.target instanceof Element ? e.target : null);
@@ -2198,24 +2218,7 @@ document.addEventListener('keydown', (e) => {
   });
   if (!action) return;
   e.preventDefault();
-  if (action === 'skip-tour') { endTour(); }
-  else if (action === 'search') { if (!searchBusy) runSearch(); }
-  else if (action === 'zoom-in') { zoomBy(1 / 1.3); }
-  else if (action === 'zoom-out') { zoomBy(1.3); }
-  else if (action === 'goto') { $('#gotoInput').focus(); }
-  else if (action === 'ruler') { setRulerOn(!ruler.on); }
-  else if (action === 'help') { $('#helpDlg').showModal(); }
-  else {  // 'close': dialogs first, then the active tool / pin popup
-    const help = $('#helpDlg'), gallery = $('#galleryDlg');
-    if (help.open) { help.close(); }
-    else if (gallery.open) { gallery.close(); }
-    else {
-      if (ruler.on) setRulerOn(false);
-      if (markerMode) setMarkerMode(false);
-      if (sel.on) setSelOn(false);
-      hidePopup();
-    }
-  }
+  KEY_ACTIONS[action]();
 });
 
 // ---------- init ----------
