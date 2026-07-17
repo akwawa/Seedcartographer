@@ -26,8 +26,8 @@ let listPtr = 0, listCap = 0;
 // the sliced search job and reuse areaPtr, which would clobber the grid
 let searchPtr = 0, searchCap = 0;
 
-createMcFinder().then((mod) => {
-  M = mod;
+try {
+  M = await createMcFinder();
   const cp = M._malloc(256 * 3);
   M._fillBiomeColors(cp);
   baseColors = M.HEAPU8.slice(cp, cp + 256 * 3);
@@ -35,9 +35,9 @@ createMcFinder().then((mod) => {
   M._free(cp);
   ready = true;
   postMessage({ type: 'ready', mcNewest: M._c_mc_newest() });
-}).catch((err) => {
+} catch (err) {
   postMessage({ type: 'fatal', message: 'WASM module failed to load: ' + (err?.message || err) });
-});
+}
 
 function ensureArea(cells) {
   if (cells > areaCap) {

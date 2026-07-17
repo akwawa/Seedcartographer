@@ -25,6 +25,10 @@ et la release GitHub.
   rater l'arrivée du support des versions 26.x (#225).
 
 ### Modifié
+- Migration ES modules, finition : `worker.js` et `app.js` utilisent le
+  top-level await des modules au lieu d'une chaîne de promesses / d'un appel
+  `init()` flottant (règle Sonar S7785, apparue avec le passage en modules)
+  (#224).
 - Migration ES modules, étape finale : `"type": "module"` officialisé dans
   `package.json` (fin du warning Node `MODULE_TYPELESS_PACKAGE_JSON`) ; les
   derniers fichiers CommonJS (`eslint.config.js`, `playwright.config.js`,

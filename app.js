@@ -2250,4 +2250,4 @@ function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg)
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
 Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles });
-init();
+await init();
