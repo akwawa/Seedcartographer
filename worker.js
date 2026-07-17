@@ -243,6 +243,21 @@ async function genExtraLayers(layerYs, ctx) {
   return true;
 }
 
+// 1) biome grids for the search box: the main grid in row bands (0 → 80%)
+// then the extra multi-Y layers — or nothing at all for a structures-only
+// search, where the whole biome pass is short-circuited. Returns true or
+// the failure kind.
+async function prepareBiomeGrids(d, layerYs, ctx) {
+  if (!needsBiomeGrid(d)) {
+    ctx.progress(80);
+    return true;
+  }
+  ensureSearchArea(ctx.cols * ctx.rows * (1 + layerYs.length));
+  const mainOk = await genMainGrid(d.y, ctx);
+  if (mainOk !== true) return mainOk;
+  return genExtraLayers(layerYs, ctx);
+}
+
 // ---- sliced, cancellable search ----
 let searchBusy = false;
 let searchCancelId = 0;
@@ -269,22 +284,9 @@ async function runSearchJob(d) {
     const rows = Math.ceil((d.cz + d.range + pad) / SC) - gz0 + 2;
     const layerYs = adjLayerYs(d);
     if (cols * rows * (1 + layerYs.length) > SEARCH_MAX_CELLS) { fail('area-too-large'); return; }
+    const gridOk = await prepareBiomeGrids(d, layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
+    if (gridOk !== true) { fail(gridOk); return; }
     const useGrid = needsBiomeGrid(d);
-    if (useGrid) {
-      ensureSearchArea(cols * rows * (1 + layerYs.length));
-
-      // 1) generate the grid in row bands (0 → 80%), yielding between bands so
-      // tile renders and cancel messages are processed
-      const mainOk = await genMainGrid(d.y, { cols, rows, gx0, gz0, SC, cancelled, progress });
-      if (mainOk !== true) { fail(mainOk); return; }
-
-      // 1b) extra biome layers for the multi-Y adjacency clauses, same box
-      const layersOk = await genExtraLayers(layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
-      if (layersOk !== true) { fail(layersOk); return; }
-    } else {
-      // structures-only search: the biome pass is short-circuited
-      progress(80);
-    }
     const cells = cols * rows;
 
     // 2) structure positions per clause (fast)
