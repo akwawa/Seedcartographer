@@ -19,6 +19,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Raccourcis clavier : `Enter` lance la recherche depuis n'importe quel champ
+  du panneau de critères, `+`/`-` zooment la carte, `G` ouvre « aller aux
+  coordonnées », `R` active/désactive l'outil règle, `?` ouvre l'aide et
+  `Échap` ferme le dialogue/outil/pop-up actif. Les raccourcis lettres sont
+  inactifs pendant la frappe dans un champ et pendant le tour guidé (où
+  `Échap` passe le tour). La logique touche+contexte→action vit dans le
+  module pur `keys.js` ; une fiche des raccourcis, traduite dans les dix
+  langues, est ajoutée au dialogue d'aide. (#230)
 - Mini-tour guidé à la première visite : quatre bulles ancrées sur les
   éléments réels de l'interface (seed → critères → recherche →
   partage/export) avec compteur d'étape, boutons « Suivant »/« Passer »,

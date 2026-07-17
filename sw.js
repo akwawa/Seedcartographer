@@ -31,6 +31,7 @@ const ASSETS = [
   './gallery.js',
   './errorreport.js',
   './tour.js',
+  './keys.js',
   './gallery.json',
   './profile.js',
   './legend.js',
