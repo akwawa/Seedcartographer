@@ -16,7 +16,7 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [Non publié]
+## [0.10.0](https://github.com/akwawa/Seedcartographer/compare/v0.9.0...v0.10.0) (2026-07-17)
 
 ### Ajouté
 - Export PNG haute résolution de la carte (mode poster) : un sélecteur de
