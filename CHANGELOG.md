@@ -19,6 +19,13 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Quatre nouvelles langues : japonais, russe, polonais et chinois simplifié.
+  Toutes les clés d'interface, les textes d'aide et les noms de biomes sont
+  traduits avec la terminologie officielle de Minecraft dans chaque langue.
+  Le sélecteur de langue les propose et la détection automatique reconnaît
+  `ja`, `ru`, `pl` et les variantes chinoises (`zh`, `zh-CN`, `zh-Hans`… ;
+  `zh-TW`/`zh-HK` retombent sur le chinois simplifié en attendant une table
+  traditionnelle dédiée) (#228).
 - Recherche sans biome : une option « N'importe quel biome » dans le sélecteur
   de biome principal permet une recherche portant uniquement sur des critères
   de structures (ex. « 3 villages dans un rayon donné, biome indifférent »).

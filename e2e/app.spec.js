@@ -132,6 +132,31 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await page.selectOption('#langSel', 'pt');
   await expect(page.locator('#searchBtn')).toHaveText('Buscar nesta área');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosque de cerejeiras');
+  await page.selectOption('#langSel', 'ja');
+  await expect(page.locator('#searchBtn')).toHaveText('このエリアを検索');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('桜の森');
+  await page.selectOption('#langSel', 'ru');
+  await expect(page.locator('#searchBtn')).toHaveText('Искать в этой области');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Вишнёвая роща');
+  await page.selectOption('#langSel', 'pl');
+  await expect(page.locator('#searchBtn')).toHaveText('Przeszukaj ten obszar');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Wiśniowy gaj');
+  await page.selectOption('#langSel', 'zh-CN');
+  await expect(page.locator('#searchBtn')).toHaveText('搜索此区域');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('樱花树林');
+  // long labels (ru/pl) and ideograms must not overflow the panel horizontally
+  // long labels (ru/pl) and ideograms must not push the layout further than
+  // the widest pre-existing locale already does (the topbar overflows and is
+  // clipped by design at some widths, in every language)
+  const overflowOf = async (lang) => {
+    await page.selectOption('#langSel', lang);
+    return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  };
+  let baseline = 0;
+  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt']) baseline = Math.max(baseline, await overflowOf(lang));
+  for (const lang of ['ja', 'ru', 'pl', 'zh-CN']) {
+    expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(baseline);
+  }
 });
 
 test('Nether dimension: biome list, map, search and share link work', async ({ page, context }) => {
