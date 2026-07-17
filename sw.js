@@ -30,6 +30,7 @@ const ASSETS = [
   './relief.js',
   './gallery.js',
   './errorreport.js',
+  './tour.js',
   './gallery.json',
   './profile.js',
   './legend.js',

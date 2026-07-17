@@ -184,7 +184,16 @@ export const I18N = {
     structAncientCity: 'Ancient city',
     structBuriedTreasure: 'Buried treasure',
     structTrailRuins: 'Trail ruins',
-    structTrialChamber: 'Trial chamber'
+    structTrialChamber: 'Trial chamber',
+    tourSeed: 'Type a seed here (or keep the demo one), then load it.',
+    tourCriteria: 'Pick your criteria: biomes, structures, patterns…',
+    tourSearch: 'Then launch the search on the visible area.',
+    tourShare: 'Found a good spot? Share the link or export the map.',
+    tourNext: 'Next',
+    tourDone: 'Done',
+    tourSkip: 'Skip',
+    tourReplay: 'Replay the tour',
+    tourProgress: 'Step {n} of {t}'
   },
   fr: {
     copyConverted: "Copier les coordonnées converties",
@@ -366,7 +375,16 @@ export const I18N = {
     structAncientCity: 'Cité ancienne',
     structBuriedTreasure: 'Trésor enfoui',
     structTrailRuins: 'Vestiges de sentier',
-    structTrialChamber: "Salle d'épreuves"
+    structTrialChamber: "Salle d'épreuves",
+    tourSeed: 'Saisissez une seed ici (ou gardez la démo), puis chargez-la.',
+    tourCriteria: 'Choisissez vos critères : biomes, structures, motifs…',
+    tourSearch: 'Puis lancez la recherche sur la zone visible.',
+    tourShare: 'Un bon spot ? Partagez le lien ou exportez la carte.',
+    tourNext: 'Suivant',
+    tourDone: 'Terminer',
+    tourSkip: 'Passer',
+    tourReplay: 'Revoir le tour',
+    tourProgress: 'Étape {n} sur {t}'
   },
   es: {
     copyConverted: "Copiar las coordenadas convertidas",
@@ -548,7 +566,16 @@ export const I18N = {
     structAncientCity: 'Ciudad antigua',
     structBuriedTreasure: 'Tesoro enterrado',
     structTrailRuins: 'Ruinas de senderos',
-    structTrialChamber: 'Cámara de pruebas'
+    structTrialChamber: 'Cámara de pruebas',
+    tourSeed: 'Escribe una seed aquí (o deja la demo) y cárgala.',
+    tourCriteria: 'Elige tus criterios: biomas, estructuras, patrones…',
+    tourSearch: 'Luego lanza la búsqueda en la zona visible.',
+    tourShare: '¿Un buen sitio? Comparte el enlace o exporta el mapa.',
+    tourNext: 'Siguiente',
+    tourDone: 'Terminar',
+    tourSkip: 'Omitir',
+    tourReplay: 'Volver a ver el tour',
+    tourProgress: 'Paso {n} de {t}'
   },
   de: {
     copyConverted: "Umgerechnete Koordinaten kopieren",
@@ -730,7 +757,16 @@ export const I18N = {
     structAncientCity: 'Antike Stadt',
     structBuriedTreasure: 'Vergrabener Schatz',
     structTrailRuins: 'Pfadruinen',
-    structTrialChamber: 'Prüfungskammer'
+    structTrialChamber: 'Prüfungskammer',
+    tourSeed: 'Gib hier einen Seed ein (oder behalte die Demo) und lade ihn.',
+    tourCriteria: 'Wähle deine Kriterien: Biome, Bauwerke, Muster…',
+    tourSearch: 'Starte dann die Suche im sichtbaren Bereich.',
+    tourShare: 'Guter Ort gefunden? Teile den Link oder exportiere die Karte.',
+    tourNext: 'Weiter',
+    tourDone: 'Fertig',
+    tourSkip: 'Überspringen',
+    tourReplay: 'Tour erneut ansehen',
+    tourProgress: 'Schritt {n} von {t}'
   },  it: {
     copyConverted: "Copia le coordinate convertite",
     dimension: "Dimensione",
@@ -911,7 +947,16 @@ export const I18N = {
     structAncientCity: "Città antica",
     structBuriedTreasure: "Tesoro sepolto",
     structTrailRuins: "Rovine dei sentieri",
-    structTrialChamber: "Camera delle prove"
+    structTrialChamber: "Camera delle prove",
+    tourSeed: 'Inserisci qui un seed (o tieni la demo) e caricalo.',
+    tourCriteria: 'Scegli i tuoi criteri: biomi, strutture, motivi…',
+    tourSearch: "Poi avvia la ricerca nell'area visibile.",
+    tourShare: 'Trovato un buon posto? Condividi il link o esporta la mappa.',
+    tourNext: 'Avanti',
+    tourDone: 'Fine',
+    tourSkip: 'Salta',
+    tourReplay: 'Rivedi il tour',
+    tourProgress: 'Passo {n} di {t}'
   },
   pt: {
     copyConverted: "Copiar as coordenadas convertidas",
@@ -1093,7 +1138,16 @@ export const I18N = {
     structAncientCity: "Cidade ancestral",
     structBuriedTreasure: "Tesouro enterrado",
     structTrailRuins: "Ruínas de trilha",
-    structTrialChamber: "Câmara de desafios"
+    structTrialChamber: "Câmara de desafios",
+    tourSeed: 'Digite uma seed aqui (ou mantenha a demo) e carregue-a.',
+    tourCriteria: 'Escolha seus critérios: biomas, estruturas, padrões…',
+    tourSearch: 'Depois inicie a busca na área visível.',
+    tourShare: 'Achou um bom lugar? Compartilhe o link ou exporte o mapa.',
+    tourNext: 'Avançar',
+    tourDone: 'Concluir',
+    tourSkip: 'Pular',
+    tourReplay: 'Rever o tour',
+    tourProgress: 'Etapa {n} de {t}'
   },
   ja: {
     copyConverted: "変換した座標をコピー",
@@ -1275,7 +1329,16 @@ export const I18N = {
     structAncientCity: "古代都市",
     structBuriedTreasure: "埋もれた宝",
     structTrailRuins: "旅路の遺跡",
-    structTrialChamber: "トライアルチャンバー"
+    structTrialChamber: "トライアルチャンバー",
+    tourSeed: 'ここにシード値を入力（デモのままでも可）して読み込みます。',
+    tourCriteria: '条件を選びます：バイオーム、構造物、地形パターンなど。',
+    tourSearch: '次に表示中のエリアで検索を実行します。',
+    tourShare: '良い場所が見つかったら、リンクを共有するか地図を書き出せます。',
+    tourNext: '次へ',
+    tourDone: '完了',
+    tourSkip: 'スキップ',
+    tourReplay: 'ツアーをもう一度見る',
+    tourProgress: 'ステップ {n} / {t}'
   },
   ru: {
     copyConverted: "Скопировать преобразованные координаты",
@@ -1457,7 +1520,16 @@ export const I18N = {
     structAncientCity: "Древний город",
     structBuriedTreasure: "Клад",
     structTrailRuins: "Придорожные руины",
-    structTrialChamber: "Испытательные залы"
+    structTrialChamber: "Испытательные залы",
+    tourSeed: 'Введите сид здесь (или оставьте демо) и загрузите его.',
+    tourCriteria: 'Выберите критерии: биомы, строения, узоры…',
+    tourSearch: 'Затем запустите поиск в видимой области.',
+    tourShare: 'Нашли хорошее место? Поделитесь ссылкой или экспортируйте карту.',
+    tourNext: 'Далее',
+    tourDone: 'Готово',
+    tourSkip: 'Пропустить',
+    tourReplay: 'Посмотреть тур ещё раз',
+    tourProgress: 'Шаг {n} из {t}'
   },
   pl: {
     copyConverted: "Skopiuj przeliczone współrzędne",
@@ -1639,7 +1711,16 @@ export const I18N = {
     structAncientCity: "Starożytne miasto",
     structBuriedTreasure: "Zakopany skarb",
     structTrailRuins: "Ruiny szlaku",
-    structTrialChamber: "Komnaty prób"
+    structTrialChamber: "Komnaty prób",
+    tourSeed: 'Wpisz tu seed (albo zostaw demo) i wczytaj go.',
+    tourCriteria: 'Wybierz kryteria: biomy, struktury, wzory…',
+    tourSearch: 'Potem uruchom wyszukiwanie w widocznym obszarze.',
+    tourShare: 'Dobre miejsce? Udostępnij link lub wyeksportuj mapę.',
+    tourNext: 'Dalej',
+    tourDone: 'Gotowe',
+    tourSkip: 'Pomiń',
+    tourReplay: 'Obejrzyj przewodnik ponownie',
+    tourProgress: 'Krok {n} z {t}'
   },
   'zh-CN': {
     copyConverted: "复制转换后的坐标",
@@ -1821,7 +1902,16 @@ export const I18N = {
     structAncientCity: "远古城市",
     structBuriedTreasure: "埋藏的宝藏",
     structTrailRuins: "古迹废墟",
-    structTrialChamber: "试炼密室"
+    structTrialChamber: "试炼密室",
+    tourSeed: '在这里输入种子（或保留演示种子）并加载。',
+    tourCriteria: '选择条件：生物群系、结构、地形图案等。',
+    tourSearch: '然后在可见区域启动搜索。',
+    tourShare: '找到好地点？分享链接或导出地图。',
+    tourNext: '下一步',
+    tourDone: '完成',
+    tourSkip: '跳过',
+    tourReplay: '重看引导',
+    tourProgress: '第 {n} 步，共 {t} 步'
   },
 };
 

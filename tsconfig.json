@@ -12,7 +12,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "seed.js", "search.js", "shapes.js", "version.js", "export.js", "coords.js", "slime.js", "maptools.js", "tilecache.js", "sharestate.js", "seedsearch.js", "searchhistory.js", "userpresets.js", "usermarkers.js", "palette.js", "tilegrid.js", "relief.js", "profile.js", "gallery.js", "errorreport.js",
+    "seed.js", "search.js", "shapes.js", "version.js", "export.js", "coords.js", "slime.js", "maptools.js", "tilecache.js", "sharestate.js", "seedsearch.js", "searchhistory.js", "userpresets.js", "usermarkers.js", "palette.js", "tilegrid.js", "relief.js", "profile.js", "gallery.js", "errorreport.js", "tour.js",
     "markers.js", "presets.js", "favorites.js", "legend.js", "theme.js",
     "scripts/*.js"
   ]

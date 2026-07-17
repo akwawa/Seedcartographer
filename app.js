@@ -30,6 +30,7 @@ import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
 import { resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV } from './export.js';
 import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
+import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
@@ -2088,6 +2089,91 @@ function initTheme() {
   if (altPalette) applyPalette(true, false);
 }
 
+// ---------- first-visit guided tour (#229) ----------
+// DOM glue over the pure logic in tour.js: overlay + highlight ring + bubble
+// positioned next to the real UI elements, keyboard-driven (Tab trapped in
+// the bubble, Enter = next, Escape = skip). localStorage remembers the tour
+// was seen; a storage error never blocks the app (and never re-nags either).
+function tourSeenValue() {
+  try { return localStorage.getItem(TOUR_SEEN_KEY); } catch { return 'unavailable'; }
+}
+function markTourSeen() {
+  try { localStorage.setItem(TOUR_SEEN_KEY, '1'); } catch { /* ignore */ }
+}
+let tourUi = null;   // { overlay, ring, bubble, text, counter, next, skip, step }
+function endTour() {
+  if (!tourUi) return;
+  window.removeEventListener('resize', tourReposition);
+  tourUi.overlay.remove(); tourUi.ring.remove(); tourUi.bubble.remove();
+  tourUi = null;
+  markTourSeen();
+}
+function tourReposition() {
+  if (!tourUi) return;
+  const el = document.querySelector(TOUR_STEPS[tourUi.step].target);
+  el.scrollIntoView({ block: 'nearest' });   // panel targets may be below the fold
+  const r = el.getBoundingClientRect();
+  const ring = tourUi.ring;
+  ring.style.left = (r.left - 5) + 'px';
+  ring.style.top = (r.top - 5) + 'px';
+  ring.style.width = (r.width + 10) + 'px';
+  ring.style.height = (r.height + 10) + 'px';
+  const b = tourUi.bubble;
+  const p = tourBubblePosition(r, { width: b.offsetWidth, height: b.offsetHeight },
+    { width: window.innerWidth, height: window.innerHeight });
+  b.style.left = p.left + 'px';
+  b.style.top = p.top + 'px';
+}
+function tourShowStep(step) {
+  tourUi.step = step;
+  tourUi.text.textContent = t(TOUR_STEPS[step].key);
+  tourUi.counter.textContent = t('tourProgress', { n: step + 1, t: TOUR_STEPS.length });
+  tourUi.next.textContent = t(isLastStep(step, TOUR_STEPS.length) ? 'tourDone' : 'tourNext');
+  tourUi.bubble.setAttribute('aria-label', t('tourProgress', { n: step + 1, t: TOUR_STEPS.length }));
+  tourReposition();
+  tourUi.next.focus();
+}
+function startTour() {
+  if (tourUi) return;
+  const mk = (tag, cls) => { const el = document.createElement(tag); el.className = cls; document.body.append(el); return el; };
+  const overlay = mk('div', 'tour-overlay');
+  const ring = mk('div', 'tour-ring');
+  const bubble = mk('div', 'tour-bubble');
+  bubble.setAttribute('role', 'dialog');
+  bubble.setAttribute('aria-modal', 'true');
+  const text = document.createElement('p');
+  text.className = 'tour-text';
+  const counter = document.createElement('span');
+  counter.className = 'tour-counter mono';
+  const skip = document.createElement('button');
+  skip.className = 'btn tiny tour-skip';
+  skip.textContent = t('tourSkip');
+  const next = document.createElement('button');
+  next.className = 'btn tiny tour-next';
+  const row = document.createElement('div');
+  row.className = 'tour-row';
+  row.append(counter, skip, next);
+  bubble.append(text, row);
+  tourUi = { overlay, ring, bubble, text, counter, next, skip, step: 0 };
+  next.onclick = () => {
+    const n = nextStep(tourUi.step, TOUR_STEPS.length);
+    if (n === -1) endTour(); else tourShowStep(n);
+  };
+  skip.onclick = endTour;
+  overlay.onclick = endTour;
+  bubble.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); endTour(); return; }
+    // the bubble is the keyboard world while the tour runs: Tab cycles
+    // between its two buttons, in both directions
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      (document.activeElement === next ? skip : next).focus();
+    }
+  });
+  window.addEventListener('resize', tourReposition);
+  tourShowStep(0);
+}
+
 // ---------- init ----------
 async function init() {
   hashState = await readHash();
@@ -2249,6 +2335,8 @@ async function init() {
     + (APP_VERSION.commit ? ` (${APP_VERSION.commit})` : '');
   $('#helpBtn').onclick = () => $('#helpDlg').showModal();
   $('#helpClose').onclick = () => $('#helpDlg').close();
+  // the tour can be replayed anytime from the help dialog (#229)
+  $('#tourReplay').onclick = () => { $('#helpDlg').close(); startTour(); };
   $('#galleryBtn').onclick = openGallery;
   $('#galleryClose').onclick = () => $('#galleryDlg').close();
   buildDimSelect();
@@ -2258,6 +2346,8 @@ async function init() {
   buildMarkerList();
   applyI18n();
   resize();
+  // first visit: walk the newcomer through seed → criteria → search → share
+  if (isFirstVisit(tourSeenValue())) startTour();
   // offline support (PWA); requires a secure context, harmless otherwise
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });

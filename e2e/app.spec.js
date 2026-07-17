@@ -1,5 +1,5 @@
 /* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
 test.beforeEach(({ page }) => {

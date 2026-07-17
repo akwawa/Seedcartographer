@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 // Time-to-first-map-render budget: from navigation start until a fresh grid
 // tile is actually painted on the canvas (engine booted, WASM compiled,

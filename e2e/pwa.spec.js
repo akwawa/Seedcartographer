@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 test.beforeEach(({ page }) => {
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));

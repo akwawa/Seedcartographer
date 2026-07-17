@@ -19,6 +19,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Mini-tour guidé à la première visite : quatre bulles ancrées sur les
+  éléments réels de l'interface (seed → critères → recherche →
+  partage/export) avec compteur d'étape, boutons « Suivant »/« Passer »,
+  navigation clavier et focus piégé dans la bulle. Mémorisé via
+  `localStorage`, relançable depuis le dialogue d'aide (« Revoir le
+  tour ») et traduit dans les dix langues. (#229)
 - Quatre nouvelles langues : japonais, russe, polonais et chinois simplifié.
   Toutes les clés d'interface, les textes d'aide et les noms de biomes sont
   traduits avec la terminologie officielle de Minecraft dans chaque langue.
