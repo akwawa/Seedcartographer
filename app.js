@@ -32,6 +32,7 @@ import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
+import { keyAction } from './keys.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
@@ -2173,6 +2174,49 @@ function startTour() {
   window.addEventListener('resize', tourReposition);
   tourShowStep(0);
 }
+
+// ---------- global keyboard shortcuts (#230) ----------
+// DOM glue over the pure mapping in keys.js: build the simplified context
+// from the event, then run the returned action. Handlers that already
+// consumed the key (canvas pan/zoom, tour bubble, criteria rows…) call
+// preventDefault first, so this never doubles them up.
+document.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented) return;
+  const el = /** @type {Element} */ (e.target instanceof Element ? e.target : null);
+  const tag = el ? el.tagName : '';
+  const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  const action = keyAction({
+    key: e.key,
+    mod: e.ctrlKey || e.metaKey || e.altKey,
+    inInput,
+    // Enter submits the search from any field of the criteria card only;
+    // other fields (goto box, marker/favorite notes, sync code…) keep
+    // their own Enter behavior
+    inSearchField: inInput && tag !== 'TEXTAREA' && el.closest('#criteriaCard') !== null,
+    tourOpen: tourUi !== null,
+    dialogOpen: $('#helpDlg').open || $('#galleryDlg').open
+  });
+  if (!action) return;
+  e.preventDefault();
+  if (action === 'skip-tour') { endTour(); }
+  else if (action === 'search') { if (!searchBusy) runSearch(); }
+  else if (action === 'zoom-in') { zoomBy(1 / 1.3); }
+  else if (action === 'zoom-out') { zoomBy(1.3); }
+  else if (action === 'goto') { $('#gotoInput').focus(); }
+  else if (action === 'ruler') { setRulerOn(!ruler.on); }
+  else if (action === 'help') { $('#helpDlg').showModal(); }
+  else {  // 'close': dialogs first, then the active tool / pin popup
+    const help = $('#helpDlg'), gallery = $('#galleryDlg');
+    if (help.open) { help.close(); }
+    else if (gallery.open) { gallery.close(); }
+    else {
+      if (ruler.on) setRulerOn(false);
+      if (markerMode) setMarkerMode(false);
+      if (sel.on) setSelOn(false);
+      hidePopup();
+    }
+  }
+});
 
 // ---------- init ----------
 async function init() {

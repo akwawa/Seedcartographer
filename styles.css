@@ -224,6 +224,9 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .help .help-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);
   cursor:pointer;font-size:16px;line-height:1;padding:3px 6px}
 .help .help-close:hover{color:var(--text)}
+.help .help-keys{margin:0;padding-left:0;list-style:none;font-size:13px;line-height:1.9}
+.help .help-keys kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 6px}
 
 /* ---------- first-visit guided tour (#229) ---------- */
 /* stacking: overlay < highlight ring < bubble, all above the topbar/dialogs */
