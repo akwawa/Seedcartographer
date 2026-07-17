@@ -1,12 +1,11 @@
 // tilegrid.js — world-aligned fixed-size tile grid for the progressive map
-// render. Pure math, shared between app.js (script tag), worker.js
-// (importScripts) and the Node test suite (require).
+// render. Pure-math ES module shared between app.js, worker.js and the
+// Node test suite.
 //
 // A tile is TILE_CELLS × TILE_CELLS engine cells of `scale` blocks each, its
 // NW corner aligned on a multiple of the tile span (TILE_CELLS * scale)
 // world-wide: the same world region always maps to the same tile key, which
 // is what makes the LRU cache reusable across pans.
-'use strict';
 
 const TILE_CELLS = 256;          // cells per tile side
 const TILE_GRID_CACHE_MAX = 96;  // small tiles kept in the LRU (~25 MB)
@@ -62,6 +61,4 @@ function unionPresent(tiles) {
   return [...set];
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { TILE_CELLS, TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent };
-}
+export { TILE_CELLS, TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent };

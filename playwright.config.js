@@ -1,9 +1,8 @@
 // Playwright end-to-end test config. The app is static: a Python http.server
 // is enough as the web server (WASM needs real HTTP, file:// won't work).
-'use strict';
-const { defineConfig } = require('@playwright/test');
+import { defineConfig } from '@playwright/test';
 
-module.exports = defineConfig({
+export default defineConfig({
   testDir: './e2e',
   timeout: 120000,
   fullyParallel: true,

@@ -1,5 +1,4 @@
-'use strict';
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.beforeEach(({ page }) => {
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));

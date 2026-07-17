@@ -1,6 +1,5 @@
-'use strict';
 /* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
 test.beforeEach(({ page }) => {
@@ -391,7 +390,7 @@ test('map pans and zooms with the keyboard', async ({ page }) => {
 });
 
 test('axe-core audit: no WCAG A/AA violations in either theme', async ({ page }) => {
-  const AxeBuilder = require('@axe-core/playwright').default;
+  const { default: AxeBuilder } = await import('@axe-core/playwright');
   await page.goto('/');
   await waitForApp(page);
   for (const theme of ['dark', 'light']) {

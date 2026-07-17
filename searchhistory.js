@@ -1,9 +1,8 @@
 // searchhistory.js — recent searches, replayable in one click. Pure list
 // operations, shared between app.js (script tag, backed by localStorage) and
 // the Node test suite (require). No data ever leaves the browser.
-'use strict';
 
-const HISTORY_MAX = 10;   // recent searches kept, newest first
+export const HISTORY_MAX = 10;   // recent searches kept, newest first
 
 // an entry captures everything a replay needs: the world, the criteria (in
 // the share-hash shape produced by readCriteria) and the searched zone
@@ -26,7 +25,7 @@ function historyKey(e) {
  * @param {number} [max] size cap
  * @returns {HistoryEntry[]} new list (input untouched)
  */
-function addHistoryEntry(list, entry, max = HISTORY_MAX) {
+export function addHistoryEntry(list, entry, max = HISTORY_MAX) {
   const k = historyKey(entry);
   return [entry, ...list.filter((e) => historyKey(e) !== k)].slice(0, max);
 }
@@ -51,13 +50,9 @@ function normalizeHistoryEntry(e) {
  * @param {string|null} json raw localStorage payload
  * @returns {HistoryEntry[]} well-formed entries only
  */
-function parseHistory(json) {
+export function parseHistory(json) {
   let raw;
   try { raw = JSON.parse(String(json)); } catch { return []; }
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, HISTORY_MAX).map(normalizeHistoryEntry).filter((e) => e !== null);
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { HISTORY_MAX, addHistoryEntry, parseHistory };
 }

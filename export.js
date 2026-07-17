@@ -1,13 +1,12 @@
 // export.js — pure serializers for search results (CSV / JSON downloads).
 // Shared between app.js (script tag) and the Node test suite (require).
-'use strict';
 
 // Quote a CSV field when it contains a separator, quote or newline.
 /**
  * @param {string|number} v raw field value
  * @returns {string} CSV-safe field
  */
-function csvField(v) {
+export function csvField(v) {
   const s = String(v);
   return /[",\n\r]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
 }
@@ -24,7 +23,7 @@ function csvField(v) {
  * @param {ExportMeta} meta world description repeated on each row
  * @returns {string} CSV text
  */
-function resultsToCSV(hits, meta) {
+export function resultsToCSV(hits, meta) {
   const head = 'x,z,nearby_structures,seed,mc_version';
   const rows = hits.map((h) => [h.x, h.z, h.count, meta.seed, meta.mcLabel].map(csvField).join(','));
   return [head, ...rows].join('\n') + '\n';
@@ -36,7 +35,7 @@ function resultsToCSV(hits, meta) {
  * @param {ExportMeta} meta world and criteria description
  * @returns {string} pretty-printed JSON text
  */
-function resultsToJSON(hits, meta) {
+export function resultsToJSON(hits, meta) {
   return JSON.stringify({
     seed: meta.seed,
     mcVersion: meta.mcLabel,
@@ -54,7 +53,7 @@ function resultsToJSON(hits, meta) {
  *          dimension: string, cx: number, cz: number}} meta view description
  * @returns {string[]} cartouche lines
  */
-function mapCartoucheLines(meta) {
+export function mapCartoucheLines(meta) {
   return [
     `Seed: ${meta.seed}`,
     `Java ${meta.mcLabel}${meta.large ? ' (Large Biomes)' : ''} — ${meta.dimension}`,
@@ -70,7 +69,7 @@ function mapCartoucheLines(meta) {
  * @param {string} ext file extension without the dot
  * @returns {string}
  */
-function exportFileName(seed, kind, ext) {
+export function exportFileName(seed, kind, ext) {
   return `seedcartographer-${String(seed).replace(/[^\w-]+/g, '_')}-${kind}.${ext}`;
 }
 
@@ -79,7 +78,7 @@ function exportFileName(seed, kind, ext) {
  * @param {string} line one CSV line
  * @returns {string[]} cells
  */
-function splitCSVLine(line) {
+export function splitCSVLine(line) {
   const out = [];
   let cur = '', quoted = false;
   for (let i = 0; i < line.length; i++) {
@@ -104,7 +103,7 @@ function splitCSVLine(line) {
  * @param {number} [max] cap on returned locations
  * @returns {{hits: Hit[], skipped: number}}
  */
-function parseLocationsCSV(text, max = 1500) {
+export function parseLocationsCSV(text, max = 1500) {
   const lines = String(text).split(/\r?\n/).filter((l) => l.trim() !== '');
   /** @type {Hit[]} */
   const hits = [];
@@ -126,11 +125,4 @@ function parseLocationsCSV(text, max = 1500) {
     hits.push({ x, z, count });
   });
   return { hits, skipped };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    resultsToCSV, resultsToJSON, csvField,
-    mapCartoucheLines, exportFileName, parseLocationsCSV, splitCSVLine
-  };
 }

@@ -16,6 +16,59 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Veille cubiomes : un workflow hebdomadaire (`cubiomes-watch.yml`) compare le
+  HEAD amont de Cubitect/cubiomes au submodule épinglé et ouvre (ou
+  rafraîchit) automatiquement une issue quand l'amont avance — pour ne pas
+  rater l'arrivée du support des versions 26.x (#225).
+
+### Corrigé
+- CI : déploiement GitHub Pages cassé depuis le double-build (#207) — les
+  scripts de stamping de version refusent par conception tout chemin hors de
+  leur répertoire courant (`insideCwd`), or `pages.yml` les appelait sur
+  `../_site` depuis `build-main`/`build-dev`. Chaque build est désormais
+  stagé dans son propre checkout puis copié vers `_site` (#240).
+
+### Modifié
+- Migration ES modules, finition : `worker.js` et `app.js` utilisent le
+  top-level await des modules au lieu d'une chaîne de promesses / d'un appel
+  `init()` flottant (règle Sonar S7785, apparue avec le passage en modules)
+  (#224).
+- Migration ES modules, étape finale : `"type": "module"` officialisé dans
+  `package.json` (fin du warning Node `MODULE_TYPELESS_PACKAGE_JSON`) ; les
+  derniers fichiers CommonJS (`eslint.config.js`, `playwright.config.js`,
+  `scripts/*.js`, specs Playwright `e2e/*.js`) passent en `import`/`export`
+  natifs (#224).
+- Migration ES modules, étape 1 : la couche de test Node passe en modules
+  ES natifs (`test/*.test.mjs`, `import` pour les builtins Node,
+  `createRequire` pour charger les sources encore double-mode CommonJS).
+  Aucun changement côté navigateur : les sources restent chargées par
+  balises `<script>` classiques et `importScripts` (#224).
+- Migration ES modules, étape 2 : la page principale passe en modules ES —
+  `index.html` charge `app.js` via `<script type="module">` et `app.js`
+  importe explicitement ses dépendances pure-logique (i18n, biomes, coords,
+  presets, favoris, légende, outils carte, caches de tuiles, partage,
+  recherche de seeds, historique, presets/marqueurs utilisateur, profil,
+  galerie, thème, export, version, rapport d'erreurs), qui perdent leur
+  garde CommonJS au profit d'`export`. Les fichiers partagés avec
+  `worker.js` via `importScripts` (seed, shapes, search, slime, markers,
+  palette, tilegrid, relief) restent des scripts classiques à globals
+  jusqu'à l'étape 3 ; les tests Node importent désormais directement les
+  sources converties (#224).
+- Migration ES modules, étape 3 (finale) : `worker.js` devient un module
+  worker (`new Worker(..., { type: 'module' })`, `import` au lieu
+  d'`importScripts`) et la glue Emscripten est rebâtie en module ES
+  (`-sEXPORT_ES6=1` dans `build.sh`, emsdk 6.0.2). Les huit derniers
+  fichiers classiques (seed, shapes, search, slime, markers, palette,
+  tilegrid, relief) passent en `export` natif ; `app.js` les importe
+  explicitement — ce qui corrige au passage l'import manquant de
+  `sortHitsByDist` (tri des résultats par distance au spawn) — et
+  `index.html` ne charge plus que le module `app.js`. Plus aucun
+  `createRequire` dans les tests Node, plus de top-level await dans
+  `seedsearch.js` (#224).
+
 ## [0.8.0](https://github.com/akwawa/Seedcartographer/compare/v0.7.0...v0.8.0) (2026-07-14)
 
 ### Ajouté

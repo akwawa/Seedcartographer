@@ -36,28 +36,35 @@ jobs:
           path: build-dev
           persist-credentials: false
       # publish only the runtime files (same set as the Docker image)
+      # the version-stamping scripts refuse any path outside their cwd
+      # (insideCwd guard), so each build stages inside its own checkout and
+      # the result is moved into the shared _site tree afterwards
       - name: Build main into the site root
         working-directory: build-main
         run: |
-          mkdir -p ../_site
+          mkdir -p _site_stage
           cp index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js \
              biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.js gallery.json errorreport.js \
              theme.js export.js mcfinder.js mcfinder.wasm \
-             manifest.webmanifest icon.svg sw.js version.js CNAME ../_site/
-          cp -r fonts ../_site/
-          node scripts/app-version.js ../_site
-          node scripts/sw-version.js ../_site
+             manifest.webmanifest icon.svg sw.js version.js CNAME _site_stage/
+          cp -r fonts _site_stage/
+          node scripts/app-version.js _site_stage
+          node scripts/sw-version.js _site_stage
+          mkdir -p ../_site
+          cp -r _site_stage/. ../_site/
       - name: Build dev into /dev/ (staging preview)
         working-directory: build-dev
         run: |
-          mkdir -p ../_site/dev
+          mkdir -p _site_stage
           cp index.html styles.css app.js worker.js seed.js search.js shapes.js i18n.js \
-             biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.js gallery.json \
+             biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js palette.js tilegrid.js relief.js profile.js gallery.js gallery.json errorreport.js \
              theme.js export.js mcfinder.js mcfinder.wasm \
-             manifest.webmanifest icon.svg sw.js version.js ../_site/dev/
-          cp -r fonts ../_site/dev/
-          node scripts/app-version.js ../_site/dev
-          node scripts/sw-version.js ../_site/dev
+             manifest.webmanifest icon.svg sw.js version.js _site_stage/
+          cp -r fonts _site_stage/
+          node scripts/app-version.js _site_stage
+          node scripts/sw-version.js _site_stage
+          mkdir -p ../_site/dev
+          cp -r _site_stage/. ../_site/dev/
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

@@ -6,17 +6,17 @@
 //   node scripts/sw-version.js <site-dir>
 //
 // The checked-in sw.js keeps a fixed dev placeholder for local serving.
-'use strict';
-const fs = require('node:fs');
-const path = require('node:path');
-const crypto = require('node:crypto');
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import process from 'node:process';
 
 // the ASSETS array in sw.js is the canonical runtime file set
 /**
  * @param {string} swSource sw.js source text
  * @returns {string[]} asset paths relative to the site root
  */
-function parseAssets(swSource) {
+export function parseAssets(swSource) {
   const m = /const ASSETS = \[([^\]]*)\]/.exec(swSource);
   if (!m) throw new Error('ASSETS array not found in sw.js');
   return [...m[1].matchAll(/'\.\/([^']*)'/g)].map(([, p]) => p).filter(Boolean);
@@ -27,7 +27,7 @@ function parseAssets(swSource) {
  * @param {Array<{path: string, content: string|Buffer}>} files assets to hash
  * @returns {string} deterministic cache version
  */
-function contentVersion(files) {
+export function contentVersion(files) {
   const h = crypto.createHash('sha256');
   for (const f of files) {
     h.update(f.path); h.update('\0'); h.update(f.content); h.update('\0');
@@ -40,7 +40,7 @@ function contentVersion(files) {
  * @param {string} version replacement VERSION value
  * @returns {string} rewritten source
  */
-function stampVersion(swSource, version) {
+export function stampVersion(swSource, version) {
   const out = swSource.replace(/const VERSION = '[^']*';/, `const VERSION = '${version}';`);
   if (out === swSource) throw new Error('VERSION line not found in sw.js');
   return out;
@@ -67,7 +67,7 @@ function insideCwd(abs) {
  * @param {string} dir site directory containing sw.js and the assets
  * @returns {string} the stamped cache version
  */
-function stampDir(dir) {
+export function stampDir(dir) {
   const root = insideCwd(fs.realpathSync(path.resolve(dir)));
   const resolveInside = (/** @type {string} */ rel) => {
     const abs = path.resolve(root, rel);
@@ -82,8 +82,6 @@ function stampDir(dir) {
   return version;
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   console.log(stampDir(process.argv[2] || '.'));
 }
-
-module.exports = { parseAssets, contentVersion, stampVersion, stampDir };

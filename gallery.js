@@ -1,11 +1,8 @@
 // gallery.js — pure logic behind the seed gallery page: entry validation
 // (gallery.json is editorial data, checked by test) and share-link building.
-// Shared between gallery.html (script tag) and the Node test suite (require).
-'use strict';
+// ES module shared between app.js and the Node test suite.
 
-// browser: sharestate.js is loaded first; Node tests: require directly
-const galleryGlobals = /** @type {any} */ (globalThis);
-const galleryEncode = galleryGlobals.encodeShareState || require('./sharestate.js').encodeShareState;
+import { encodeShareState } from './sharestate.js';
 
 const GALLERY_DIMS = new Set([0, -1, 1]);
 
@@ -19,7 +16,7 @@ const GALLERY_DIMS = new Set([0, -1, 1]);
 // One editorial entry, normalized — or null when malformed. `title.en` and
 // `desc.en` are mandatory (the render falls back to English).
 /** @param {any} e @returns {GalleryEntry|null} */
-function validateGalleryEntry(e) {
+export function validateGalleryEntry(e) {
   if (!e || typeof e !== 'object') return null;
   if (typeof e.id !== 'string' || !/^[a-z0-9-]{1,40}$/.test(e.id)) return null;
   if (typeof e.seed !== 'string' && typeof e.seed !== 'number') return null;
@@ -40,7 +37,7 @@ function validateGalleryEntry(e) {
 
 // The whole gallery file: only well-formed entries with unique ids survive.
 /** @param {any} raw parsed gallery.json content @returns {GalleryEntry[]} */
-function validateGallery(raw) {
+export function validateGallery(raw) {
   if (!Array.isArray(raw)) return [];
   const seen = new Set();
   const out = [];
@@ -54,17 +51,17 @@ function validateGallery(raw) {
 // Share-link hash opening the app on the entry (legacy uncompressed format:
 // readable by every app version, and the gallery page stays synchronous).
 /** @param {GalleryEntry} e @returns {string} hash payload (without '#') */
-function galleryEntryHash(e) {
+export function galleryEntryHash(e) {
   const state = {
     s: e.seed, m: e.mc, l: e.large ? 1 : 0, d: e.dim, y: e.y,
     x: e.x, z: e.z, b: e.b, ...(e.c ? { c: e.c } : {})
   };
-  return galleryEncode(state);
+  return encodeShareState(state);
 }
 
 // Localized field with an English fallback.
 /** @param {Record<string, string>} field @param {string} lang @returns {string} */
-function galleryText(field, lang) {
+export function galleryText(field, lang) {
   return typeof field[lang] === 'string' && field[lang].trim() ? field[lang] : field.en;
 }
 
@@ -75,7 +72,7 @@ function galleryText(field, lang) {
  * @param {number} w @param {number} h thumbnail size in pixels
  * @returns {object} message for the search worker
  */
-function galleryThumbRender(e, reqId, w, h) {
+export function galleryThumbRender(e, reqId, w, h) {
   return {
     type: 'render', reqId, seed: e.seed, mc: e.mc, large: e.large,
     dim: e.dim, y: e.y, highlight: null, cx: e.x, cz: e.z, bpp: e.b, w, h
@@ -90,7 +87,7 @@ function galleryThumbRender(e, reqId, w, h) {
  * @param {number[]} types structure types to collect
  * @returns {object} message for the search worker
  */
-function galleryStructRender(e, reqId, w, h, types) {
+export function galleryStructRender(e, reqId, w, h, types) {
   return {
     type: 'structures', reqId, seed: e.seed, mc: e.mc, large: e.large, dim: e.dim, types,
     x0: Math.floor(e.x - w * e.b / 2), z0: Math.floor(e.z - h * e.b / 2),
@@ -104,10 +101,6 @@ function galleryStructRender(e, reqId, w, h, types) {
  * @param {number} x @param {number} z world block coordinates
  * @returns {{px: number, py: number}} pixel position on the thumbnail
  */
-function galleryThumbPoint(e, w, h, x, z) {
+export function galleryThumbPoint(e, w, h, x, z) {
   return { px: (x - e.x) / e.b + w / 2, py: (z - e.z) / e.b + h / 2 };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { validateGalleryEntry, validateGallery, galleryEntryHash, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint };
 }

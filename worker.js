@@ -1,6 +1,14 @@
 // worker.js — owns a cubiomes WASM instance. Handles tile rendering,
 // structure listing, biome probing and the combined location search.
-importScripts('./mcfinder.js', './seed.js', './shapes.js', './search.js', './slime.js', './markers.js', './palette.js', './tilegrid.js', './relief.js');
+// ES module worker: the shared pure-logic modules are explicit imports.
+import createMcFinder from './mcfinder.js';
+import { seedToBigInt } from './seed.js';
+import { scanGrid, pairMidpoints, SEARCH_MAX_CELLS } from './search.js';
+import { slimeChunksInBox, SLIME_STRUCT_TYPE } from './slime.js';
+import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
+import { altBiomeColors } from './palette.js';
+import { TILE_CELLS } from './tilegrid.js';
+import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -18,8 +26,8 @@ let listPtr = 0, listCap = 0;
 // the sliced search job and reuse areaPtr, which would clobber the grid
 let searchPtr = 0, searchCap = 0;
 
-createMcFinder().then((mod) => {
-  M = mod;
+try {
+  M = await createMcFinder();
   const cp = M._malloc(256 * 3);
   M._fillBiomeColors(cp);
   baseColors = M.HEAPU8.slice(cp, cp + 256 * 3);
@@ -27,9 +35,9 @@ createMcFinder().then((mod) => {
   M._free(cp);
   ready = true;
   postMessage({ type: 'ready', mcNewest: M._c_mc_newest() });
-}).catch((err) => {
+} catch (err) {
   postMessage({ type: 'fatal', message: 'WASM module failed to load: ' + (err?.message || err) });
-});
+}
 
 function ensureArea(cells) {
   if (cells > areaCap) {

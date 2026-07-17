@@ -1,13 +1,9 @@
 // search.js — pure multi-criteria scan over a pre-generated biome grid.
-// Shared between worker.js (importScripts) and the Node test suite (require).
+// ES module shared between worker.js, app.js and the Node test suite.
 // The heavy work (biome grid generation, structure placement) stays in the
 // WASM engine; this module only combines the criteria.
-'use strict';
 
-// shapes.js is loaded first (importScripts in the worker); Node tests: require
-const searchGlobals = /** @type {any} */ (globalThis);
-const shapesPrep = searchGlobals.prepShapeClauses || require('./shapes.js').prepShapeClauses;
-const shapesPass = searchGlobals.shapePass || require('./shapes.js').shapePass;
+import { prepShapeClauses as shapesPrep, shapePass as shapesPass } from './shapes.js';
 
 const SEARCH_MAX_HITS = 1500;   // result cap, mirrors the old C engine
 const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
@@ -257,7 +253,7 @@ function evalCell(ctx, ci, cj, wx, wz) {
  *          adjMode?: string, adjClauses?: AdjClause[],
  *          layers?: Array<{y: number, grid: Int32Array|number[]}>,
  *          pctMode?: string, pctClauses?: PctClause[],
- *          shapeMode?: string, shapeClauses?: object[],
+ *          shapeMode?: string, shapeClauses?: import('./shapes.js').ShapeClause[],
  *          structMode?: string, structClauses?: StructClause[],
  *          surface?: SurfaceClause|null,
  *          rowStart?: number, rowEnd?: number, hits?: SearchHit[]}} p
@@ -361,6 +357,4 @@ function sortHitsByDist(hits, origin) {
   return [...hits].sort((a, b) => d2(a) - d2(b));
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { scanGrid, pairMidpoints, SEARCH_MAX_HITS, SEARCH_MAX_CELLS, sortHitsByDist };
-}
+export { scanGrid, pairMidpoints, SEARCH_MAX_HITS, SEARCH_MAX_CELLS, sortHitsByDist };

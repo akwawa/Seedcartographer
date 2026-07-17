@@ -2,10 +2,9 @@
 // of search results. Pure list operations, shared between app.js (script
 // tag, backed by localStorage) and the Node test suite (require). No data
 // ever leaves the browser except through the explicit JSON export.
-'use strict';
 
-const MARKER_MAX = 200;       // sanity cap so localStorage cannot grow unbounded
-const MARKER_NAME_MAX = 60;   // display cap for free-text names
+export const MARKER_MAX = 200;       // sanity cap so localStorage cannot grow unbounded
+export const MARKER_NAME_MAX = 60;   // display cap for free-text names
 
 // a marker is bound to the exact world it was placed in, like a favorite
 /**
@@ -26,7 +25,7 @@ function nextMarkerId(list) {
  *          x: number, z: number, name?: string}} m marker to place
  * @returns {UserMarker[]} new list (input untouched)
  */
-function addMarker(list, m) {
+export function addMarker(list, m) {
   if (list.length >= MARKER_MAX) return list;
   if (list.some((e) => sameMarkerWorld(e, m) && e.x === m.x && e.z === m.z)) return list;
   const name = String(m.name ?? '').trim().slice(0, MARKER_NAME_MAX) || `#${nextMarkerId(list)}`;
@@ -37,12 +36,12 @@ function addMarker(list, m) {
 }
 
 /** @param {UserMarker[]} list @param {number} id @returns {UserMarker[]} */
-function removeMarker(list, id) {
+export function removeMarker(list, id) {
   return list.filter((m) => m.id !== id);
 }
 
 /** @param {UserMarker[]} list @param {number} id @param {string} name @returns {UserMarker[]} */
-function renameMarker(list, id, name) {
+export function renameMarker(list, id, name) {
   const n = String(name ?? '').trim().slice(0, MARKER_NAME_MAX);
   return list.map((m) => (m.id === id && n ? { ...m, name: n } : m));
 }
@@ -57,7 +56,7 @@ function sameMarkerWorld(a, b) {
  * @param {{seed: string|number, mc: number, large: boolean, dim: number}} world
  * @returns {UserMarker[]} markers placed in this exact world
  */
-function markersFor(list, world) {
+export function markersFor(list, world) {
   return list.filter((m) => sameMarkerWorld(m, world));
 }
 
@@ -78,7 +77,7 @@ function normalizeMarker(m) {
  * @param {string|null} json raw payload
  * @returns {UserMarker[]} well-formed markers only
  */
-function parseMarkers(json) {
+export function parseMarkers(json) {
   let raw;
   try { raw = JSON.parse(String(json)); } catch { return []; }
   if (!Array.isArray(raw)) return [];
@@ -97,12 +96,8 @@ function parseMarkers(json) {
  * @param {UserMarker[]} imported parsed import payload
  * @returns {UserMarker[]} merged list (input untouched)
  */
-function mergeMarkers(list, imported) {
+export function mergeMarkers(list, imported) {
   let out = list;
   for (const m of imported) out = addMarker(out, m);
   return out;
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { MARKER_MAX, MARKER_NAME_MAX, addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers };
 }

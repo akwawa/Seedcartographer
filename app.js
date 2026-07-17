@@ -1,11 +1,46 @@
 // app.js — UI, map rendering, search orchestration. Talks to worker.js.
-'use strict';
+// ES module: every pure-logic helper is an explicit import below; the
+// worker-shared modules (seed.js, slime.js, markers.js, palette.js,
+// tilegrid.js, search.js) are plain ES modules too (#224 MR 3).
+import { t, applyI18n, setLang, currentLang, I18N_LANGS } from './i18n.js';
+import { biomeLabel } from './biomes.js';
+import { convertCoords } from './coords.js';
+import { PRESETS, presetCriteria } from './presets.js';
+import { parseFavorites, addFavorite, findFavorite, removeFavorite, updateFavoriteNote, favoritesFor } from './favorites.js';
+import { legendEntries } from './legend.js';
+import {
+  scaleBarSpec, gridSpec, gridLines, minimapZoomOut, minimapClickToWorld,
+  viewportRectOnMinimap, parseGotoInput, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
+} from './maptools.js';
+import { tileWorldKey, tileKey, createTileCache, tilesInView } from './tilecache.js';
+import {
+  encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
+  sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
+} from './sharestate.js';
+import {
+  SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND, sequentialSeeds, randomSeeds,
+  planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun
+} from './seedsearch.js';
+import { addHistoryEntry, parseHistory } from './searchhistory.js';
+import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
+import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
+import { exportProfile, parseProfile, mergeProfile } from './profile.js';
+import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
+import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
+import { resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV } from './export.js';
+import { APP_VERSION } from './version.js';
+import { formatErrorEvent } from './errorreport.js';
+import { sortHitsByDist } from './search.js';
+import { SLIME_STRUCT_TYPE } from './slime.js';
+import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
+import { altRgb } from './palette.js';
+import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
 // the sliced search job on the other, so a long search never delays a tile
 // render or a biome probe (at the cost of a second WASM instance in memory).
-const worker = new Worker('./worker.js');
-const searchWorker = new Worker('./worker.js');
+const worker = new Worker('./worker.js', { type: 'module' });
+const searchWorker = new Worker('./worker.js', { type: 'module' });
 let MC_NEWEST = 28;
 let reqSeq = 1;
 
@@ -1071,7 +1106,7 @@ let seedMsgBase = null, seedStart = '0', seedMode = 'random';
 function getSeedPool() {
   const target = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
   while (seedPool.length < target) {
-    const w = new Worker('./worker.js');
+    const w = new Worker('./worker.js', { type: 'module' });
     w.engineReady = false; w.pending = []; w.idle = true;
     w.onerror = (e) => console.error('SEED WORKER ERROR:', e.message);
     w.onmessage = (e) => {
@@ -1845,9 +1880,9 @@ function buildGalleryCards() {
     card.type = 'button';
     card.className = 'gallerycard';
     const h = document.createElement('h3');
-    h.textContent = galleryText(e.title, currentLang);
+    h.textContent = galleryText(e.title, currentLang());
     const p = document.createElement('p');
-    p.textContent = galleryText(e.desc, currentLang);
+    p.textContent = galleryText(e.desc, currentLang());
     const meta = document.createElement('p');
     meta.className = 'mono gallerymeta';
     meta.textContent = `seed ${e.seed} · ${e.x}, ${e.z}`;
@@ -2094,7 +2129,7 @@ async function init() {
     o.value = code; o.textContent = name;
     langSel.appendChild(o);
   }
-  langSel.value = currentLang;
+  langSel.value = currentLang();
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
   langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
@@ -2211,4 +2246,8 @@ async function init() {
   }
 }
 function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); buildMarkerList(); }
-init();
+// As a module, app.js no longer leaks its bindings into the page scope; the
+// e2e suite reads these few (share-link round-trips, ruler state, tile-cache
+// settling), so expose them explicitly. All are consts mutated in place.
+Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles });
+await init();
