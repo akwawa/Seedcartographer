@@ -9,6 +9,7 @@ import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from '
 import { altBiomeColors } from './palette.js';
 import { TILE_CELLS } from './tilegrid.js';
 import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
+import { hdCellSpan, hdCellIndex } from './export.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -419,6 +420,68 @@ function genSeedGrids(y, layerYs, cols, gx0, gz0, SC) {
   return true;
 }
 
+// ---- high-resolution map export (#231) ----
+// Re-renders the requested view at poster resolution in horizontal pixel
+// bands: each band generates its cell grid, paints RGBA pixels and transfers
+// them to the app, which composes the final canvas. Banding keeps the WASM
+// scratch buffer small and lets cancel messages through between bands
+// (same pattern as the sliced search job).
+let exportCancelId = 0;
+const EXPORT_BAND_PX = 256;
+
+// paint one pixel band from the freshly generated cell grid
+function paintExportBand(d, py0, py1, r0, cols, colMap) {
+  const rgba = new Uint8ClampedArray((py1 - py0) * d.outW * 4);
+  const base = areaPtr >> 2;
+  for (let py = py0; py < py1; py++) {
+    const row = (hdCellIndex(py, d.wz0, d.bppOut, d.scale) - r0) * cols;
+    const out = (py - py0) * d.outW;
+    for (let px = 0; px < d.outW; px++) {
+      let id = M.HEAP32[base + row + colMap[px]];
+      if (id < 0 || id > 255) id = 0;
+      const c = id * 3, o = (out + px) * 4;
+      rgba[o] = colors[c]; rgba[o + 1] = colors[c + 1];
+      rgba[o + 2] = colors[c + 2]; rgba[o + 3] = 255;
+    }
+  }
+  return rgba;
+}
+
+async function runExportJob(d) {
+  const fail = (error) => postMessage({ type: 'exportDone', reqId: d.reqId, error });
+  // the export honours the app's active color table (palette messages only
+  // reach the tile worker, so the flag rides along with the request)
+  handlePaletteMsg({ alt: !!d.alt });
+  const span = hdCellSpan(d.wx0, d.outW, d.bppOut, d.scale);
+  const cols = span.count;
+  const colMap = new Int32Array(d.outW);
+  for (let px = 0; px < d.outW; px++) {
+    colMap[px] = hdCellIndex(px, d.wx0, d.bppOut, d.scale) - span.c0;
+  }
+  for (let py0 = 0; py0 < d.outH; py0 += EXPORT_BAND_PX) {
+    if (exportCancelId === d.reqId) { fail('cancelled'); return; }
+    const py1 = Math.min(py0 + EXPORT_BAND_PX, d.outH);
+    const r0 = hdCellIndex(py0, d.wz0, d.bppOut, d.scale);
+    const rows = hdCellIndex(py1 - 1, d.wz0, d.bppOut, d.scale) - r0 + 1;
+    let rgba;
+    try {
+      // re-apply per band: an interleaved search job may switch the world
+      applyWorld(d.seed, d.mc, d.large, d.dim);
+      ensureArea(cols * rows);
+      if (!M._genBiomeArea(areaPtr, span.c0, r0, cols, rows, d.scale, scaledY(d.y))) {
+        fail('area-too-large'); return;
+      }
+      rgba = paintExportBand(d, py0, py1, r0, cols, colMap);
+    } catch {
+      // allocation failure (WASM heap or band buffer): report, don't crash
+      fail('export-failed'); return;
+    }
+    postMessage({ type: 'exportBand', reqId: d.reqId, py0, rowsPx: py1 - py0, rgba: rgba.buffer }, [rgba.buffer]);
+    await yieldToQueue();
+  }
+  postMessage({ type: 'exportDone', reqId: d.reqId, ok: true });
+}
+
 // checkerboard render: one fixed world-aligned tile of the progressive grid.
 // A generation bump cancels every queued tile of older batches (off-screen
 // requests are simply skipped instead of computed).
@@ -560,6 +623,8 @@ const HANDLERS = {
   seedSearch: runSeedSearchJob, // async: yields between seeds so cancel is processed
   cancelSeedSearch: (d) => { seedCancelId = d.reqId; },
   search: handleSearchMsg,
+  exportMap: runExportJob, // async: banded so cancel messages get through
+  cancelExport: (d) => { exportCancelId = d.reqId; },
   palette: handlePaletteMsg,
   structConsts: (d) => postMessage({ type: 'structConsts', values: d.indices.map((i) => M._structConst(i)) }),
   biomeList: handleBiomeListMsg

@@ -32,7 +32,13 @@
     </label>
     <button id="loadBtn" class="btn" data-i18n="loadSeed">Load seed</button>
   </div>
+  <select id="pngSizeSel" class="ver pngsize" title="PNG export size" aria-label="PNG export size" data-i18n-title="exportSizeTitle" data-i18n-aria="exportSizeTitle">
+    <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
+    <option value="2048">2048 px</option>
+    <option value="4096">4096 px</option>
+  </select>
   <button id="pngBtn" class="btn ghost" data-i18n="exportPng">Export PNG</button>
+  <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
   <button id="shareBtn" class="btn ghost" data-i18n="shareLink">Share link</button>
   <select id="langSel" class="ver" title="Language" aria-label="Language" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
   <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>

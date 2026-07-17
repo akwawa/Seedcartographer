@@ -19,6 +19,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Export PNG haute résolution de la carte (mode poster) : un sélecteur de
+  taille à côté du bouton « Exporter PNG » propose la taille actuelle, 2048 px
+  ou 4096 px. Le rendu se fait tuile par tuile dans le worker (l'interface
+  reste fluide) avec barre de progression et annulation, le cartouche est
+  redimensionné proportionnellement, et un message clair s'affiche si
+  l'export dépasse les limites mémoire du navigateur. (#231)
 - Raccourcis clavier : `Enter` lance la recherche depuis n'importe quel champ
   du panneau de critères, `+`/`-` zooment la carte, `G` ouvre « aller aux
   coordonnées », `R` active/désactive l'outil règle, `?` ouvre l'aide et
