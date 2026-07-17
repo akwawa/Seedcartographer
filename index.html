@@ -32,7 +32,13 @@
     </label>
     <button id="loadBtn" class="btn" data-i18n="loadSeed">Load seed</button>
   </div>
+  <select id="pngSizeSel" class="ver pngsize" title="PNG export size" aria-label="PNG export size" data-i18n-title="exportSizeTitle" data-i18n-aria="exportSizeTitle">
+    <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
+    <option value="2048">2048 px</option>
+    <option value="4096">4096 px</option>
+  </select>
   <button id="pngBtn" class="btn ghost" data-i18n="exportPng">Export PNG</button>
+  <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
   <button id="shareBtn" class="btn ghost" data-i18n="shareLink">Share link</button>
   <select id="langSel" class="ver" title="Language" aria-label="Language" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
   <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
@@ -44,7 +50,7 @@
 
 <main>
   <aside id="panel" class="panel">
-    <section class="card">
+    <section id="criteriaCard" class="card">
       <h2 data-i18n="findPlace">Find a place</h2>
       <p class="lede" data-i18n="lede">Set the conditions, then search the area you're looking at. Results are spots in this seed.</p>
 
@@ -256,10 +262,20 @@
   <p data-i18n="helpCriteria"></p>
   <h3 data-i18n="helpMapTitle">Map</h3>
   <p data-i18n="helpMap"></p>
+  <h3 data-i18n="helpKeysTitle">Keyboard shortcuts</h3>
+  <ul class="help-keys">
+    <li><kbd>Enter</kbd> <span data-i18n="keyEnter">run the search from any criteria field</span></li>
+    <li><kbd>+</kbd> / <kbd>-</kbd> <span data-i18n="keyZoom">zoom the map in / out</span></li>
+    <li><kbd>G</kbd> <span data-i18n="keyGoto">go to coordinates</span></li>
+    <li><kbd>R</kbd> <span data-i18n="keyRuler">toggle the ruler tool</span></li>
+    <li><kbd>?</kbd> <span data-i18n="keyHelp">open this help</span></li>
+    <li><kbd>Esc</kbd> <span data-i18n="keyEsc">close the active dialog, tool or popup</span></li>
+  </ul>
   <h3 data-i18n="helpLimitsTitle">Known limits</h3>
   <p data-i18n="helpLimits"></p>
   <h3 data-i18n="helpCreditsTitle">License &amp; credits</h3>
   <p data-i18n="helpCredits"></p>
+  <p><button id="tourReplay" class="btn tiny tour-replay" data-i18n="tourReplay">Replay the tour</button></p>
   <p class="help-links">
     <span class="mono" id="helpVersion"></span> ·
     <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a> ·

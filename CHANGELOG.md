@@ -16,6 +16,43 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Export PNG haute résolution de la carte (mode poster) : un sélecteur de
+  taille à côté du bouton « Exporter PNG » propose la taille actuelle, 2048 px
+  ou 4096 px. Le rendu se fait tuile par tuile dans le worker (l'interface
+  reste fluide) avec barre de progression et annulation, le cartouche est
+  redimensionné proportionnellement, et un message clair s'affiche si
+  l'export dépasse les limites mémoire du navigateur. (#231)
+- Raccourcis clavier : `Enter` lance la recherche depuis n'importe quel champ
+  du panneau de critères, `+`/`-` zooment la carte, `G` ouvre « aller aux
+  coordonnées », `R` active/désactive l'outil règle, `?` ouvre l'aide et
+  `Échap` ferme le dialogue/outil/pop-up actif. Les raccourcis lettres sont
+  inactifs pendant la frappe dans un champ et pendant le tour guidé (où
+  `Échap` passe le tour). La logique touche+contexte→action vit dans le
+  module pur `keys.js` ; une fiche des raccourcis, traduite dans les dix
+  langues, est ajoutée au dialogue d'aide. (#230)
+- Mini-tour guidé à la première visite : quatre bulles ancrées sur les
+  éléments réels de l'interface (seed → critères → recherche →
+  partage/export) avec compteur d'étape, boutons « Suivant »/« Passer »,
+  navigation clavier et focus piégé dans la bulle. Mémorisé via
+  `localStorage`, relançable depuis le dialogue d'aide (« Revoir le
+  tour ») et traduit dans les dix langues. (#229)
+- Quatre nouvelles langues : japonais, russe, polonais et chinois simplifié.
+  Toutes les clés d'interface, les textes d'aide et les noms de biomes sont
+  traduits avec la terminologie officielle de Minecraft dans chaque langue.
+  Le sélecteur de langue les propose et la détection automatique reconnaît
+  `ja`, `ru`, `pl` et les variantes chinoises (`zh`, `zh-CN`, `zh-Hans`… ;
+  `zh-TW`/`zh-HK` retombent sur le chinois simplifié en attendant une table
+  traditionnelle dédiée) (#228).
+- Recherche sans biome : une option « N'importe quel biome » dans le sélecteur
+  de biome principal permet une recherche portant uniquement sur des critères
+  de structures (ex. « 3 villages dans un rayon donné, biome indifférent »).
+  Le moteur court-circuite alors la passe biome et évalue directement les
+  emplacements de structures ; partage, presets et historique restent
+  compatibles et les libellés sont traduits dans les 6 langues (#227).
+
 ## [0.9.0](https://github.com/akwawa/Seedcartographer/compare/v0.8.0...v0.9.0) (2026-07-17)
 
 ### Ajouté

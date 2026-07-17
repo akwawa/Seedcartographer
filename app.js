@@ -27,10 +27,15 @@ import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeM
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
-import { resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV } from './export.js';
+import {
+  resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV,
+  hdExportGeometry, cartoucheMetrics
+} from './export.js';
 import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
+import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
+import { keyAction } from './keys.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
@@ -117,6 +122,8 @@ searchWorker.onmessage = (e) => {
     if (d.reqId === searchReq) $('#searchProgress').value = d.pct;
     return;
   }
+  if (d.type === 'exportBand') { onExportBand(d); return; }
+  if (d.type === 'exportDone') { onExportDone(d); return; }
   if (d.type === 'search') onSearchResult(d);
 };
 // engine startup: version list first, then the biome list ahead of any
@@ -911,6 +918,19 @@ function biomeSelect(initial) {
   if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   return sel;
 }
+// sentinel value of the "any biome" option in the main-biome selector: the
+// spot's own biome is not constrained (structures-only searches, #227)
+const ANY_BIOME = -1;
+// the main-biome selector is a regular biome select plus the "any" option
+function mainBiomeSelect(initial) {
+  const sel = biomeSelect();
+  const o = document.createElement('option');
+  o.value = String(ANY_BIOME); o.dataset.i18n = 'anyBiome'; o.textContent = t('anyBiome');
+  sel.insertBefore(o, sel.firstChild);
+  sel.value = initial === undefined ? String(ANY_BIOME) : String(initial);
+  if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+  return sel;
+}
 function structsOfDim() {
   return structToggles.filter((tg) => (tg.dim || 0) === world.dim);
 }
@@ -947,7 +967,7 @@ function addRow(container, parts) {
   container.appendChild(row);
 }
 function addMainBiomeRow(biome) {
-  addRow($('#mainBiomes'), [aria(biomeSelect(biome), 'ariaBiome')]);
+  addRow($('#mainBiomes'), [aria(mainBiomeSelect(biome), 'ariaBiome')]);
 }
 function addAdjRow(biome, dist, negate, yl) {
   const neg = critSelect([['0', t('present'), 'present'], ['1', t('absent'), 'absent']], negate ? '1' : '0');
@@ -1009,13 +1029,16 @@ function addPairRow(t1, t2, gap, radius) {
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
 // ---------- search ----------
-// Criteria panel -> search-message fields, or null when no main biome is set.
+// Criteria panel -> search-message fields, or null when the criteria cannot
+// anchor a search (no main biome and no structure criterion).
 // Shared by the location search and the multi-seed search.
+// "Any biome" (or no main-biome row at all) is sent as an empty mainBiomes
+// list: the engine then skips the biome pass and requires structure clauses.
 function collectCriteria() {
-  const mainBiomes = rowsOf('#mainBiomes')
+  const pickedBiomes = rowsOf('#mainBiomes')
     .map((r) => Number.parseInt(r.querySelector('select').value, 10))
     .filter(Number.isFinite);
-  if (!mainBiomes.length) return null;
+  const mainBiomes = pickedBiomes.includes(ANY_BIOME) ? [] : pickedBiomes;
   const adjClauses = rowsOf('#adjClauses').map((r) => {
     const ins = r.querySelectorAll('input.num');
     const y = Number.parseInt(ins[1].value, 10);
@@ -1065,6 +1088,8 @@ function collectCriteria() {
     return v !== '' && Number.isFinite(n) ? n : null;
   };
   const surfMin = intOrNull('#surfMin'), surfMax = intOrNull('#surfMax');
+  // without a main biome the search must be anchored by structure criteria
+  if (!mainBiomes.length && !structClauses.length && !pairClauses.length) return null;
   return {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
@@ -1078,7 +1103,7 @@ function collectCriteria() {
 function runSearch() {
   const crit = collectCriteria();
   if (!crit) {
-    searchInfo.textContent = t('pickBiome');
+    searchInfo.textContent = t('pickCriteria');
     searchInfo.className = 'info err';
     return;
   }
@@ -1156,7 +1181,7 @@ function startSeedSearch() {
   const crit = collectCriteria();
   const seedInfo = $('#seedInfo');
   if (!crit) {
-    seedInfo.textContent = t('pickBiome');
+    seedInfo.textContent = t('pickCriteria');
     seedInfo.className = 'info err';
     return;
   }
@@ -1788,6 +1813,92 @@ function exportMapPNG() {
   lines.forEach((ln, i) => o.fillText(ln, Math.round(10 * dpr), canvas.height + Math.round((18 + i * 17) * dpr)));
   out.toBlob((blob) => { if (blob) downloadBlob(exportFileName(world.seed, 'map', 'png'), blob); }, 'image/png');
 }
+
+// ---------- high-resolution map export (#231) ----------
+// The current view is re-rendered at 2048/4096 px in the search worker (idle
+// unless a search runs), band by band, with the same progress-bar + cancel
+// button pattern as the cancellable search (#20).
+let exportReq = 0, exportBusy = false;
+let exportJob = null;   // {out, o, geom} while an HD export runs
+function setExportBusy(on) {
+  exportBusy = on;
+  const btn = $('#pngBtn');
+  btn.dataset.i18n = on ? 'cancelBtn' : 'exportPng';
+  btn.textContent = t(btn.dataset.i18n);
+  const prog = $('#pngProgress');
+  prog.hidden = !on;
+  prog.value = 0;
+  $('#pngSizeSel').disabled = on;
+  if (!on) exportJob = null;
+}
+function exportError(key) {
+  searchInfo.textContent = t(key);
+  searchInfo.className = 'info err';
+}
+function startExportHD(outW) {
+  const geom = hdExportGeometry(view, canvas.width / dpr, canvas.height / dpr, outW);
+  if (!geom) { exportError('exportTooLarge'); return; }
+  const m = cartoucheMetrics(geom.outW);
+  let out, o = null;
+  // memory guard: a canvas this large can fail to allocate outright
+  try {
+    out = document.createElement('canvas');
+    out.width = geom.outW; out.height = geom.outH + m.band;
+    o = out.getContext('2d');
+  } catch { /* reported below */ }
+  if (!o) { exportError('exportTooLarge'); return; }
+  exportReq = reqSeq++;
+  exportJob = { out, o, geom };
+  setExportBusy(true);
+  sendSearch({
+    type: 'exportMap', reqId: exportReq, alt: altPalette,
+    seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer,
+    ...geom
+  });
+}
+function onExportBand(d) {
+  if (d.reqId !== exportReq || !exportJob) return;
+  try {
+    exportJob.o.putImageData(new ImageData(new Uint8ClampedArray(d.rgba), exportJob.geom.outW, d.rowsPx), 0, d.py0);
+  } catch {
+    // pixel-buffer allocation failed: abort the worker job and report
+    sendSearch({ type: 'cancelExport', reqId: exportReq });
+    setExportBusy(false);
+    exportError('exportTooLarge');
+    return;
+  }
+  $('#pngProgress').value = Math.round(100 * (d.py0 + d.rowsPx) / exportJob.geom.outH);
+}
+function onExportDone(d) {
+  if (d.reqId !== exportReq || !exportJob) return;
+  const job = exportJob;
+  setExportBusy(false);
+  if (d.error) {
+    if (d.error !== 'cancelled') exportError('exportFailed');
+    return;
+  }
+  finishExportHD(job);
+}
+// stamp the proportionally scaled cartouche band and trigger the download
+function finishExportHD(job) {
+  const { out, o, geom } = job;
+  const m = cartoucheMetrics(geom.outW);
+  o.fillStyle = mapBg;
+  o.fillRect(0, geom.outH, geom.outW, m.band);
+  o.fillStyle = mapText;
+  o.font = `${m.font}px monospace`;
+  const lines = mapCartoucheLines({
+    seed: world.seed, mcLabel: mcLabel(), large: world.large,
+    dimension: (DIMENSIONS.find(([v]) => v === world.dim) || [0, 'Overworld'])[1],
+    cx: Math.round(view.cx), cz: Math.round(view.cz)
+  });
+  lines.forEach((ln, i) => o.fillText(ln, m.padX, geom.outH + m.baseline + i * m.lineStep));
+  out.toBlob((blob) => {
+    if (blob) downloadBlob(exportFileName(world.seed, `map-${geom.outW}`, 'png'), blob);
+    else exportError('exportFailed');
+  }, 'image/png');
+}
+
 function exportResults(fmt) {
   if (!pins.length) return;
   const c = readCriteria();
@@ -2070,6 +2181,137 @@ function initTheme() {
   if (altPalette) applyPalette(true, false);
 }
 
+// ---------- first-visit guided tour (#229) ----------
+// DOM glue over the pure logic in tour.js: overlay + highlight ring + bubble
+// positioned next to the real UI elements, keyboard-driven (Tab trapped in
+// the bubble, Enter = next, Escape = skip). localStorage remembers the tour
+// was seen; a storage error never blocks the app (and never re-nags either).
+function tourSeenValue() {
+  try { return localStorage.getItem(TOUR_SEEN_KEY); } catch { return 'unavailable'; }
+}
+function markTourSeen() {
+  try { localStorage.setItem(TOUR_SEEN_KEY, '1'); } catch { /* ignore */ }
+}
+let tourUi = null;   // { overlay, ring, bubble, text, counter, next, skip, step }
+function endTour() {
+  if (!tourUi) return;
+  window.removeEventListener('resize', tourReposition);
+  tourUi.overlay.remove(); tourUi.ring.remove(); tourUi.bubble.remove();
+  tourUi = null;
+  markTourSeen();
+}
+function tourReposition() {
+  if (!tourUi) return;
+  const el = document.querySelector(TOUR_STEPS[tourUi.step].target);
+  el.scrollIntoView({ block: 'nearest' });   // panel targets may be below the fold
+  const r = el.getBoundingClientRect();
+  const ring = tourUi.ring;
+  ring.style.left = (r.left - 5) + 'px';
+  ring.style.top = (r.top - 5) + 'px';
+  ring.style.width = (r.width + 10) + 'px';
+  ring.style.height = (r.height + 10) + 'px';
+  const b = tourUi.bubble;
+  const p = tourBubblePosition(r, { width: b.offsetWidth, height: b.offsetHeight },
+    { width: window.innerWidth, height: window.innerHeight });
+  b.style.left = p.left + 'px';
+  b.style.top = p.top + 'px';
+}
+function tourShowStep(step) {
+  tourUi.step = step;
+  tourUi.text.textContent = t(TOUR_STEPS[step].key);
+  tourUi.counter.textContent = t('tourProgress', { n: step + 1, t: TOUR_STEPS.length });
+  tourUi.next.textContent = t(isLastStep(step, TOUR_STEPS.length) ? 'tourDone' : 'tourNext');
+  tourUi.bubble.setAttribute('aria-label', t('tourProgress', { n: step + 1, t: TOUR_STEPS.length }));
+  tourReposition();
+  tourUi.next.focus();
+}
+function startTour() {
+  if (tourUi) return;
+  const mk = (tag, cls) => { const el = document.createElement(tag); el.className = cls; document.body.append(el); return el; };
+  const overlay = mk('div', 'tour-overlay');
+  const ring = mk('div', 'tour-ring');
+  const bubble = mk('div', 'tour-bubble');
+  bubble.setAttribute('role', 'dialog');
+  bubble.setAttribute('aria-modal', 'true');
+  const text = document.createElement('p');
+  text.className = 'tour-text';
+  const counter = document.createElement('span');
+  counter.className = 'tour-counter mono';
+  const skip = document.createElement('button');
+  skip.className = 'btn tiny tour-skip';
+  skip.textContent = t('tourSkip');
+  const next = document.createElement('button');
+  next.className = 'btn tiny tour-next';
+  const row = document.createElement('div');
+  row.className = 'tour-row';
+  row.append(counter, skip, next);
+  bubble.append(text, row);
+  tourUi = { overlay, ring, bubble, text, counter, next, skip, step: 0 };
+  next.onclick = () => {
+    const n = nextStep(tourUi.step, TOUR_STEPS.length);
+    if (n === -1) endTour(); else tourShowStep(n);
+  };
+  skip.onclick = endTour;
+  overlay.onclick = endTour;
+  bubble.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); endTour(); return; }
+    // the bubble is the keyboard world while the tour runs: Tab cycles
+    // between its two buttons, in both directions
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      (document.activeElement === next ? skip : next).focus();
+    }
+  });
+  window.addEventListener('resize', tourReposition);
+  tourShowStep(0);
+}
+
+// ---------- global keyboard shortcuts (#230) ----------
+// DOM glue over the pure mapping in keys.js: build the simplified context
+// from the event, then run the returned action. Handlers that already
+// consumed the key (canvas pan/zoom, tour bubble, criteria rows…) call
+// preventDefault first, so this never doubles them up.
+// 'close' cascades: dialogs first, then the active tool / pin popup
+function closeTopmost() {
+  const help = $('#helpDlg'), gallery = $('#galleryDlg');
+  if (help.open) { help.close(); return; }
+  if (gallery.open) { gallery.close(); return; }
+  if (ruler.on) setRulerOn(false);
+  if (markerMode) setMarkerMode(false);
+  if (sel.on) setSelOn(false);
+  hidePopup();
+}
+const KEY_ACTIONS = {
+  'skip-tour': () => endTour(),
+  search: () => { if (!searchBusy) runSearch(); },
+  'zoom-in': () => zoomBy(1 / 1.3),
+  'zoom-out': () => zoomBy(1.3),
+  goto: () => $('#gotoInput').focus(),
+  ruler: () => setRulerOn(!ruler.on),
+  help: () => $('#helpDlg').showModal(),
+  close: closeTopmost
+};
+document.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented) return;
+  const el = /** @type {Element} */ (e.target instanceof Element ? e.target : null);
+  const tag = el ? el.tagName : '';
+  const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  const action = keyAction({
+    key: e.key,
+    mod: e.ctrlKey || e.metaKey || e.altKey,
+    inInput,
+    // Enter submits the search from any field of the criteria card only;
+    // other fields (goto box, marker/favorite notes, sync code…) keep
+    // their own Enter behavior
+    inSearchField: inInput && tag !== 'TEXTAREA' && el.closest('#criteriaCard') !== null,
+    tourOpen: tourUi !== null,
+    dialogOpen: $('#helpDlg').open || $('#galleryDlg').open
+  });
+  if (!action) return;
+  e.preventDefault();
+  KEY_ACTIONS[action]();
+});
+
 // ---------- init ----------
 async function init() {
   hashState = await readHash();
@@ -2100,7 +2342,12 @@ async function init() {
     if (seedBusy) cancelSeedSearch();
     else startSeedSearch();
   };
-  $('#pngBtn').onclick = exportMapPNG;
+  $('#pngBtn').onclick = () => {
+    if (exportBusy) { sendSearch({ type: 'cancelExport', reqId: exportReq }); return; }
+    const size = $('#pngSizeSel').value;
+    if (size === 'view') exportMapPNG();
+    else startExportHD(Number.parseInt(size, 10));
+  };
   const importInput = $('#importFile');
   $('#importCsv').onclick = () => importInput.click();
   importInput.onchange = () => {
@@ -2231,6 +2478,8 @@ async function init() {
     + (APP_VERSION.commit ? ` (${APP_VERSION.commit})` : '');
   $('#helpBtn').onclick = () => $('#helpDlg').showModal();
   $('#helpClose').onclick = () => $('#helpDlg').close();
+  // the tour can be replayed anytime from the help dialog (#229)
+  $('#tourReplay').onclick = () => { $('#helpDlg').close(); startTour(); };
   $('#galleryBtn').onclick = openGallery;
   $('#galleryClose').onclick = () => $('#galleryDlg').close();
   buildDimSelect();
@@ -2240,6 +2489,8 @@ async function init() {
   buildMarkerList();
   applyI18n();
   resize();
+  // first visit: walk the newcomer through seed → criteria → search → share
+  if (isFirstVisit(tourSeenValue())) startTour();
   // offline support (PWA); requires a secure context, harmless otherwise
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });

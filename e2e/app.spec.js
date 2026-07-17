@@ -1,5 +1,5 @@
 /* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
 test.beforeEach(({ page }) => {
@@ -47,6 +47,32 @@ test('demo search finds the seed-141 spot and shows the popup', async ({ page })
   // popup closes with the × button
   await page.click('.pop-close');
   await expect(page.locator('#popup')).toBeHidden();
+});
+
+test('structures-only search: "any biome" + villages, then share-link restore', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria load: flip the main biome to "any biome" and drop the
+  // adjacency clause so only the structure criterion (2 villages) remains
+  await page.selectOption('#mainBiomes .row select', '-1');
+  await page.click('#adjClauses .row .rm');
+  await expect(page.locator('#adjClauses .row')).toHaveCount(0);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  await expect(page.locator('#results .result').first()).toBeVisible();
+  // the share link keeps the structures-only criteria
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#mainBiomes .row select')).toHaveValue('-1');
+  await expect(p2.locator('#adjClauses .row')).toHaveCount(0);
+  await expect(p2.locator('#structClauses .row')).toHaveCount(1);
+  // the restored criteria still search fine
+  await p2.click('#searchBtn');
+  await waitForSearchDone(p2);
+  await expect(p2.locator('#searchInfo')).toHaveClass(/ok/);
 });
 
 test('a long search shows progress and can be cancelled', async ({ page }) => {
@@ -106,14 +132,39 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await page.selectOption('#langSel', 'pt');
   await expect(page.locator('#searchBtn')).toHaveText('Buscar nesta área');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosque de cerejeiras');
+  await page.selectOption('#langSel', 'ja');
+  await expect(page.locator('#searchBtn')).toHaveText('このエリアを検索');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('桜の森');
+  await page.selectOption('#langSel', 'ru');
+  await expect(page.locator('#searchBtn')).toHaveText('Искать в этой области');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Вишнёвая роща');
+  await page.selectOption('#langSel', 'pl');
+  await expect(page.locator('#searchBtn')).toHaveText('Przeszukaj ten obszar');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Wiśniowy gaj');
+  await page.selectOption('#langSel', 'zh-CN');
+  await expect(page.locator('#searchBtn')).toHaveText('搜索此区域');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('樱花树林');
+  // long labels (ru/pl) and ideograms must not overflow the panel horizontally
+  // long labels (ru/pl) and ideograms must not push the layout further than
+  // the widest pre-existing locale already does (the topbar overflows and is
+  // clipped by design at some widths, in every language)
+  const overflowOf = async (lang) => {
+    await page.selectOption('#langSel', lang);
+    return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  };
+  let baseline = 0;
+  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt']) baseline = Math.max(baseline, await overflowOf(lang));
+  for (const lang of ['ja', 'ru', 'pl', 'zh-CN']) {
+    expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(baseline);
+  }
 });
 
 test('Nether dimension: biome list, map, search and share link work', async ({ page, context }) => {
   await page.goto('/');
   await waitForApp(page);
   await page.selectOption('#dimSel', '-1');
-  // biome rows now only offer the five Nether biomes
-  await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 5);
+  // biome rows now only offer the five Nether biomes (plus "any biome")
+  await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 6);
   // structure criteria only offer Nether structures
   await page.click('#addStruct');
   await expect(page.locator('#structClauses .row select option')).toHaveCount(3);
@@ -240,6 +291,37 @@ test('Export PNG downloads a snapshot of the current view', async ({ page }) => 
   // PNG magic bytes and a non-trivial payload
   expect(buf.subarray(0, 4).toString('hex')).toBe('89504e47');
   expect(buf.length).toBeGreaterThan(1000);
+});
+
+test('high-resolution export downloads a 2048 px PNG with a scaled cartouche', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // the expected output size comes from the same pure geometry helpers the
+  // app uses: viewport aspect at 2048 px wide, plus the cartouche band
+  const expected = await page.evaluate(async () => {
+    const { hdExportGeometry, cartoucheMetrics } = await import('./export.js');
+    const c = document.querySelector('#map');
+    // dpr cancels out of the aspect ratio, so bpp can be anything here
+    const g = hdExportGeometry({ cx: 0, cz: 0, bpp: 1 }, c.width, c.height, 2048);
+    return { w: g.outW, h: g.outH + cartoucheMetrics(2048).band };
+  });
+  await page.selectOption('#pngSizeSel', '2048');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('#pngBtn')
+  ]);
+  expect(download.suggestedFilename()).toBe('seedcartographer-141-map-2048.png');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const c of stream) chunks.push(c);
+  const buf = Buffer.concat(chunks);
+  // IHDR carries the pixel dimensions right after the 8-byte signature
+  expect(buf.subarray(0, 4).toString('hex')).toBe('89504e47');
+  expect(buf.readUInt32BE(16)).toBe(expected.w);
+  expect(buf.readUInt32BE(20)).toBe(expected.h);
+  // the export controls returned to their idle state
+  await expect(page.locator('#pngProgress')).toBeHidden();
+  await expect(page.locator('#pngSizeSel')).toBeEnabled();
 });
 
 test('Import CSV shows places as pins in the list and on the map', async ({ page }) => {

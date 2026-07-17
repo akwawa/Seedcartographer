@@ -47,6 +47,11 @@ button,input,select{font:inherit;color:inherit}
 .chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
 .ver{font-family:var(--mono);font-size:12px;color:var(--faint);border:1px solid var(--line);padding:3px 8px;border-radius:5px}
 .topbar .ghost{margin-left:auto}
+/* the PNG size selector carries the auto margin so the export controls
+   (size + button + progress) stay grouped on the right (#231) */
+.topbar .pngsize{margin-left:auto}
+.topbar .pngsize ~ .ghost{margin-left:0}
+.topbar .pngprogress{width:70px}
 
 input,select{
   background:var(--panel2);border:1px solid var(--line);border-radius:7px;
@@ -224,6 +229,24 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .help .help-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);
   cursor:pointer;font-size:16px;line-height:1;padding:3px 6px}
 .help .help-close:hover{color:var(--text)}
+.help .help-keys{margin:0;padding-left:0;list-style:none;font-size:13px;line-height:1.9}
+.help .help-keys kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+
+/* ---------- first-visit guided tour (#229) ---------- */
+/* stacking: overlay < highlight ring < bubble, all above the topbar/dialogs */
+.tour-overlay{position:fixed;inset:0;background:var(--overlay-soft);z-index:40}
+.tour-ring{position:fixed;z-index:41;pointer-events:none;border:2px solid var(--lapis-hi);
+  border-radius:9px;box-shadow:0 0 0 4px rgba(91,136,245,.25)}
+.tour-bubble{position:fixed;z-index:42;width:min(320px,calc(100vw - 24px));
+  background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;box-shadow:0 10px 32px rgba(0,0,0,.45)}
+.tour-text{margin:0 0 10px;font-size:13px;line-height:1.5}
+.tour-row{display:flex;align-items:center;gap:8px}
+.tour-counter{font-size:11px;color:var(--muted);margin-right:auto}
+.tour-next{background:var(--lapis);border-color:var(--lapis);color:#fff}
+.tour-next:hover{background:var(--lapis-hi);border-color:var(--lapis-hi)}
+.help .tour-replay{margin-top:14px}
 
 /* ---------- favorites ---------- */
 .presetsave{margin-top:6px}

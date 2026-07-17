@@ -9,6 +9,7 @@ import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from '
 import { altBiomeColors } from './palette.js';
 import { TILE_CELLS } from './tilegrid.js';
 import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
+import { hdCellSpan, hdCellIndex } from './export.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -178,6 +179,17 @@ function buildStructClauses(d) {
   return clauses;
 }
 
+// A structures-only search ("any biome") needs no biome grid at all: the
+// biome pass is skipped entirely unless some clause actually reads the grid.
+// (inMain flags are ignored by search.js when the main set is empty, so they
+// do not force a grid on their own.)
+function needsBiomeGrid(d) {
+  return (d.mainBiomes || []).length > 0
+    || (d.adjClauses || []).length > 0
+    || (d.pctClauses || []).length > 0
+    || (d.shapeClauses || []).length > 0;
+}
+
 // shape clauses cross the message boundary as plain arrays: rebuild the sets
 function workerShapeClauses(d) {
   return (d.shapeClauses || []).map((c) => ({
@@ -232,6 +244,21 @@ async function genExtraLayers(layerYs, ctx) {
   return true;
 }
 
+// 1) biome grids for the search box: the main grid in row bands (0 → 80%)
+// then the extra multi-Y layers — or nothing at all for a structures-only
+// search, where the whole biome pass is short-circuited. Returns true or
+// the failure kind.
+async function prepareBiomeGrids(d, layerYs, ctx) {
+  if (!needsBiomeGrid(d)) {
+    ctx.progress(80);
+    return true;
+  }
+  ensureSearchArea(ctx.cols * ctx.rows * (1 + layerYs.length));
+  const mainOk = await genMainGrid(d.y, ctx);
+  if (mainOk !== true) return mainOk;
+  return genExtraLayers(layerYs, ctx);
+}
+
 // ---- sliced, cancellable search ----
 let searchBusy = false;
 let searchCancelId = 0;
@@ -258,17 +285,10 @@ async function runSearchJob(d) {
     const rows = Math.ceil((d.cz + d.range + pad) / SC) - gz0 + 2;
     const layerYs = adjLayerYs(d);
     if (cols * rows * (1 + layerYs.length) > SEARCH_MAX_CELLS) { fail('area-too-large'); return; }
-    ensureSearchArea(cols * rows * (1 + layerYs.length));
-
-    // 1) generate the grid in row bands (0 → 80%), yielding between bands so
-    // tile renders and cancel messages are processed
-    const mainOk = await genMainGrid(d.y, { cols, rows, gx0, gz0, SC, cancelled, progress });
-    if (mainOk !== true) { fail(mainOk); return; }
-
-    // 1b) extra biome layers for the multi-Y adjacency clauses, same box
+    const gridOk = await prepareBiomeGrids(d, layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
+    if (gridOk !== true) { fail(gridOk); return; }
+    const useGrid = needsBiomeGrid(d);
     const cells = cols * rows;
-    const layersOk = await genExtraLayers(layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
-    if (layersOk !== true) { fail(layersOk); return; }
 
     // 2) structure positions per clause (fast)
     const structClauses = buildStructClauses(d);
@@ -294,11 +314,13 @@ async function runSearchJob(d) {
     for (let j = 0; j < rows; j += SCAN_BAND) {
       if (cancelled()) { fail('cancelled'); return; }
       // re-take the heap views each slice: interleaved allocations may grow memory
-      params.grid = M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cols * rows);
-      params.layers = layerYs.map((y, li) => {
-        const b = (searchPtr >> 2) + (li + 1) * cells;
-        return { y, grid: M.HEAP32.subarray(b, b + cells) };
-      });
+      params.grid = useGrid ? M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cols * rows) : null;
+      params.layers = useGrid
+        ? layerYs.map((y, li) => {
+            const b = (searchPtr >> 2) + (li + 1) * cells;
+            return { y, grid: M.HEAP32.subarray(b, b + cells) };
+          })
+        : [];
       params.rowStart = j; params.rowEnd = Math.min(j + SCAN_BAND, rows) - 1;
       const res = scanGrid(params);
       if (!res) { fail('bad-request'); return; }
@@ -323,12 +345,15 @@ let seedCancelId = 0;
 
 function seedScanParams(d, cols, rows, gx0, gz0, SC) {
   const cells = cols * rows;
+  const useGrid = needsBiomeGrid(d);
   return {
-    grid: M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cells),
-    layers: adjLayerYs(d).map((y, li) => {
-      const b = (searchPtr >> 2) + (li + 1) * cells;
-      return { y, grid: M.HEAP32.subarray(b, b + cells) };
-    }),
+    grid: useGrid ? M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cells) : null,
+    layers: useGrid
+      ? adjLayerYs(d).map((y, li) => {
+          const b = (searchPtr >> 2) + (li + 1) * cells;
+          return { y, grid: M.HEAP32.subarray(b, b + cells) };
+        })
+      : [],
     cols, rows, gx0, gz0, SC,
     cx: 0, cz: 0, range: d.range, step: d.step, mergeDist: Math.max(256, d.step * 6),
     mainSet: new Set(d.mainBiomes),
@@ -359,11 +384,12 @@ async function runSeedSearchJob(d) {
     postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
     return;
   }
-  ensureSearchArea(cols * cols * (1 + layerYs.length));
+  const useGrid = needsBiomeGrid(d);
+  if (useGrid) ensureSearchArea(cols * cols * (1 + layerYs.length));
   for (const seedStr of d.seeds) {
     if (cancelled()) break;
     applyWorld(seedStr, d.mc, d.large, d.dim);
-    if (!genSeedGrids(d.y, layerYs, cols, gx0, gz0, SC)) {
+    if (useGrid && !genSeedGrids(d.y, layerYs, cols, gx0, gz0, SC)) {
       postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
       return;
     }
@@ -392,6 +418,68 @@ function genSeedGrids(y, layerYs, cols, gx0, gz0, SC) {
       gx0, gz0, cols, cols, SC, scaledY(layerYs[li]))) return false;
   }
   return true;
+}
+
+// ---- high-resolution map export (#231) ----
+// Re-renders the requested view at poster resolution in horizontal pixel
+// bands: each band generates its cell grid, paints RGBA pixels and transfers
+// them to the app, which composes the final canvas. Banding keeps the WASM
+// scratch buffer small and lets cancel messages through between bands
+// (same pattern as the sliced search job).
+let exportCancelId = 0;
+const EXPORT_BAND_PX = 256;
+
+// paint one pixel band from the freshly generated cell grid
+function paintExportBand(d, py0, py1, r0, cols, colMap) {
+  const rgba = new Uint8ClampedArray((py1 - py0) * d.outW * 4);
+  const base = areaPtr >> 2;
+  for (let py = py0; py < py1; py++) {
+    const row = (hdCellIndex(py, d.wz0, d.bppOut, d.scale) - r0) * cols;
+    const out = (py - py0) * d.outW;
+    for (let px = 0; px < d.outW; px++) {
+      let id = M.HEAP32[base + row + colMap[px]];
+      if (id < 0 || id > 255) id = 0;
+      const c = id * 3, o = (out + px) * 4;
+      rgba[o] = colors[c]; rgba[o + 1] = colors[c + 1];
+      rgba[o + 2] = colors[c + 2]; rgba[o + 3] = 255;
+    }
+  }
+  return rgba;
+}
+
+async function runExportJob(d) {
+  const fail = (error) => postMessage({ type: 'exportDone', reqId: d.reqId, error });
+  // the export honours the app's active color table (palette messages only
+  // reach the tile worker, so the flag rides along with the request)
+  handlePaletteMsg({ alt: !!d.alt });
+  const span = hdCellSpan(d.wx0, d.outW, d.bppOut, d.scale);
+  const cols = span.count;
+  const colMap = new Int32Array(d.outW);
+  for (let px = 0; px < d.outW; px++) {
+    colMap[px] = hdCellIndex(px, d.wx0, d.bppOut, d.scale) - span.c0;
+  }
+  for (let py0 = 0; py0 < d.outH; py0 += EXPORT_BAND_PX) {
+    if (exportCancelId === d.reqId) { fail('cancelled'); return; }
+    const py1 = Math.min(py0 + EXPORT_BAND_PX, d.outH);
+    const r0 = hdCellIndex(py0, d.wz0, d.bppOut, d.scale);
+    const rows = hdCellIndex(py1 - 1, d.wz0, d.bppOut, d.scale) - r0 + 1;
+    let rgba;
+    try {
+      // re-apply per band: an interleaved search job may switch the world
+      applyWorld(d.seed, d.mc, d.large, d.dim);
+      ensureArea(cols * rows);
+      if (!M._genBiomeArea(areaPtr, span.c0, r0, cols, rows, d.scale, scaledY(d.y))) {
+        fail('area-too-large'); return;
+      }
+      rgba = paintExportBand(d, py0, py1, r0, cols, colMap);
+    } catch {
+      // allocation failure (WASM heap or band buffer): report, don't crash
+      fail('export-failed'); return;
+    }
+    postMessage({ type: 'exportBand', reqId: d.reqId, py0, rowsPx: py1 - py0, rgba: rgba.buffer }, [rgba.buffer]);
+    await yieldToQueue();
+  }
+  postMessage({ type: 'exportDone', reqId: d.reqId, ok: true });
 }
 
 // checkerboard render: one fixed world-aligned tile of the progressive grid.
@@ -535,6 +623,8 @@ const HANDLERS = {
   seedSearch: runSeedSearchJob, // async: yields between seeds so cancel is processed
   cancelSeedSearch: (d) => { seedCancelId = d.reqId; },
   search: handleSearchMsg,
+  exportMap: runExportJob, // async: banded so cancel messages get through
+  cancelExport: (d) => { exportCancelId = d.reqId; },
   palette: handlePaletteMsg,
   structConsts: (d) => postMessage({ type: 'structConsts', values: d.indices.map((i) => M._structConst(i)) }),
   biomeList: handleBiomeListMsg
