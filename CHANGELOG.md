@@ -18,27 +18,6 @@ et la release GitHub.
 
 ## [0.9.0](https://github.com/akwawa/Seedcartographer/compare/v0.8.0...v0.9.0) (2026-07-17)
 
-
-### Ajouté
-
-* **ci:** weekly watch of the cubiomes upstream ([#232](https://github.com/akwawa/Seedcartographer/issues/232)) ([bcfd51a](https://github.com/akwawa/Seedcartographer/commit/bcfd51a670a383978d1c4c65d2b80cffc91e066d)), closes [#225](https://github.com/akwawa/Seedcartographer/issues/225)
-
-
-### Corrigé
-
-* **ci:** stage the Pages builds inside each checkout ([#241](https://github.com/akwawa/Seedcartographer/issues/241)) ([a97c8d3](https://github.com/akwawa/Seedcartographer/commit/a97c8d35ff16ce5c853cbc4da48158b044e97612)), closes [#240](https://github.com/akwawa/Seedcartographer/issues/240)
-
-
-### Modifié
-
-* finalize ES module migration with "type": "module" ([#224](https://github.com/akwawa/Seedcartographer/issues/224)) ([#236](https://github.com/akwawa/Seedcartographer/issues/236)) ([8bf8007](https://github.com/akwawa/Seedcartographer/commit/8bf80070c09c97f82b9b629b78956c15b3b9d5c3))
-* finish ES module migration — module worker and ES6 wasm glue ([#235](https://github.com/akwawa/Seedcartographer/issues/235)) ([6820be4](https://github.com/akwawa/Seedcartographer/commit/6820be44db56e0685de15c09bdc94b4f3e01a2b5))
-* migration ES modules, étape 2 — page principale en modules natifs ([#234](https://github.com/akwawa/Seedcartographer/issues/234)) ([8461c8a](https://github.com/akwawa/Seedcartographer/commit/8461c8ae9f29470e4d7cf4a60c9db73a42215efd))
-* **test:** migrate Node test layer to native ES modules ([#233](https://github.com/akwawa/Seedcartographer/issues/233)) ([8ed6d53](https://github.com/akwawa/Seedcartographer/commit/8ed6d53bec5dac4aeef1e8c8029672ebc5d1d8d8))
-* use top-level await in worker.js and app.js (sonar S7785) ([#239](https://github.com/akwawa/Seedcartographer/issues/239)) ([dd368ef](https://github.com/akwawa/Seedcartographer/commit/dd368ef72c7b2811b69d1294bfc1f90eeccde51c))
-
-## [Non publié]
-
 ### Ajouté
 - Veille cubiomes : un workflow hebdomadaire (`cubiomes-watch.yml`) compare le
   HEAD amont de Cubitect/cubiomes au submodule épinglé et ouvre (ou
