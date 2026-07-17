@@ -27,7 +27,10 @@ import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeM
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
-import { resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV } from './export.js';
+import {
+  resultsToCSV, resultsToJSON, mapCartoucheLines, exportFileName, parseLocationsCSV,
+  hdExportGeometry, cartoucheMetrics
+} from './export.js';
 import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
@@ -119,6 +122,8 @@ searchWorker.onmessage = (e) => {
     if (d.reqId === searchReq) $('#searchProgress').value = d.pct;
     return;
   }
+  if (d.type === 'exportBand') { onExportBand(d); return; }
+  if (d.type === 'exportDone') { onExportDone(d); return; }
   if (d.type === 'search') onSearchResult(d);
 };
 // engine startup: version list first, then the biome list ahead of any
@@ -1808,6 +1813,92 @@ function exportMapPNG() {
   lines.forEach((ln, i) => o.fillText(ln, Math.round(10 * dpr), canvas.height + Math.round((18 + i * 17) * dpr)));
   out.toBlob((blob) => { if (blob) downloadBlob(exportFileName(world.seed, 'map', 'png'), blob); }, 'image/png');
 }
+
+// ---------- high-resolution map export (#231) ----------
+// The current view is re-rendered at 2048/4096 px in the search worker (idle
+// unless a search runs), band by band, with the same progress-bar + cancel
+// button pattern as the cancellable search (#20).
+let exportReq = 0, exportBusy = false;
+let exportJob = null;   // {out, o, geom} while an HD export runs
+function setExportBusy(on) {
+  exportBusy = on;
+  const btn = $('#pngBtn');
+  btn.dataset.i18n = on ? 'cancelBtn' : 'exportPng';
+  btn.textContent = t(btn.dataset.i18n);
+  const prog = $('#pngProgress');
+  prog.hidden = !on;
+  prog.value = 0;
+  $('#pngSizeSel').disabled = on;
+  if (!on) exportJob = null;
+}
+function exportError(key) {
+  searchInfo.textContent = t(key);
+  searchInfo.className = 'info err';
+}
+function startExportHD(outW) {
+  const geom = hdExportGeometry(view, canvas.width / dpr, canvas.height / dpr, outW);
+  if (!geom) { exportError('exportTooLarge'); return; }
+  const m = cartoucheMetrics(geom.outW);
+  let out, o = null;
+  // memory guard: a canvas this large can fail to allocate outright
+  try {
+    out = document.createElement('canvas');
+    out.width = geom.outW; out.height = geom.outH + m.band;
+    o = out.getContext('2d');
+  } catch { /* reported below */ }
+  if (!o) { exportError('exportTooLarge'); return; }
+  exportReq = reqSeq++;
+  exportJob = { out, o, geom };
+  setExportBusy(true);
+  sendSearch({
+    type: 'exportMap', reqId: exportReq, alt: altPalette,
+    seed: world.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer,
+    ...geom
+  });
+}
+function onExportBand(d) {
+  if (d.reqId !== exportReq || !exportJob) return;
+  try {
+    exportJob.o.putImageData(new ImageData(new Uint8ClampedArray(d.rgba), exportJob.geom.outW, d.rowsPx), 0, d.py0);
+  } catch {
+    // pixel-buffer allocation failed: abort the worker job and report
+    sendSearch({ type: 'cancelExport', reqId: exportReq });
+    setExportBusy(false);
+    exportError('exportTooLarge');
+    return;
+  }
+  $('#pngProgress').value = Math.round(100 * (d.py0 + d.rowsPx) / exportJob.geom.outH);
+}
+function onExportDone(d) {
+  if (d.reqId !== exportReq || !exportJob) return;
+  const job = exportJob;
+  setExportBusy(false);
+  if (d.error) {
+    if (d.error !== 'cancelled') exportError('exportFailed');
+    return;
+  }
+  finishExportHD(job);
+}
+// stamp the proportionally scaled cartouche band and trigger the download
+function finishExportHD(job) {
+  const { out, o, geom } = job;
+  const m = cartoucheMetrics(geom.outW);
+  o.fillStyle = mapBg;
+  o.fillRect(0, geom.outH, geom.outW, m.band);
+  o.fillStyle = mapText;
+  o.font = `${m.font}px monospace`;
+  const lines = mapCartoucheLines({
+    seed: world.seed, mcLabel: mcLabel(), large: world.large,
+    dimension: (DIMENSIONS.find(([v]) => v === world.dim) || [0, 'Overworld'])[1],
+    cx: Math.round(view.cx), cz: Math.round(view.cz)
+  });
+  lines.forEach((ln, i) => o.fillText(ln, m.padX, geom.outH + m.baseline + i * m.lineStep));
+  out.toBlob((blob) => {
+    if (blob) downloadBlob(exportFileName(world.seed, `map-${geom.outW}`, 'png'), blob);
+    else exportError('exportFailed');
+  }, 'image/png');
+}
+
 function exportResults(fmt) {
   if (!pins.length) return;
   const c = readCriteria();
@@ -2251,7 +2342,12 @@ async function init() {
     if (seedBusy) cancelSeedSearch();
     else startSeedSearch();
   };
-  $('#pngBtn').onclick = exportMapPNG;
+  $('#pngBtn').onclick = () => {
+    if (exportBusy) { sendSearch({ type: 'cancelExport', reqId: exportReq }); return; }
+    const size = $('#pngSizeSel').value;
+    if (size === 'view') exportMapPNG();
+    else startExportHD(Number.parseInt(size, 10));
+  };
   const importInput = $('#importFile');
   $('#importCsv').onclick = () => importInput.click();
   importInput.onchange = () => {

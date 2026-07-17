@@ -293,6 +293,37 @@ test('Export PNG downloads a snapshot of the current view', async ({ page }) => 
   expect(buf.length).toBeGreaterThan(1000);
 });
 
+test('high-resolution export downloads a 2048 px PNG with a scaled cartouche', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // the expected output size comes from the same pure geometry helpers the
+  // app uses: viewport aspect at 2048 px wide, plus the cartouche band
+  const expected = await page.evaluate(async () => {
+    const { hdExportGeometry, cartoucheMetrics } = await import('./export.js');
+    const c = document.querySelector('#map');
+    // dpr cancels out of the aspect ratio, so bpp can be anything here
+    const g = hdExportGeometry({ cx: 0, cz: 0, bpp: 1 }, c.width, c.height, 2048);
+    return { w: g.outW, h: g.outH + cartoucheMetrics(2048).band };
+  });
+  await page.selectOption('#pngSizeSel', '2048');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('#pngBtn')
+  ]);
+  expect(download.suggestedFilename()).toBe('seedcartographer-141-map-2048.png');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const c of stream) chunks.push(c);
+  const buf = Buffer.concat(chunks);
+  // IHDR carries the pixel dimensions right after the 8-byte signature
+  expect(buf.subarray(0, 4).toString('hex')).toBe('89504e47');
+  expect(buf.readUInt32BE(16)).toBe(expected.w);
+  expect(buf.readUInt32BE(20)).toBe(expected.h);
+  // the export controls returned to their idle state
+  await expect(page.locator('#pngProgress')).toBeHidden();
+  await expect(page.locator('#pngSizeSel')).toBeEnabled();
+});
+
 test('Import CSV shows places as pins in the list and on the map', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

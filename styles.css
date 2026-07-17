@@ -47,6 +47,11 @@ button,input,select{font:inherit;color:inherit}
 .chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
 .ver{font-family:var(--mono);font-size:12px;color:var(--faint);border:1px solid var(--line);padding:3px 8px;border-radius:5px}
 .topbar .ghost{margin-left:auto}
+/* the PNG size selector carries the auto margin so the export controls
+   (size + button + progress) stay grouped on the right (#231) */
+.topbar .pngsize{margin-left:auto}
+.topbar .pngsize ~ .ghost{margin-left:0}
+.topbar .pngprogress{width:70px}
 
 input,select{
   background:var(--panel2);border:1px solid var(--line);border-radius:7px;

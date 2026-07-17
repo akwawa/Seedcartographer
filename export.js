@@ -61,6 +61,95 @@ export function mapCartoucheLines(meta) {
   ];
 }
 
+// ---- high-resolution map export (#231) ----
+// The HD export re-renders the current view at a fixed output width in the
+// worker, band by band. These helpers are pure so the geometry is shared
+// between app.js (canvas assembly) and worker.js (band rendering) and unit
+// tested without a DOM or a WASM engine.
+
+// Memory guard: cap on output pixels (RGBA ≈ 4 bytes each). 32M pixels keep
+// the composed canvas around 128 MB, safely below browser canvas limits.
+export const EXPORT_MAX_PIXELS = 32 * 1024 * 1024;
+
+// smallest cubiomes sampling scale that keeps the cell grid <= output pixels
+/**
+ * @param {number} bpp blocks per output pixel
+ * @returns {number} cubiomes scale (4, 16, 64 or 256)
+ */
+export function hdExportScale(bpp) {
+  for (const s of [4, 16, 64]) if (s >= bpp) return s;
+  return 256;
+}
+
+// Geometry of an HD export of the current view at `outW` pixels wide: output
+// size (same aspect as the viewport), blocks-per-pixel, world NW corner and
+// sampling scale — or null when the output would blow the pixel budget.
+/**
+ * @param {{cx: number, cz: number, bpp: number}} view current map view
+ * @param {number} viewW viewport width in CSS pixels
+ * @param {number} viewH viewport height in CSS pixels
+ * @param {number} outW requested output width in pixels
+ * @param {number} [maxPixels] memory guard, in output pixels
+ * @returns {{outW: number, outH: number, bppOut: number, wx0: number,
+ *            wz0: number, scale: number}|null}
+ */
+export function hdExportGeometry(view, viewW, viewH, outW, maxPixels = EXPORT_MAX_PIXELS) {
+  const outH = Math.max(1, Math.round(outW * viewH / viewW));
+  if (outW * outH > maxPixels) return null;
+  const bppOut = (viewW * view.bpp) / outW;
+  return {
+    outW, outH, bppOut,
+    wx0: view.cx - (outW * bppOut) / 2,
+    wz0: view.cz - (outH * bppOut) / 2,
+    scale: hdExportScale(bppOut)
+  };
+}
+
+// Cell-grid span covering `extent` output pixels starting at world coord
+// `w0` (pixels sample at their center, hence the half-pixel end offset).
+/**
+ * @param {number} w0 world coordinate of the first pixel's edge
+ * @param {number} extent number of output pixels
+ * @param {number} bppOut blocks per output pixel
+ * @param {number} scale cubiomes sampling scale
+ * @returns {{c0: number, count: number}} first cell index and cell count
+ */
+export function hdCellSpan(w0, extent, bppOut, scale) {
+  const c0 = Math.floor(w0 / scale);
+  const c1 = Math.floor((w0 + (extent - 0.5) * bppOut) / scale);
+  return { c0, count: c1 - c0 + 1 };
+}
+
+// cell row/column of one output pixel (sampled at the pixel center)
+/**
+ * @param {number} p output pixel index (row or column)
+ * @param {number} w0 world coordinate of the first pixel's edge
+ * @param {number} bppOut blocks per output pixel
+ * @param {number} scale cubiomes sampling scale
+ * @returns {number} absolute cell index
+ */
+export function hdCellIndex(p, w0, bppOut, scale) {
+  return Math.floor((w0 + (p + 0.5) * bppOut) / scale);
+}
+
+// Cartouche band metrics scaled to the export width so the text stays
+// readable on a poster-sized PNG (1024 px wide ≈ the on-screen sizing).
+/**
+ * @param {number} width export width in pixels
+ * @returns {{band: number, font: number, padX: number,
+ *            baseline: number, lineStep: number}}
+ */
+export function cartoucheMetrics(width) {
+  const s = Math.max(1, width / 1024);
+  return {
+    band: Math.round(64 * s),
+    font: Math.round(12 * s),
+    padX: Math.round(10 * s),
+    baseline: Math.round(18 * s),
+    lineStep: Math.round(17 * s)
+  };
+}
+
 // download name for an export of `kind` ('map', 'csv'…): seed sanitized to
 // filesystem-safe characters
 /**
