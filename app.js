@@ -911,6 +911,19 @@ function biomeSelect(initial) {
   if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   return sel;
 }
+// sentinel value of the "any biome" option in the main-biome selector: the
+// spot's own biome is not constrained (structures-only searches, #227)
+const ANY_BIOME = -1;
+// the main-biome selector is a regular biome select plus the "any" option
+function mainBiomeSelect(initial) {
+  const sel = biomeSelect();
+  const o = document.createElement('option');
+  o.value = String(ANY_BIOME); o.dataset.i18n = 'anyBiome'; o.textContent = t('anyBiome');
+  sel.insertBefore(o, sel.firstChild);
+  sel.value = initial === undefined ? String(ANY_BIOME) : String(initial);
+  if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+  return sel;
+}
 function structsOfDim() {
   return structToggles.filter((tg) => (tg.dim || 0) === world.dim);
 }
@@ -947,7 +960,7 @@ function addRow(container, parts) {
   container.appendChild(row);
 }
 function addMainBiomeRow(biome) {
-  addRow($('#mainBiomes'), [aria(biomeSelect(biome), 'ariaBiome')]);
+  addRow($('#mainBiomes'), [aria(mainBiomeSelect(biome), 'ariaBiome')]);
 }
 function addAdjRow(biome, dist, negate, yl) {
   const neg = critSelect([['0', t('present'), 'present'], ['1', t('absent'), 'absent']], negate ? '1' : '0');
@@ -1009,13 +1022,16 @@ function addPairRow(t1, t2, gap, radius) {
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
 // ---------- search ----------
-// Criteria panel -> search-message fields, or null when no main biome is set.
+// Criteria panel -> search-message fields, or null when the criteria cannot
+// anchor a search (no main biome and no structure criterion).
 // Shared by the location search and the multi-seed search.
+// "Any biome" (or no main-biome row at all) is sent as an empty mainBiomes
+// list: the engine then skips the biome pass and requires structure clauses.
 function collectCriteria() {
-  const mainBiomes = rowsOf('#mainBiomes')
+  const pickedBiomes = rowsOf('#mainBiomes')
     .map((r) => Number.parseInt(r.querySelector('select').value, 10))
     .filter(Number.isFinite);
-  if (!mainBiomes.length) return null;
+  const mainBiomes = pickedBiomes.includes(ANY_BIOME) ? [] : pickedBiomes;
   const adjClauses = rowsOf('#adjClauses').map((r) => {
     const ins = r.querySelectorAll('input.num');
     const y = Number.parseInt(ins[1].value, 10);
@@ -1065,6 +1081,8 @@ function collectCriteria() {
     return v !== '' && Number.isFinite(n) ? n : null;
   };
   const surfMin = intOrNull('#surfMin'), surfMax = intOrNull('#surfMax');
+  // without a main biome the search must be anchored by structure criteria
+  if (!mainBiomes.length && !structClauses.length && !pairClauses.length) return null;
   return {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
@@ -1078,7 +1096,7 @@ function collectCriteria() {
 function runSearch() {
   const crit = collectCriteria();
   if (!crit) {
-    searchInfo.textContent = t('pickBiome');
+    searchInfo.textContent = t('pickCriteria');
     searchInfo.className = 'info err';
     return;
   }
@@ -1156,7 +1174,7 @@ function startSeedSearch() {
   const crit = collectCriteria();
   const seedInfo = $('#seedInfo');
   if (!crit) {
-    seedInfo.textContent = t('pickBiome');
+    seedInfo.textContent = t('pickCriteria');
     seedInfo.className = 'info err';
     return;
   }

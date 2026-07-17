@@ -24,7 +24,7 @@ function makeGrid(cols, rows, fill, cells = []) {
   return g;
 }
 
-test('empty main biome set is rejected', () => {
+test('empty main biome set without structure clauses is rejected', () => {
   assert.strictEqual(scanGrid(makeParams(makeGrid(4, 4, 0), 4, 4, { mainSet: new Set() })), null);
 });
 
@@ -179,6 +179,41 @@ test('inMain structure clauses only count structures on main-set cells', () => {
   // without the flag both points count
   params.structClauses = [{ points: [onMain, offMain], min: 2, radius: 4000 }];
   assert.ok(scanGrid(params).length > 0);
+});
+
+test('structures-only search: empty main set passes with structure clauses', () => {
+  // "any biome": the grid may even be null, nothing reads biomes
+  const hits = scanGrid(makeParams(null, 8, 8, {
+    mainSet: new Set(),
+    structClauses: [{ points: [[32, 32], [40, 40], [48, 32]], min: 3, radius: 200 }]
+  }));
+  assert.ok(hits.length > 0);
+  assert.strictEqual(hits[0].count, 3);
+  // spots too far from the cluster still fail the clause
+  assert.deepStrictEqual(scanGrid(makeParams(null, 8, 8, {
+    mainSet: new Set(),
+    structClauses: [{ points: [[5000, 5000]], min: 1, radius: 100 }]
+  })), []);
+});
+
+test('a missing mainSet behaves like an empty one', () => {
+  const p = makeParams(null, 8, 8, {
+    structClauses: [{ points: [[32, 32]], min: 1, radius: 200 }]
+  });
+  delete p.mainSet;
+  assert.ok(scanGrid(p).length > 0);
+  // ...and stays malformed without structure clauses
+  p.structClauses = [];
+  assert.strictEqual(scanGrid(p), null);
+});
+
+test('inMain is ignored when the main set is empty (any biome)', () => {
+  // with "any biome" the inMain filter would drop every point: it is skipped
+  const hits = scanGrid(makeParams(null, 8, 8, {
+    mainSet: new Set(),
+    structClauses: [{ points: [[32, 32], [80, 80]], min: 2, radius: 4000, inMain: true }]
+  }));
+  assert.ok(hits.length > 0);
 });
 
 

@@ -178,6 +178,17 @@ function buildStructClauses(d) {
   return clauses;
 }
 
+// A structures-only search ("any biome") needs no biome grid at all: the
+// biome pass is skipped entirely unless some clause actually reads the grid.
+// (inMain flags are ignored by search.js when the main set is empty, so they
+// do not force a grid on their own.)
+function needsBiomeGrid(d) {
+  return (d.mainBiomes || []).length > 0
+    || (d.adjClauses || []).length > 0
+    || (d.pctClauses || []).length > 0
+    || (d.shapeClauses || []).length > 0;
+}
+
 // shape clauses cross the message boundary as plain arrays: rebuild the sets
 function workerShapeClauses(d) {
   return (d.shapeClauses || []).map((c) => ({
@@ -258,17 +269,23 @@ async function runSearchJob(d) {
     const rows = Math.ceil((d.cz + d.range + pad) / SC) - gz0 + 2;
     const layerYs = adjLayerYs(d);
     if (cols * rows * (1 + layerYs.length) > SEARCH_MAX_CELLS) { fail('area-too-large'); return; }
-    ensureSearchArea(cols * rows * (1 + layerYs.length));
+    const useGrid = needsBiomeGrid(d);
+    if (useGrid) {
+      ensureSearchArea(cols * rows * (1 + layerYs.length));
 
-    // 1) generate the grid in row bands (0 → 80%), yielding between bands so
-    // tile renders and cancel messages are processed
-    const mainOk = await genMainGrid(d.y, { cols, rows, gx0, gz0, SC, cancelled, progress });
-    if (mainOk !== true) { fail(mainOk); return; }
+      // 1) generate the grid in row bands (0 → 80%), yielding between bands so
+      // tile renders and cancel messages are processed
+      const mainOk = await genMainGrid(d.y, { cols, rows, gx0, gz0, SC, cancelled, progress });
+      if (mainOk !== true) { fail(mainOk); return; }
 
-    // 1b) extra biome layers for the multi-Y adjacency clauses, same box
+      // 1b) extra biome layers for the multi-Y adjacency clauses, same box
+      const layersOk = await genExtraLayers(layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
+      if (layersOk !== true) { fail(layersOk); return; }
+    } else {
+      // structures-only search: the biome pass is short-circuited
+      progress(80);
+    }
     const cells = cols * rows;
-    const layersOk = await genExtraLayers(layerYs, { cols, rows, gx0, gz0, SC, cancelled, progress });
-    if (layersOk !== true) { fail(layersOk); return; }
 
     // 2) structure positions per clause (fast)
     const structClauses = buildStructClauses(d);
@@ -294,11 +311,13 @@ async function runSearchJob(d) {
     for (let j = 0; j < rows; j += SCAN_BAND) {
       if (cancelled()) { fail('cancelled'); return; }
       // re-take the heap views each slice: interleaved allocations may grow memory
-      params.grid = M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cols * rows);
-      params.layers = layerYs.map((y, li) => {
-        const b = (searchPtr >> 2) + (li + 1) * cells;
-        return { y, grid: M.HEAP32.subarray(b, b + cells) };
-      });
+      params.grid = useGrid ? M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cols * rows) : null;
+      params.layers = useGrid
+        ? layerYs.map((y, li) => {
+            const b = (searchPtr >> 2) + (li + 1) * cells;
+            return { y, grid: M.HEAP32.subarray(b, b + cells) };
+          })
+        : [];
       params.rowStart = j; params.rowEnd = Math.min(j + SCAN_BAND, rows) - 1;
       const res = scanGrid(params);
       if (!res) { fail('bad-request'); return; }
@@ -323,12 +342,15 @@ let seedCancelId = 0;
 
 function seedScanParams(d, cols, rows, gx0, gz0, SC) {
   const cells = cols * rows;
+  const useGrid = needsBiomeGrid(d);
   return {
-    grid: M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cells),
-    layers: adjLayerYs(d).map((y, li) => {
-      const b = (searchPtr >> 2) + (li + 1) * cells;
-      return { y, grid: M.HEAP32.subarray(b, b + cells) };
-    }),
+    grid: useGrid ? M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + cells) : null,
+    layers: useGrid
+      ? adjLayerYs(d).map((y, li) => {
+          const b = (searchPtr >> 2) + (li + 1) * cells;
+          return { y, grid: M.HEAP32.subarray(b, b + cells) };
+        })
+      : [],
     cols, rows, gx0, gz0, SC,
     cx: 0, cz: 0, range: d.range, step: d.step, mergeDist: Math.max(256, d.step * 6),
     mainSet: new Set(d.mainBiomes),
@@ -359,11 +381,12 @@ async function runSeedSearchJob(d) {
     postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
     return;
   }
-  ensureSearchArea(cols * cols * (1 + layerYs.length));
+  const useGrid = needsBiomeGrid(d);
+  if (useGrid) ensureSearchArea(cols * cols * (1 + layerYs.length));
   for (const seedStr of d.seeds) {
     if (cancelled()) break;
     applyWorld(seedStr, d.mc, d.large, d.dim);
-    if (!genSeedGrids(d.y, layerYs, cols, gx0, gz0, SC)) {
+    if (useGrid && !genSeedGrids(d.y, layerYs, cols, gx0, gz0, SC)) {
       postMessage({ type: 'seedBatchDone', reqId: d.reqId, error: 'area-too-large' });
       return;
     }
