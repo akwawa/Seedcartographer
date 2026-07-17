@@ -49,6 +49,32 @@ test('demo search finds the seed-141 spot and shows the popup', async ({ page })
   await expect(page.locator('#popup')).toBeHidden();
 });
 
+test('structures-only search: "any biome" + villages, then share-link restore', async ({ page, context }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria load: flip the main biome to "any biome" and drop the
+  // adjacency clause so only the structure criterion (2 villages) remains
+  await page.selectOption('#mainBiomes .row select', '-1');
+  await page.click('#adjClauses .row .rm');
+  await expect(page.locator('#adjClauses .row')).toHaveCount(0);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  await expect(page.locator('#results .result').first()).toBeVisible();
+  // the share link keeps the structures-only criteria
+  const url = await page.evaluate(async () => { await syncHash(); return location.href; });
+  const p2 = await context.newPage();
+  await p2.goto(url);
+  await waitForApp(p2);
+  await expect(p2.locator('#mainBiomes .row select')).toHaveValue('-1');
+  await expect(p2.locator('#adjClauses .row')).toHaveCount(0);
+  await expect(p2.locator('#structClauses .row')).toHaveCount(1);
+  // the restored criteria still search fine
+  await p2.click('#searchBtn');
+  await waitForSearchDone(p2);
+  await expect(p2.locator('#searchInfo')).toHaveClass(/ok/);
+});
+
 test('a long search shows progress and can be cancelled', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -112,8 +138,8 @@ test('Nether dimension: biome list, map, search and share link work', async ({ p
   await page.goto('/');
   await waitForApp(page);
   await page.selectOption('#dimSel', '-1');
-  // biome rows now only offer the five Nether biomes
-  await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 5);
+  // biome rows now only offer the five Nether biomes (plus "any biome")
+  await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 6);
   // structure criteria only offer Nether structures
   await page.click('#addStruct');
   await expect(page.locator('#structClauses .row select option')).toHaveCount(3);

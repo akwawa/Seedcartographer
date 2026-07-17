@@ -59,6 +59,14 @@ test('sanitizeCriteria coerces integers, drops junk and caps row counts', () => 
   assert.strictEqual(sanitizeCriteria('str', 8), null);
 });
 
+test('sanitizeCriteria keeps the "any biome" sentinel of structures-only links', () => {
+  // -1 marks the "any biome" main-row option (#227): it must round-trip so
+  // shared/preset/history structures-only searches restore unchanged
+  const c = sanitizeCriteria({ mb: [-1], sc: [{ t: 7, mn: 3, r: 800 }] }, 8);
+  assert.deepStrictEqual(c.mb, [-1]);
+  assert.deepStrictEqual(c.sc, [{ t: 7, mn: 3, r: 800, im: false }]);
+});
+
 test('sanitizeWorldView bounds-checks every hash field', () => {
   const wv = sanitizeWorldView({ s: 141, m: 'evil', l: 1, d: 7, y: 9999, x: 10, z: -20, b: 99999 });
   assert.deepStrictEqual(wv, { seed: '141', mc: null, large: true, dim: 0, y: 320, cx: 10, cz: -20, bpp: 512 });

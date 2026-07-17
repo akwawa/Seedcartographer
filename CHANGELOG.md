@@ -16,6 +16,16 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Recherche sans biome : une option « N'importe quel biome » dans le sélecteur
+  de biome principal permet une recherche portant uniquement sur des critères
+  de structures (ex. « 3 villages dans un rayon donné, biome indifférent »).
+  Le moteur court-circuite alors la passe biome et évalue directement les
+  emplacements de structures ; partage, presets et historique restent
+  compatibles et les libellés sont traduits dans les 6 langues (#227).
+
 ## [0.9.0](https://github.com/akwawa/Seedcartographer/compare/v0.8.0...v0.9.0) (2026-07-17)
 
 ### Ajouté

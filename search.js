@@ -17,7 +17,11 @@ const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
 //   cx, cz, range                    — search box (blocks, centered)
 //   step                             — scan stride in blocks
 //   mergeDist                        — duplicate-merge distance in blocks
-//   mainSet                          — Set of accepted biome ids for the spot
+//   mainSet                          — Set of accepted biome ids for the spot;
+//                                      empty (or missing) means "any biome" and
+//                                      is only valid with structure clauses —
+//                                      the grid may then be null as long as no
+//                                      other clause reads it
 //   adjMode, adjClauses              — 'and'|'or', [{biomes:Set, dist, negate?, y?}]
 //                                      (negate: the biome must be ABSENT within dist;
 //                                      y: check the clause on the extra layer
@@ -144,10 +148,12 @@ function pctPass(pcts, pctAll, g, ci, cj) {
  * @typedef {{grid: Int32Array|number[], cols: number, rows: number,
  *            gx0: number, gz0: number, SC: number, mainSet: Set<number>}} GridCtx
  */
+// (with an empty main set — "any biome" search — inMain is meaningless and
+// the filter is skipped, otherwise it would drop every structure)
 /** @param {StructClause[]} clauses @param {GridCtx} g @returns {object[]} */
 function prepStructClauses(clauses, g) {
   return clauses.map((c) => ({
-    points: c.inMain
+    points: c.inMain && g.mainSet.size
       ? c.points.filter(([sx, sz]) => {
           const ci = Math.floor((sx - g.gx0 * g.SC) / g.SC), cj = Math.floor((sz - g.gz0 * g.SC) / g.SC);
           return ci >= 0 && cj >= 0 && ci < g.cols && cj < g.rows && g.mainSet.has(g.grid[cj * g.cols + ci]);
@@ -226,7 +232,8 @@ function isDuplicate(hits, wx, wz, merge2) {
  * @returns {number|null}
  */
 function evalCell(ctx, ci, cj, wx, wz) {
-  if (!ctx.g.mainSet.has(ctx.g.grid[cj * ctx.g.cols + ci])) return null;
+  // an empty main set means "any biome": the spot's own biome never rejects
+  if (ctx.g.mainSet.size && !ctx.g.mainSet.has(ctx.g.grid[cj * ctx.g.cols + ci])) return null;
   if (ctx.adj.length && !adjPass(ctx.adj, ctx.adjAll, ctx.g, ci, cj)) return null;
   if (ctx.pcts.length && !pctPass(ctx.pcts, ctx.pctAll, ctx.g, ci, cj)) return null;
   if (ctx.shapes.length && !shapesPass(ctx.shapes, ctx.shapeAll, ctx.g, ci, cj)) return null;
@@ -261,12 +268,14 @@ function evalCell(ctx, ci, cj, wx, wz) {
  */
 function scanGrid(p) {
   const { grid, cols, rows, gx0, gz0, SC, cx, cz, range, mergeDist } = p;
-  const mainSet = p.mainSet;
+  const mainSet = p.mainSet || new Set();
   const adjAll = p.adjMode !== 'or';
   const pctAll = p.pctMode !== 'or';
   const shapeAll = p.shapeMode !== 'or';
   const structAll = p.structMode !== 'or';
-  if (!mainSet?.size) return null;
+  // an empty main-biome set is only meaningful for a structures-only search
+  // ("any biome"): without structure clauses everything would match
+  if (!mainSet.size && !(p.structClauses || []).length) return null;
 
   const g = { grid, cols, rows, gx0, gz0, SC, mainSet };
   const adj = prepAdjClauses(p.adjClauses || [], SC, grid, p.layers);
