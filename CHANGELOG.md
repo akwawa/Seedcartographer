@@ -24,6 +24,13 @@ et la release GitHub.
   rafraîchit) automatiquement une issue quand l'amont avance — pour ne pas
   rater l'arrivée du support des versions 26.x (#225).
 
+### Corrigé
+- CI : déploiement GitHub Pages cassé depuis le double-build (#207) — les
+  scripts de stamping de version refusent par conception tout chemin hors de
+  leur répertoire courant (`insideCwd`), or `pages.yml` les appelait sur
+  `../_site` depuis `build-main`/`build-dev`. Chaque build est désormais
+  stagé dans son propre checkout puis copié vers `_site` (#240).
+
 ### Modifié
 - Migration ES modules, finition : `worker.js` et `app.js` utilisent le
   top-level await des modules au lieu d'une chaîne de promesses / d'un appel
