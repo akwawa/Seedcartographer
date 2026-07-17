@@ -16,6 +16,18 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.10.0](https://github.com/akwawa/Seedcartographer/compare/v0.9.0...v0.10.0) (2026-07-17)
+
+
+### Ajouté
+
+* first-visit guided tour of the main workflow ([#229](https://github.com/akwawa/Seedcartographer/issues/229)) ([#245](https://github.com/akwawa/Seedcartographer/issues/245)) ([888a66a](https://github.com/akwawa/Seedcartographer/commit/888a66a64e1d1b6eda555315dae641a7b3e9a719))
+* high-resolution PNG map export (poster mode) ([#247](https://github.com/akwawa/Seedcartographer/issues/247)) ([2ec93d8](https://github.com/akwawa/Seedcartographer/commit/2ec93d827e018522fc1ff9c42af84f88d29c6e2e)), closes [#231](https://github.com/akwawa/Seedcartographer/issues/231)
+* **i18n:** add Japanese, Russian, Polish and Simplified Chinese locales ([#244](https://github.com/akwawa/Seedcartographer/issues/244)) ([2126e1f](https://github.com/akwawa/Seedcartographer/commit/2126e1feb17d8b866bbc9dff6c529a3f8b2460d7)), closes [#228](https://github.com/akwawa/Seedcartographer/issues/228)
+* milestone 0.10 — comfort features ([d527889](https://github.com/akwawa/Seedcartographer/commit/d52788937a6f7defc36188e95beba9189b32dc9f))
+* raccourcis clavier globaux ([#246](https://github.com/akwawa/Seedcartographer/issues/246)) ([bffd6c4](https://github.com/akwawa/Seedcartographer/commit/bffd6c4cc3cc8061397c0187e3b71aa281eba1e8))
+* **search:** recherche sans biome — structures seules ([#243](https://github.com/akwawa/Seedcartographer/issues/243)) ([0106809](https://github.com/akwawa/Seedcartographer/commit/01068090c99dd260a99454b81f476f68e90fd437))
+
 ## [Non publié]
 
 ### Ajouté
