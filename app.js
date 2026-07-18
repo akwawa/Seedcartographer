@@ -604,7 +604,7 @@ function finishZoneDrag() {
   const next = addZone(userZones, {
     ...world, x0: zoneTool.a.x, z0: zoneTool.a.z, x1: zoneTool.b.x, z1: zoneTool.b.z
   });
-  const created = next.length > userZones.length ? next[next.length - 1] : null;
+  const created = next.length > userZones.length ? next.at(-1) : null;
   setUserZones(next);
   setZoneOn(false);
   if (created) showZoneEditor(created);
