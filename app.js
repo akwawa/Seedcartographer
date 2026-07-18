@@ -416,12 +416,7 @@ function draw() {
   // named zone annotations sit right above the tiles, under every marker
   drawZones(W, H);
 
-  // structure / slime layers (only points in view)
-  for (const t of structToggles) {
-    if (!t.on || !t.points) continue;
-    if (t.slime) drawSlimeLayer(t.points, W, H);
-    else drawStructMarkers(t, W, H);
-  }
+  drawStructLayers(W, H);
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
@@ -449,6 +444,15 @@ function draw() {
 
   // the compare pane shares the viewport: every main-map redraw refreshes it
   if (cmpState.on) drawCompare();
+}
+
+// structure / slime layers (only points in view)
+function drawStructLayers(W, H) {
+  for (const t of structToggles) {
+    if (!t.on || !t.points) continue;
+    if (t.slime) drawSlimeLayer(t.points, W, H);
+    else drawStructMarkers(t, W, H);
+  }
 }
 
 function drawTile(e) {
