@@ -44,7 +44,7 @@ export default [
       'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'userzones.js',
       'profile.js', 'gallery.js', 'theme.js', 'export.js', 'version.js',
       'errorreport.js', 'seed.js', 'search.js', 'rarebiomes.js', 'shapes.js', 'slime.js', 'tour.js', 'keys.js',
-      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js'
+      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'compare.js'
     ],
     languageOptions: {
       sourceType: 'module',

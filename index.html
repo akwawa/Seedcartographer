@@ -32,6 +32,7 @@
       <select id="dimSel" class="ver"></select>
     </label>
     <button id="loadBtn" class="btn" data-i18n="loadSeed">Load seed</button>
+    <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
   </div>
   <select id="pngSizeSel" class="ver pngsize" title="PNG export size" aria-label="PNG export size" data-i18n-title="exportSizeTitle" data-i18n-aria="exportSizeTitle">
     <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
@@ -226,6 +227,15 @@
 
   <div class="mapwrap">
     <canvas id="map" tabindex="0" aria-label="Interactive map" data-i18n-aria="mapAria"></canvas>
+    <div id="cmpPane" class="cmppane" hidden>
+      <canvas id="cmpMap" tabindex="0" aria-label="Compare map (second seed)" data-i18n-aria="compareMapAria"></canvas>
+      <div class="cmpbar">
+        <label class="lbl"><span data-i18n="compareSeedLbl">Seed B</span>
+          <input id="cmpSeed" class="mono" spellcheck="false" autocomplete="off">
+        </label>
+        <button id="cmpClose" class="btn tiny" title="Exit compare mode" data-i18n-title="compareClose" aria-label="Exit compare mode" data-i18n-aria="compareClose">×</button>
+      </div>
+    </div>
     <div id="hud" class="hud" aria-hidden="true"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
     <dialog id="popup" class="popup"></dialog>
     <div class="maptoggles">
