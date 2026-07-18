@@ -4,7 +4,7 @@
   "commandRunner": { "command": "node --test" },
   "mutate": [
     "coords.js", "export.js", "favorites.js", "gallery.js", "errorreport.js", "legend.js", "maptools.js",
-    "markers.js", "palette.js", "presets.js", "profile.js", "relief.js", "search.js", "searchhistory.js",
+    "markers.js", "palette.js", "presets.js", "profile.js", "relief.js", "rarebiomes.js", "search.js", "searchhistory.js",
     "keys.js", "seed.js", "seedsearch.js", "shapes.js", "sharestate.js", "slime.js", "theme.js", "tour.js",
     "tilecache.js", "tilegrid.js", "usermarkers.js", "userpresets.js"
   ],

@@ -19,6 +19,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Section « Biomes rares » : un bouton par biome rare (champs de champignons,
+  badlands, badlands érodés, bosquet de cerisiers, pics de glace, jungle,
+  jungle de bambous, marais de mangrove) lance une recherche du plus proche
+  en anneaux croissants depuis le centre de la vue, dans le worker, avec
+  barre de progression et annulation. Le rayon s'étend automatiquement
+  jusqu'à 10 240 blocs ; le résultat centre la carte avec un pin temporaire
+  et sa pop-up, et un message clair (traduit dans les dix langues) s'affiche
+  si le biome est introuvable dans la limite. (#252)
 - Indicateur discret « hors ligne » dans la barre supérieure quand le
   navigateur perd la connexion (événements online/offline), traduit dans les
   dix langues, et test e2e du mode hors-ligne complet : démarrage de

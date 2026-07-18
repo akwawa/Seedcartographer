@@ -36,6 +36,7 @@ import { formatErrorEvent } from './errorreport.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
 import { keyAction } from './keys.js';
+import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
@@ -63,6 +64,7 @@ let tile = null;                                // {canvas, originX, originZ, sc
 let pins = [];                                  // [{x,z,count}] as displayed (sorted)
 let basePins = [];                              // pins in engine (search) order
 let lastSpawn = null;                           // world spawn of the last search
+let rarePin = null;                             // {x,z} temporary rare-biome pin (#252)
 let sortMode = 'order';                         // 'order' | 'spawn'
 let selected = -1;
 // ruler tool: a/b world endpoints, b tracks the pointer until the 2nd click
@@ -122,6 +124,11 @@ searchWorker.onmessage = (e) => {
     if (d.reqId === searchReq) $('#searchProgress').value = d.pct;
     return;
   }
+  if (d.type === 'rareProgress') {
+    if (d.reqId === rareReq) $('#rareProgress').value = d.pct;
+    return;
+  }
+  if (d.type === 'rare') { onRareResult(d); return; }
   if (d.type === 'exportBand') { onExportBand(d); return; }
   if (d.type === 'exportDone') { onExportDone(d); return; }
   if (d.type === 'search') onSearchResult(d);
@@ -334,6 +341,9 @@ function setDimension(dim) {
   // surface relief only exists in the Overworld
   const rlbl = $('#reliefToggleLbl');
   if (rlbl) rlbl.hidden = dim !== 0;
+  // the rare-biome shortcuts are Overworld biomes only
+  const rareCard = $('#rareCard');
+  if (rareCard) rareCard.hidden = dim !== 0;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
@@ -407,6 +417,8 @@ function draw() {
     const sx = w2sx(p.x), sy = w2sy(p.z);
     drawPin(sx, sy, i === selected);
   });
+  // temporary "nearest rare biome" pin (#252), cleared with the popup
+  if (rarePin) drawPin(w2sx(rarePin.x), w2sy(rarePin.z), true);
 
   if (showGrid) drawGrid(W, H);
   if (showNetherGrid) drawNetherGrid(W, H);
@@ -1121,6 +1133,73 @@ function runSearch() {
   });
 }
 
+// ---------- nearest rare biome (#252) ----------
+// One button per rare biome: the worker scans growing rings around the view
+// center and reports the closest occurrence, with the same progress/cancel
+// pattern as the cancellable search (#20). The active button flips to Cancel.
+let rareReq = 0, rareBusy = false, rareBtn = null;
+function setRareBusy(on, btn) {
+  rareBusy = on;
+  const prog = $('#rareProgress');
+  prog.hidden = !on;
+  prog.value = 0;
+  if (on) {
+    rareBtn = btn;
+    btn.textContent = t('cancelBtn');
+  } else if (rareBtn) {
+    rareBtn.textContent = biomeLabel(rareBtn.dataset.biome);
+    rareBtn = null;
+  }
+}
+function startRareSearch(biome, btn) {
+  if (rareBusy) { sendSearch({ type: 'cancelRare', reqId: rareReq }); return; }
+  rarePin = null;
+  const info = $('#rareInfo');
+  info.textContent = t('searching'); info.className = 'info busy';
+  rareReq = reqSeq++;
+  setRareBusy(true, btn);
+  sendSearch({
+    type: 'rareBiome', reqId: rareReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+    y: yLayer, cx: Math.round(view.cx), cz: Math.round(view.cz), biome
+  });
+}
+function onRareResult(d) {
+  if (d.reqId !== rareReq) return;   // stale
+  setRareBusy(false);
+  const info = $('#rareInfo');
+  if (d.error === 'cancelled') {
+    info.textContent = t('searchCancelled'); info.className = 'info empty';
+    return;
+  }
+  if (d.error) {
+    info.textContent = t('searchFailedArea'); info.className = 'info err';
+    return;
+  }
+  if (!d.hit) {
+    info.textContent = t('rareNotFound', { r: RARE_MAX_RADIUS }); info.className = 'info empty';
+    return;
+  }
+  rarePin = d.hit;
+  view.cx = d.hit.x; view.cz = d.hit.z;
+  if (view.bpp > 4) view.bpp = 3;
+  info.textContent = t('rareFound', { x: d.hit.x, z: d.hit.z, ms: d.ms }); info.className = 'info ok';
+  draw(); requestRender(0); syncHash(); showPopup(d.hit);
+}
+// the biome names are the engine's technical names: data-biome makes
+// applyI18n retranslate the labels on a language switch, like the dropdowns
+function buildRareBiomeUI() {
+  const box = $('#rareList');
+  for (const b of RARE_BIOMES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn tiny';
+    btn.dataset.biome = b.name;
+    btn.textContent = biomeLabel(b.name);
+    btn.onclick = () => startRareSearch(b.id, btn);
+    box.appendChild(btn);
+  }
+}
+
 // ---------- multi-seed search (worker pool) ----------
 const seedPool = [];
 let seedReq = 0, seedBusy = false;
@@ -1602,6 +1681,7 @@ function favRow(f) {
 }
 
 function hidePopup() {
+  if (rarePin) { rarePin = null; draw(); }   // the rare pin lives with the popup
   if (selected !== -1) {
     selected = -1;
     [...resultsEl.children].forEach((c) => c.classList.remove('sel'));
@@ -2358,6 +2438,7 @@ async function init() {
   $('#exportJson').onclick = () => exportResults('json');
   buildPresetSelect();
   wirePresetSave();
+  buildRareBiomeUI();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addPct').onclick = () => addPctRow();
@@ -2506,5 +2587,5 @@ function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg)
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
-Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles });
+Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin });
 await init();
