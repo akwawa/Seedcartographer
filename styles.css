@@ -205,6 +205,13 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .markerbtn{position:absolute;left:56px;top:128px}
 .selbtn{position:absolute;left:98px;top:128px}
 .selbtn.on{border-color:var(--lapis-hi);color:var(--lapis-hi);background:var(--raise)}
+.annotbtn{position:absolute;left:140px;top:128px}
+.annotbtn.on{border-color:#9ad06a;color:#9ad06a;background:var(--raise)}
+.popup .zone-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
+.popup .zone-colors{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
+.popup .zone-color{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.popup .zone-color[aria-pressed="true"]{border-color:var(--text)}
+.popup .zone-del{display:block;margin:0 auto}
 .selbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
   background:var(--overlay);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;
   padding:6px 10px;font-size:12px}
