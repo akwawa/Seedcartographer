@@ -2491,6 +2491,12 @@ async function init() {
   resize();
   // first visit: walk the newcomer through seed → criteria → search → share
   if (isFirstVisit(tourSeenValue())) startTour();
+  // discreet topbar indicator while the browser reports no connectivity (#253)
+  const offlineBadge = $('#offlineBadge');
+  const syncOfflineBadge = () => { offlineBadge.hidden = navigator.onLine; };
+  window.addEventListener('online', syncOfflineBadge);
+  window.addEventListener('offline', syncOfflineBadge);
+  syncOfflineBadge();
   // offline support (PWA); requires a secure context, harmless otherwise
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
