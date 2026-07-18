@@ -42,6 +42,9 @@ import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
 import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
+import {
+  panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare
+} from './compare.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
 // the sliced search job on the other, so a long search never delays a tile
@@ -374,6 +377,11 @@ function resize() {
   const r = canvas.getBoundingClientRect();
   canvas.width = Math.round(r.width * dpr);
   canvas.height = Math.round(r.height * dpr);
+  if (cmpState.on) {
+    const r2 = cmpCanvas.getBoundingClientRect();
+    cmpCanvas.width = Math.round(r2.width * dpr);
+    cmpCanvas.height = Math.round(r2.height * dpr);
+  }
   draw(); requestRender();
 }
 window.addEventListener('resize', resize);
@@ -438,6 +446,9 @@ function draw() {
   ctx.beginPath(); ctx.moveTo(W / 2 - 7, H / 2); ctx.lineTo(W / 2 + 7, H / 2);
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
+
+  // the compare pane shares the viewport: every main-map redraw refreshes it
+  if (cmpState.on) drawCompare();
 }
 
 function drawTile(e) {
@@ -755,6 +766,7 @@ function requestRender(delay = 90) {
     }
     requestMinimap();
     requestStructures();
+    if (cmpState.on) requestCompareTiles();
   }, delay);
 }
 // progressive checkerboard: request every uncached tile of the view,
@@ -984,6 +996,163 @@ canvas.addEventListener('keydown', (e) => {
   else return;
   e.preventDefault();
 });
+
+// ---------- side-by-side seed compare (#250) ----------
+// A second map pane with its own seed and its own render worker (so a slow
+// compare render never delays the main map), sharing the main viewport:
+// pan/zoom on either canvas moves both, since both draw from `view`.
+// The pure state/viewport logic lives in compare.js.
+let cmpState = createCompareState();
+let cmpWorker = null;                // dedicated engine worker, created on enter
+let cmpGen = 0, cmpRefillTimer = null;
+const cmpTileCache = createTileCache(TILE_GRID_CACHE_MAX);
+const cmpPendingTiles = new Map();   // in-flight compare tile keys -> generation
+let cmpTileQueue = [];
+const cmpCanvas = $('#cmpMap'), cmpCtx = cmpCanvas.getContext('2d');
+
+function cmpWorld() { return compareWorldFor(world, cmpState.seed); }
+function ensureCmpWorker() {
+  if (cmpWorker) return;
+  cmpWorker = new Worker('./worker.js', { type: 'module' });
+  cmpWorker.engineReady = false;
+  cmpWorker.pending = [];
+  cmpWorker.onerror = (e) => { console.error('CMP WORKER ERROR:', e.message); sendErrorEvent('worker', e.message, e.filename, e.lineno); };
+  cmpWorker.onmessage = (e) => {
+    const d = e.data;
+    if (d.type === 'fatal') { showFatal(d.message); return; }
+    if (d.type === 'ready') { engineUp(cmpWorker); return; }
+    if (d.type === 'gridTile') onCmpGridTile(d);
+  };
+  if (altPalette) post(cmpWorker, { type: 'palette', alt: true });
+}
+// same skip/refill protocol as the main grid pipeline (onGridTile)
+function onCmpGridTile(d) {
+  if (d.skipped) {
+    if (cmpPendingTiles.get(d.key) === d.gen) cmpPendingTiles.delete(d.key);
+    pumpCmpTileQueue();
+    clearTimeout(cmpRefillTimer);
+    cmpRefillTimer = setTimeout(() => requestCompareTiles(false), 60);
+    return;
+  }
+  cmpPendingTiles.delete(d.key);
+  pumpCmpTileQueue();
+  if (!d.ok) return;
+  cmpTileCache.put({ ...tileCanvasOf(d), worldKey: d.wk, key: d.key, present: d.present });
+  // tiles of a previous compare seed/world stay cached but are not drawn
+  if (d.wk !== tileWorldKey(cmpWorld(), yLayer, reliefOn())) return;
+  drawCompare();
+}
+function pumpCmpTileQueue() {
+  while (cmpPendingTiles.size < TILE_INFLIGHT_MAX && cmpTileQueue.length) {
+    const msg = cmpTileQueue.shift();
+    if (cmpPendingTiles.has(msg.key)) continue;
+    cmpPendingTiles.set(msg.key, msg.gen);
+    post(cmpWorker, msg);
+  }
+}
+// progressive checkerboard of the compare pane, center-first like the main map
+function requestCompareTiles(bump = true) {
+  if (!cmpState.on) return;
+  if (bump) {
+    cmpGen++;
+    post(cmpWorker, { type: 'tileGen', gen: cmpGen });
+  }
+  const W = Math.ceil(cmpCanvas.width / dpr), H = Math.ceil(cmpCanvas.height / dpr);
+  const scale = renderScaleFor(view.bpp);
+  const wk = tileWorldKey(cmpWorld(), yLayer, reliefOn());
+  const cached = new Set(cmpTileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
+  const wanted = tilesForView(view, W, H, scale);
+  cmpTileCache.setMax(Math.max(TILE_GRID_CACHE_MAX, wanted.length + 16));
+  cmpTileQueue = [];
+  for (const pos of wanted) {
+    const key = tileKey(wk, scale, pos.originX, pos.originZ);
+    if (cached.has(key)) { cmpTileCache.touch(key); continue; }
+    if (cmpPendingTiles.has(key)) continue;
+    cmpTileQueue.push({
+      type: 'renderTile', gen: cmpGen, key, wk, scale, relief: reliefOn(),
+      originX: pos.originX, originZ: pos.originZ,
+      seed: cmpState.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer
+    });
+  }
+  pumpCmpTileQueue();
+}
+function drawCompare() {
+  cmpCtx.save();
+  cmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = cmpCanvas.width / dpr, H = cmpCanvas.height / dpr;
+  cmpCtx.clearRect(0, 0, W, H);
+  cmpCtx.fillStyle = mapBg; cmpCtx.fillRect(0, 0, W, H);
+  cmpCtx.imageSmoothingEnabled = false;
+  const nw = screenToWorld(view, W, H, 0, 0), se = screenToWorld(view, W, H, W, H);
+  const rect = { x0: nw.x, z0: nw.z, x1: se.x, z1: se.z };
+  const scale = renderScaleFor(view.bpp);
+  const cap = Math.max(TILE_PAINT_MAX, tilesForView(view, W, H, scale).length);
+  for (const e of tilesInView(cmpTileCache.entries(), tileWorldKey(cmpWorld(), yLayer, reliefOn()), rect, cap, scale)) {
+    cmpTileCache.touch(e.key);
+    const p = worldToScreen(view, W, H, e.originX, e.originZ);
+    cmpCtx.drawImage(e.canvas, p.x, p.y, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
+  }
+  // center crosshair mirrors the main map: the shared center stays visible
+  cmpCtx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
+  cmpCtx.lineWidth = 1;
+  cmpCtx.beginPath(); cmpCtx.moveTo(W / 2 - 7, H / 2); cmpCtx.lineTo(W / 2 + 7, H / 2);
+  cmpCtx.moveTo(W / 2, H / 2 - 7); cmpCtx.lineTo(W / 2, H / 2 + 7); cmpCtx.stroke();
+  cmpCtx.restore();
+}
+// enter/leave compare mode; leaving stops the dedicated worker and frees
+// its tiles so nothing keeps rendering behind the single-map view
+function setCompareMode(on, seed) {
+  cmpState = on ? enterCompare(cmpState, seed ?? $('#cmpSeed').value, world.seed) : exitCompare(cmpState);
+  document.querySelector('.mapwrap').classList.toggle('comparing', on);
+  $('#cmpPane').hidden = !on;
+  const btn = $('#cmpBtn');
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', String(on));
+  if (on) {
+    $('#cmpSeed').value = cmpState.seed;
+    ensureCmpWorker();
+  } else if (cmpWorker) {
+    cmpWorker.terminate();
+    cmpWorker = null;
+    cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
+    clearTimeout(cmpRefillTimer);
+  }
+  resize();   // the map halves changed size; redraws and re-requests both panes
+}
+// the compare seed field re-targets the pane (empty falls back to the main seed)
+function applyCompareSeed() {
+  cmpState = enterCompare(cmpState, $('#cmpSeed').value, world.seed);
+  $('#cmpSeed').value = cmpState.seed;
+  drawCompare();
+  requestCompareTiles();
+}
+// pan/zoom on the compare canvas drives the shared viewport, so the main
+// map follows (draw() repaints both panes; requestRender() refills both)
+let cmpDragging = false, cmpLastX = 0, cmpLastY = 0;
+cmpCanvas.addEventListener('pointerdown', (e) => {
+  try { cmpCanvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  cmpDragging = true; cmpLastX = e.clientX; cmpLastY = e.clientY;
+});
+cmpCanvas.addEventListener('pointermove', (e) => {
+  if (!cmpDragging) return;
+  Object.assign(view, panViewport(view, e.clientX - cmpLastX, e.clientY - cmpLastY));
+  cmpLastX = e.clientX; cmpLastY = e.clientY;
+  draw();
+});
+function endCmpPointer() {
+  if (!cmpDragging) return;
+  cmpDragging = false;
+  requestRender(0); syncHash();
+}
+cmpCanvas.addEventListener('pointerup', endCmpPointer);
+cmpCanvas.addEventListener('pointercancel', endCmpPointer);
+cmpCanvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const r = cmpCanvas.getBoundingClientRect();
+  Object.assign(view, zoomViewportAt(view, cmpCanvas.width / dpr, cmpCanvas.height / dpr,
+    e.clientX - r.left, e.clientY - r.top, Math.exp(e.deltaY * 0.0012)));
+  draw(); requestRender(); syncHash();
+}, { passive: false });
 
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
@@ -1515,7 +1684,17 @@ function seedResultRow(cand) {
     view.cx = cand.hit.x; view.cz = cand.hit.z;
     curReset(); draw(); requestRender(0); syncHash();
   };
-  return li;
+  // side-by-side shortcut: open the compare pane on this candidate (#250)
+  const cmp = document.createElement('button');
+  cmp.className = 'btn tiny seedcmp';
+  cmp.textContent = '⇆';
+  cmp.title = t('compareSeedResult'); cmp.dataset.i18nTitle = 'compareSeedResult';
+  cmp.setAttribute('aria-label', t('compareSeedResult')); cmp.dataset.i18nAria = 'compareSeedResult';
+  cmp.onclick = () => setCompareMode(true, cand.seed);
+  const row = document.createElement('div');
+  row.className = 'seedrow';
+  row.append(li, cmp);
+  return row;
 }
 function onSearchResult(d) {
   if (d.reqId !== searchReq) return;   // stale
@@ -2354,6 +2533,10 @@ function applyPalette(alt, persist) {
   send({ type: 'palette', alt });
   // every cached or in-flight tile was painted with the old table
   tileCache.clear(); pendingTiles.clear(); tileQueue = []; minimapTile = null;
+  if (cmpWorker) {
+    post(cmpWorker, { type: 'palette', alt });
+    cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
+  }
   draw(); requestRender(0); requestMinimap(0);
   buildLegend(legendPresent);
 }
@@ -2540,6 +2723,9 @@ async function init() {
     if (searchBusy) sendSearch({ type: 'cancelSearch', reqId: searchReq });
     else runSearch();
   };
+  $('#cmpBtn').onclick = () => setCompareMode(!cmpState.on);
+  $('#cmpClose').onclick = () => setCompareMode(false);
+  $('#cmpSeed').onchange = applyCompareSeed;
   $('#seedResumeBtn').onclick = resumeSeedSearch;
   updateSeedResumeBtn();
   $('#seedSearchBtn').onclick = () => {
@@ -2714,6 +2900,8 @@ function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg)
 // settling), so expose them explicitly. All are consts mutated in place.
 Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
-  zonesOnMap: () => zonesFor(userZones, world)
+  zonesOnMap: () => zonesFor(userZones, world),
+  cmpTileCache, cmpPendingTiles, compareOn: () => cmpState.on,
+  viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
 });
 await init();

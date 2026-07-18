@@ -19,6 +19,17 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Comparateur de seeds côte à côte : un bouton « Comparer des seeds » dans la
+  barre supérieure (ou le raccourci ⇆ sur chaque candidate de la recherche
+  multi-seeds) scinde la carte en deux vues synchronisées — même centre et
+  même zoom, le déplacement et le zoom sur l'une entraînant l'autre dans les
+  deux sens. La vue de droite a son propre champ de seed (« Seed B ») et son
+  propre worker de rendu avec cache de tuiles dédié, de sorte que le rendu de
+  comparaison ne ralentit jamais la carte principale. La sortie du mode
+  restaure la carte unique et libère le worker et les tuiles de comparaison.
+  Libellés traduits dans les dix langues, logique pure extraite dans
+  `compare.js` (état du mode, synchronisation du viewport) couverte par des
+  tests unitaires, et test e2e de synchronisation. (#250)
 - Annotations de zones sur la carte : un outil « zone » dans la barre
   d'outils permet de dessiner au glisser un rectangle nommé en coordonnées
   monde (« base ici », « farm là »), avec nom et couleur (petite palette)

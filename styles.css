@@ -156,6 +156,19 @@ main{flex:1 1 auto;display:flex;min-height:0}
   background-size:40px 40px;background-position:center}
 #map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
 #map:active{cursor:grabbing}
+/* side-by-side seed compare (#250): the main map keeps the left half, the
+   compare pane owns the right half; right-side overlays give way to it */
+.mapwrap.comparing #map{inset:0 50% 0 0;width:50%}
+.mapwrap.comparing #minimap,.mapwrap.comparing .legend,.mapwrap.comparing .maphelp{display:none}
+.cmppane{position:absolute;inset:0 0 0 50%;border-left:1px solid var(--line)}
+.cmppane canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.cmppane canvas:active{cursor:grabbing}
+.cmpbar{position:absolute;right:10px;top:10px;display:flex;gap:6px;align-items:center;
+  background:var(--overlay);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px}
+.cmpbar input{width:110px;font-size:12px;padding:4px 7px}
+/* multi-seed candidates: result button + its side-by-side compare shortcut */
+.seedrow{display:flex;gap:6px;align-items:stretch}
+.seedrow .result{flex:1 1 auto;min-width:0}
 .hud{position:absolute;left:14px;bottom:14px;background:var(--overlay);backdrop-filter:blur(6px);
   border:1px solid var(--line);border-radius:8px;padding:7px 12px;display:flex;gap:9px;align-items:center;font-size:13px}
 .hud .coords{color:var(--text)} .hud .sep{color:var(--faint)} .hud .biome{color:var(--grass);font-weight:600}
