@@ -24,6 +24,7 @@ import {
 import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
+import { ZONE_COLORS, ZONE_NAME_MAX, addZone, removeZone, renameZone, recolorZone, zonesFor, parseZones } from './userzones.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
@@ -71,6 +72,8 @@ let selected = -1;
 const ruler = { on: false, a: null, b: null, done: false };
 // selection tool: a/b world corners dragged on the map
 const sel = { on: false, a: null, b: null, done: false };
+// zone tool: a/b world corners dragged on the map, turned into a named zone
+const zoneTool = { on: false, a: null, b: null };
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -402,6 +405,9 @@ function draw() {
     }
   }
 
+  // named zone annotations sit right above the tiles, under every marker
+  drawZones(W, H);
+
   // structure / slime layers (only points in view)
   for (const t of structToggles) {
     if (!t.on || !t.points) continue;
@@ -557,6 +563,95 @@ function exportSelectionPNG() {
   out.width = pw; out.height = ph;
   out.getContext('2d').drawImage(canvas, px, py, pw, ph, 0, 0, pw, ph);
   out.toBlob((blob) => { if (blob) downloadBlob(exportFileName(world.seed, 'selection', 'png'), blob); }, 'image/png');
+}
+// semi-transparent named rectangles in world coordinates; zones of the
+// linked dimension render converted (1:8) with a dashed border
+function drawZones(W, H) {
+  ctx.save();
+  ctx.font = '12px monospace';
+  for (const d of zonesFor(userZones, world)) {
+    const x = w2sx(d.x0), y = w2sy(d.z0);
+    const w = w2sx(d.x1) - x, h = w2sy(d.z1) - y;
+    if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = d.zone.color;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = d.zone.color; ctx.lineWidth = 2;
+    ctx.setLineDash(d.converted ? [5, 4] : []);
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = d.zone.color;
+    ctx.fillText(d.zone.name, x + 4, y - 5);
+  }
+  // live preview of the rectangle being dragged
+  if (zoneTool.on && zoneTool.a && zoneTool.b) {
+    const r = normalizeRect(zoneTool.a, zoneTool.b);
+    const x = w2sx(r.x0), y = w2sy(r.z0);
+    ctx.strokeStyle = ZONE_COLORS[0]; ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x, y, w2sx(r.x1) - x, w2sy(r.z1) - y);
+  }
+  ctx.restore();
+}
+function setZoneOn(on) {
+  zoneTool.on = on; zoneTool.a = null; zoneTool.b = null;
+  $('#zoneBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+  draw();
+}
+// drag finished: create the zone, leave the tool and open its editor
+function finishZoneDrag() {
+  const next = addZone(userZones, {
+    ...world, x0: zoneTool.a.x, z0: zoneTool.a.z, x1: zoneTool.b.x, z1: zoneTool.b.z
+  });
+  const created = next.length > userZones.length ? next.at(-1) : null;
+  setUserZones(next);
+  setZoneOn(false);
+  if (created) showZoneEditor(created);
+}
+// topmost zone under a screen point, or null
+function zoneAt(mx, my) {
+  const zs = zonesFor(userZones, world);
+  for (let i = zs.length - 1; i >= 0; i--) {
+    const d = zs[i];
+    if (mx >= w2sx(d.x0) && mx <= w2sx(d.x1) && my >= w2sy(d.z0) && my <= w2sy(d.z1)) return d;
+  }
+  return null;
+}
+// small editor in the map popup: rename, pick a palette color, delete
+function zoneColorButton(z, c, box) {
+  const b = document.createElement('button');
+  b.className = 'zone-color';
+  b.style.background = c;
+  b.setAttribute('aria-pressed', String(c === z.color));
+  b.setAttribute('aria-label', `${t('zoneColorAria')} ${c}`);
+  b.onclick = () => {
+    setUserZones(recolorZone(userZones, z.id, c));
+    [...box.children].forEach((el) => el.setAttribute('aria-pressed', String(el === b)));
+  };
+  return b;
+}
+function showZoneEditor(z) {
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.setAttribute('aria-label', z.name);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const name = document.createElement('input');
+  name.className = 'zone-name mono'; name.value = z.name;
+  name.maxLength = ZONE_NAME_MAX;
+  name.placeholder = t('zoneNamePh');
+  name.setAttribute('aria-label', t('zoneNamePh'));
+  name.onchange = () => setUserZones(renameZone(userZones, z.id, name.value));
+  const colors = document.createElement('div');
+  colors.className = 'zone-colors';
+  for (const c of ZONE_COLORS) colors.appendChild(zoneColorButton(z, c, colors));
+  const del = document.createElement('button');
+  del.className = 'btn tiny zone-del'; del.textContent = t('zoneDelete');
+  del.onclick = () => { setUserZones(removeZone(userZones, z.id)); hidePopup(); };
+  pop.append(close, name, colors, del);
+  if (!pop.open) pop.show();
 }
 function setRulerOn(on) {
   ruler.on = on; ruler.a = null; ruler.b = null; ruler.done = false;
@@ -769,6 +864,13 @@ canvas.addEventListener('pointerdown', (e) => {
       dragging = false; moved = true;   // a selection drag never pans or clicks
       return;
     }
+    if (zoneTool.on) {
+      const r = canvas.getBoundingClientRect();
+      zoneTool.a = { x: Math.round(s2wx(e.clientX - r.left)), z: Math.round(s2wz(e.clientY - r.top)) };
+      zoneTool.b = null;
+      dragging = false; moved = true;   // a zone drag never pans or clicks
+      return;
+    }
     dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
   }
 });
@@ -783,6 +885,11 @@ function updateHudCoords(mx, my) {
 function trackToolPoint(mx, my) {
   if (sel.on && sel.a && !sel.done) {
     sel.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+    draw();
+    return true;
+  }
+  if (zoneTool.on && zoneTool.a) {
+    zoneTool.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
     draw();
     return true;
   }
@@ -829,6 +936,10 @@ function endPointer(e) {
     showSelBar();
     return;
   }
+  if (zoneTool.on && zoneTool.a && zoneTool.b && e.type === 'pointerup') {
+    finishZoneDrag();
+    return;
+  }
   if (pointers.size < 2) pinchDist = 0;
   if (e.type === 'pointerup' && dragging && !moved) clickAt(e);
   dragging = false;
@@ -869,7 +980,7 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } if (zoneTool.on) { setZoneOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
@@ -893,6 +1004,9 @@ function clickAt(e) {
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
   }
+  // hit-test zones (under the pins: a pin inside a zone stays clickable)
+  const zHit = zoneAt(mx, my);
+  if (zHit) { showZoneEditor(zHit.zone); return; }
   // clicked empty map: deselect and dismiss the popup
   hidePopup();
 }
@@ -1582,6 +1696,14 @@ function setUserMarkers(list) {
   try { localStorage.setItem('markers', JSON.stringify(userMarkers)); } catch { /* ignore */ }
   buildMarkerList(); draw();
 }
+let userZones = parseZones((() => {
+  try { return localStorage.getItem('zones'); } catch { return null; }
+})());
+function setUserZones(list) {
+  userZones = list;
+  try { localStorage.setItem('zones', JSON.stringify(userZones)); } catch { /* ignore */ }
+  draw();
+}
 let markerMode = false;
 function setMarkerMode(on) {
   markerMode = on;
@@ -1858,16 +1980,17 @@ function importProfileText(txt) {
     return;
   }
   const merged = mergeProfile(
-    { favorites, userPresets, history: searchHistory, markers: userMarkers }, imported);
+    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }, imported);
   setFavorites(merged.favorites);
   userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
   searchHistory = merged.history;
   try { localStorage.setItem('searchHistory', JSON.stringify(searchHistory)); } catch { /* ignore */ }
   buildHistList();
   setUserMarkers(merged.markers);
+  setUserZones(merged.zones);
   info.textContent = t('profileImported', {
     f: imported.favorites.length, p: imported.userPresets.length,
-    h: imported.history.length, m: imported.markers.length
+    h: imported.history.length, m: imported.markers.length, z: imported.zones.length
   });
 }
 function downloadFile(name, text, mime) {
@@ -2359,6 +2482,7 @@ function closeTopmost() {
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
   if (sel.on) setSelOn(false);
+  if (zoneTool.on) setZoneOn(false);
   hidePopup();
 }
 const KEY_ACTIONS = {
@@ -2498,6 +2622,7 @@ async function init() {
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
+  $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
   $('#selPng').onclick = exportSelectionPNG;
   $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
   $('#selClose').onclick = () => setSelOn(false);
@@ -2516,7 +2641,7 @@ async function init() {
   // profile: one-file backup/restore of every local store
   $('#profileExport').onclick = () => {
     downloadFile('seedcartographer-profile.json',
-      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers }),
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }),
       'application/json');
   };
   const profileImportInput = $('#profileImportFile');
@@ -2531,7 +2656,7 @@ async function init() {
   // handy between devices with no easy file transfer.
   const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
   $('#syncCodeShow').onclick = () => {
-    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers })))
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones })))
       .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
   };
   $('#syncCodePaste').onclick = () => {
@@ -2587,5 +2712,8 @@ function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg)
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
-Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin });
+Object.assign(window, {
+  syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
+  zonesOnMap: () => zonesFor(userZones, world)
+});
 await init();

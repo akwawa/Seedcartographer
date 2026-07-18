@@ -893,6 +893,45 @@ test('custom markers: place on click, rename, persist, delete', async ({ page })
   await expect(page.locator('#markerList .fav')).toHaveCount(0);
 });
 
+test('zone annotations: drag to draw, rename, persist across reload, delete', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#zoneBtn');
+  await expect(page.locator('#zoneBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.move(box.x + 260, box.y + 240);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 420, box.y + 360);
+  await page.mouse.up();
+  // the drag created the zone and opened its editor; name it
+  await expect(page.locator('#popup .zone-name')).toBeVisible();
+  await expect(page.locator('#zoneBtn')).not.toHaveClass(/on/);
+  await page.fill('#popup .zone-name', 'Ma base');
+  await page.press('#popup .zone-name', 'Enter');
+  // zones survive a reload (localStorage) and render on the map
+  await page.reload();
+  await waitForApp(page);
+  const zones = await page.evaluate(() => window.zonesOnMap());
+  expect(zones).toHaveLength(1);
+  expect(zones[0].zone.name).toBe('Ma base');
+  // the zone's border color is painted somewhere on the canvas
+  await page.waitForFunction((hex) => {
+    const c = document.querySelector('#map');
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (Math.abs(d[i] - r) < 12 && Math.abs(d[i + 1] - g) < 12 && Math.abs(d[i + 2] - b) < 12) return true;
+    }
+    return false;
+  }, zones[0].zone.color);
+  // clicking inside the zone reopens the editor; delete removes it for good
+  await page.mouse.click(box.x + 340, box.y + 300);
+  await expect(page.locator('#popup .zone-del')).toBeVisible();
+  await page.click('#popup .zone-del');
+  await expect(page.locator('#popup .zone-del')).toBeHidden();
+  expect(await page.evaluate(() => window.zonesOnMap().length)).toBe(0);
+});
+
 test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

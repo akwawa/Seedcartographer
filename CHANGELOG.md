@@ -19,6 +19,16 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Annotations de zones sur la carte : un outil « zone » dans la barre
+  d'outils permet de dessiner au glisser un rectangle nommé en coordonnées
+  monde (« base ici », « farm là »), avec nom et couleur (petite palette)
+  modifiables et suppression via un éditeur ouvert au clic sur la zone. Les
+  zones suivent le zoom et le déplacement, s'affichent au-dessus des tuiles
+  et sont converties Nether⇄Overworld (1:8, bordure pointillée) lors d'un
+  changement de dimension. Elles sont persistées dans le profil
+  (localStorage) et incluses dans l'export/import de profil ainsi que dans
+  le code de synchronisation, avec les mêmes règles de fusion que les
+  marqueurs. Libellés traduits dans les dix langues. (#251)
 - Section « Biomes rares » : un bouton par biome rare (champs de champignons,
   badlands, badlands érodés, bosquet de cerisiers, pics de glace, jungle,
   jungle de bambous, marais de mangrove) lance une recherche du plus proche
