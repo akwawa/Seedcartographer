@@ -16,6 +16,17 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Corrigé
+- Image Docker : la version affichée dans le dialogue d'aide restait le
+  placeholder « dev » car `version.js` était copié tel quel sans passer par
+  les scripts d'estampillage. Le Dockerfile estampille désormais la version
+  (et la version de cache du service worker) dans un stage de build dédié,
+  si bien que toute image — construite par la CI ou localement — affiche la
+  version releasée comme GitHub Pages ; la CI injecte le commit via
+  l'argument de build `GIT_COMMIT`. (#260)
+
 ## [0.11.0](https://github.com/akwawa/Seedcartographer/compare/v0.10.0...v0.11.0) (2026-07-20)
 
 ### Ajouté
