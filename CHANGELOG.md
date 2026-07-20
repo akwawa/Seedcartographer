@@ -16,6 +16,17 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.11.0](https://github.com/akwawa/Seedcartographer/compare/v0.10.0...v0.11.0) (2026-07-20)
+
+
+### Ajouté
+
+* milestone 0.11 — offline, rare biomes, zones, compare ([ada3c58](https://github.com/akwawa/Seedcartographer/commit/ada3c58628e434dc91ab0cbe8b55720a84f4535b))
+* named zone annotations drawn on the map ([#256](https://github.com/akwawa/Seedcartographer/issues/256)) ([fdfa3c8](https://github.com/akwawa/Seedcartographer/commit/fdfa3c8adbb8dc275a96ee081bec9be51e81aa6a))
+* offline indicator and full offline-mode e2e test ([#254](https://github.com/akwawa/Seedcartographer/issues/254)) ([b1a6ca8](https://github.com/akwawa/Seedcartographer/commit/b1a6ca8af2ebef7cb76b7a3e3ee5605bd853f904))
+* one-click nearest rare biome search ([#255](https://github.com/akwawa/Seedcartographer/issues/255)) ([eb8ac24](https://github.com/akwawa/Seedcartographer/commit/eb8ac2436d5a22a015764d00169eb3cbb9e97957)), closes [#252](https://github.com/akwawa/Seedcartographer/issues/252)
+* side-by-side seed compare with synced viewports ([#257](https://github.com/akwawa/Seedcartographer/issues/257)) ([7c37e23](https://github.com/akwawa/Seedcartographer/commit/7c37e230cfc35a8adc9f43fae2dfe28d4fb852df))
+
 ## [Non publié]
 
 ### Ajouté
