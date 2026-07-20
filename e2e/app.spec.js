@@ -1193,3 +1193,42 @@ test('side-by-side seed compare: two renders, synced pan, clean exit (#250)', as
   await page.keyboard.press('ArrowLeft');
   await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
 });
+
+test('compare mode: structure layers render on both panes and clean up (#261)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#cmpBtn');
+  await page.fill('#cmpSeed', '4242');
+  await page.press('#cmpSeed', 'Enter');
+  // both tile pipelines settle before sampling pixels
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  await page.waitForFunction(() => cmpPendingTiles.size === 0 && cmpTileCache.size() > 0);
+  // sparse checksum of a canvas: cheap, and any overlay square shifts it
+  const sum = (sel) => page.evaluate((s) => {
+    const c = document.querySelector(s);
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let acc = 0;
+    for (let i = 0; i < d.length; i += 397) acc += d[i];
+    return acc;
+  }, sel);
+  const mainBefore = await sum('#map'), cmpBefore = await sum('#cmpMap');
+  // slime chunks: dense deterministic layer, visible on any viewport
+  const slime = page.locator('#structLayers .layer', { hasText: 'Slime chunks' });
+  await slime.locator('input').check();
+  // seed-A points land on the toggle, seed-B points in the compare store
+  await page.waitForFunction(() =>
+    [...window.cmpStructPoints.values()].some((pts) => pts && pts.length > 0));
+  await expect.poll(() => sum('#map')).not.toBe(mainBefore);
+  await expect.poll(() => sum('#cmpMap')).not.toBe(cmpBefore);
+  // unchecking clears the layer from BOTH panes (no stale seed-B points)
+  await slime.locator('input').uncheck();
+  await page.waitForFunction(() => window.cmpStructPoints.size === 0);
+  await expect.poll(() => sum('#map')).toBe(mainBefore);
+  await expect.poll(() => sum('#cmpMap')).toBe(cmpBefore);
+  // leaving compare mode releases the seed-B structure points too
+  await slime.locator('input').check();
+  await page.waitForFunction(() => window.cmpStructPoints.size > 0);
+  await page.click('#cmpClose');
+  await expect(page.locator('#cmpPane')).toBeHidden();
+  expect(await page.evaluate(() => window.cmpStructPoints.size)).toBe(0);
+});

@@ -79,6 +79,45 @@ export function compareWorldFor(world, seed) {
   return { seed, mc: world.mc, large: world.large, dim: world.dim };
 }
 
+// off-screen margin of a structure query, in screen pixels (converted to
+// blocks with the current zoom): markers just outside the view are already
+// loaded when a small pan brings them in
+export const STRUCT_QUERY_MARGIN_PX = 200;
+
+/**
+ * World-space rectangle of a structure query for a viewport: the visible
+ * area plus a small off-screen margin, in blocks.
+ * @param {{cx: number, cz: number, bpp: number}} view current viewport
+ * @param {number} w viewport width in screen pixels
+ * @param {number} h viewport height in screen pixels
+ * @returns {{x0: number, z0: number, x1: number, z1: number}}
+ */
+export function structQueryRect(view, w, h) {
+  const mx = (w / 2 + STRUCT_QUERY_MARGIN_PX) * view.bpp;
+  const mz = (h / 2 + STRUCT_QUERY_MARGIN_PX) * view.bpp;
+  return {
+    x0: Math.floor(view.cx - mx), z0: Math.floor(view.cz - mz),
+    x1: Math.ceil(view.cx + mx), z1: Math.ceil(view.cz + mz)
+  };
+}
+
+/**
+ * Worker message listing the structures of `types` inside `rect` for a
+ * world — shared by the main map (seed A) and the compare pane (seed B),
+ * each with its own reqId so stale answers are told apart per pane.
+ * @param {number} reqId request id, unique per pane
+ * @param {{seed: string|number, mc: number, large: boolean, dim: number}} world target world
+ * @param {Array<number|string>} types structure type ids to list
+ * @param {{x0: number, z0: number, x1: number, z1: number}} rect query bounds in blocks
+ * @returns {{type: string, reqId: number, seed: string|number, mc: number, large: boolean, dim: number, types: Array<number|string>, x0: number, z0: number, x1: number, z1: number}}
+ */
+export function structuresRequestFor(reqId, world, types, rect) {
+  return {
+    type: 'structures', reqId, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+    types, x0: rect.x0, z0: rect.z0, x1: rect.x1, z1: rect.z1
+  };
+}
+
 /**
  * Initial compare-mode state: off, no seed picked yet.
  * @returns {{on: boolean, seed: string}}
