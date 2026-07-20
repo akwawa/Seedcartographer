@@ -24,6 +24,7 @@ import {
 import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
+import { ZONE_COLORS, ZONE_NAME_MAX, addZone, removeZone, renameZone, recolorZone, zonesFor, parseZones } from './userzones.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
@@ -36,10 +37,14 @@ import { formatErrorEvent } from './errorreport.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
 import { keyAction } from './keys.js';
+import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
 import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
+import {
+  panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare
+} from './compare.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
 // the sliced search job on the other, so a long search never delays a tile
@@ -63,12 +68,15 @@ let tile = null;                                // {canvas, originX, originZ, sc
 let pins = [];                                  // [{x,z,count}] as displayed (sorted)
 let basePins = [];                              // pins in engine (search) order
 let lastSpawn = null;                           // world spawn of the last search
+let rarePin = null;                             // {x,z} temporary rare-biome pin (#252)
 let sortMode = 'order';                         // 'order' | 'spawn'
 let selected = -1;
 // ruler tool: a/b world endpoints, b tracks the pointer until the 2nd click
 const ruler = { on: false, a: null, b: null, done: false };
 // selection tool: a/b world corners dragged on the map
 const sel = { on: false, a: null, b: null, done: false };
+// zone tool: a/b world corners dragged on the map, turned into a named zone
+const zoneTool = { on: false, a: null, b: null };
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -122,6 +130,11 @@ searchWorker.onmessage = (e) => {
     if (d.reqId === searchReq) $('#searchProgress').value = d.pct;
     return;
   }
+  if (d.type === 'rareProgress') {
+    if (d.reqId === rareReq) $('#rareProgress').value = d.pct;
+    return;
+  }
+  if (d.type === 'rare') { onRareResult(d); return; }
   if (d.type === 'exportBand') { onExportBand(d); return; }
   if (d.type === 'exportDone') { onExportDone(d); return; }
   if (d.type === 'search') onSearchResult(d);
@@ -334,6 +347,9 @@ function setDimension(dim) {
   // surface relief only exists in the Overworld
   const rlbl = $('#reliefToggleLbl');
   if (rlbl) rlbl.hidden = dim !== 0;
+  // the rare-biome shortcuts are Overworld biomes only
+  const rareCard = $('#rareCard');
+  if (rareCard) rareCard.hidden = dim !== 0;
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
@@ -361,6 +377,11 @@ function resize() {
   const r = canvas.getBoundingClientRect();
   canvas.width = Math.round(r.width * dpr);
   canvas.height = Math.round(r.height * dpr);
+  if (cmpState.on) {
+    const r2 = cmpCanvas.getBoundingClientRect();
+    cmpCanvas.width = Math.round(r2.width * dpr);
+    cmpCanvas.height = Math.round(r2.height * dpr);
+  }
   draw(); requestRender();
 }
 window.addEventListener('resize', resize);
@@ -392,12 +413,10 @@ function draw() {
     }
   }
 
-  // structure / slime layers (only points in view)
-  for (const t of structToggles) {
-    if (!t.on || !t.points) continue;
-    if (t.slime) drawSlimeLayer(t.points, W, H);
-    else drawStructMarkers(t, W, H);
-  }
+  // named zone annotations sit right above the tiles, under every marker
+  drawZones(W, H);
+
+  drawStructLayers(W, H);
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
@@ -407,6 +426,8 @@ function draw() {
     const sx = w2sx(p.x), sy = w2sy(p.z);
     drawPin(sx, sy, i === selected);
   });
+  // temporary "nearest rare biome" pin (#252), cleared with the popup
+  if (rarePin) drawPin(w2sx(rarePin.x), w2sy(rarePin.z), true);
 
   if (showGrid) drawGrid(W, H);
   if (showNetherGrid) drawNetherGrid(W, H);
@@ -420,6 +441,18 @@ function draw() {
   ctx.beginPath(); ctx.moveTo(W / 2 - 7, H / 2); ctx.lineTo(W / 2 + 7, H / 2);
   ctx.moveTo(W / 2, H / 2 - 7); ctx.lineTo(W / 2, H / 2 + 7); ctx.stroke();
   ctx.restore();
+
+  // the compare pane shares the viewport: every main-map redraw refreshes it
+  if (cmpState.on) drawCompare();
+}
+
+// structure / slime layers (only points in view)
+function drawStructLayers(W, H) {
+  for (const t of structToggles) {
+    if (!t.on || !t.points) continue;
+    if (t.slime) drawSlimeLayer(t.points, W, H);
+    else drawStructMarkers(t, W, H);
+  }
 }
 
 function drawTile(e) {
@@ -546,6 +579,95 @@ function exportSelectionPNG() {
   out.getContext('2d').drawImage(canvas, px, py, pw, ph, 0, 0, pw, ph);
   out.toBlob((blob) => { if (blob) downloadBlob(exportFileName(world.seed, 'selection', 'png'), blob); }, 'image/png');
 }
+// semi-transparent named rectangles in world coordinates; zones of the
+// linked dimension render converted (1:8) with a dashed border
+function drawZones(W, H) {
+  ctx.save();
+  ctx.font = '12px monospace';
+  for (const d of zonesFor(userZones, world)) {
+    const x = w2sx(d.x0), y = w2sy(d.z0);
+    const w = w2sx(d.x1) - x, h = w2sy(d.z1) - y;
+    if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = d.zone.color;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = d.zone.color; ctx.lineWidth = 2;
+    ctx.setLineDash(d.converted ? [5, 4] : []);
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = d.zone.color;
+    ctx.fillText(d.zone.name, x + 4, y - 5);
+  }
+  // live preview of the rectangle being dragged
+  if (zoneTool.on && zoneTool.a && zoneTool.b) {
+    const r = normalizeRect(zoneTool.a, zoneTool.b);
+    const x = w2sx(r.x0), y = w2sy(r.z0);
+    ctx.strokeStyle = ZONE_COLORS[0]; ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x, y, w2sx(r.x1) - x, w2sy(r.z1) - y);
+  }
+  ctx.restore();
+}
+function setZoneOn(on) {
+  zoneTool.on = on; zoneTool.a = null; zoneTool.b = null;
+  $('#zoneBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+  draw();
+}
+// drag finished: create the zone, leave the tool and open its editor
+function finishZoneDrag() {
+  const next = addZone(userZones, {
+    ...world, x0: zoneTool.a.x, z0: zoneTool.a.z, x1: zoneTool.b.x, z1: zoneTool.b.z
+  });
+  const created = next.length > userZones.length ? next.at(-1) : null;
+  setUserZones(next);
+  setZoneOn(false);
+  if (created) showZoneEditor(created);
+}
+// topmost zone under a screen point, or null
+function zoneAt(mx, my) {
+  const zs = zonesFor(userZones, world);
+  for (let i = zs.length - 1; i >= 0; i--) {
+    const d = zs[i];
+    if (mx >= w2sx(d.x0) && mx <= w2sx(d.x1) && my >= w2sy(d.z0) && my <= w2sy(d.z1)) return d;
+  }
+  return null;
+}
+// small editor in the map popup: rename, pick a palette color, delete
+function zoneColorButton(z, c, box) {
+  const b = document.createElement('button');
+  b.className = 'zone-color';
+  b.style.background = c;
+  b.setAttribute('aria-pressed', String(c === z.color));
+  b.setAttribute('aria-label', `${t('zoneColorAria')} ${c}`);
+  b.onclick = () => {
+    setUserZones(recolorZone(userZones, z.id, c));
+    [...box.children].forEach((el) => el.setAttribute('aria-pressed', String(el === b)));
+  };
+  return b;
+}
+function showZoneEditor(z) {
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.setAttribute('aria-label', z.name);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const name = document.createElement('input');
+  name.className = 'zone-name mono'; name.value = z.name;
+  name.maxLength = ZONE_NAME_MAX;
+  name.placeholder = t('zoneNamePh');
+  name.setAttribute('aria-label', t('zoneNamePh'));
+  name.onchange = () => setUserZones(renameZone(userZones, z.id, name.value));
+  const colors = document.createElement('div');
+  colors.className = 'zone-colors';
+  for (const c of ZONE_COLORS) colors.appendChild(zoneColorButton(z, c, colors));
+  const del = document.createElement('button');
+  del.className = 'btn tiny zone-del'; del.textContent = t('zoneDelete');
+  del.onclick = () => { setUserZones(removeZone(userZones, z.id)); hidePopup(); };
+  pop.append(close, name, colors, del);
+  if (!pop.open) pop.show();
+}
 function setRulerOn(on) {
   ruler.on = on; ruler.a = null; ruler.b = null; ruler.done = false;
   $('#rulerBtn').classList.toggle('on', on);
@@ -648,6 +770,7 @@ function requestRender(delay = 90) {
     }
     requestMinimap();
     requestStructures();
+    if (cmpState.on) requestCompareTiles();
   }, delay);
 }
 // progressive checkerboard: request every uncached tile of the view,
@@ -757,6 +880,13 @@ canvas.addEventListener('pointerdown', (e) => {
       dragging = false; moved = true;   // a selection drag never pans or clicks
       return;
     }
+    if (zoneTool.on) {
+      const r = canvas.getBoundingClientRect();
+      zoneTool.a = { x: Math.round(s2wx(e.clientX - r.left)), z: Math.round(s2wz(e.clientY - r.top)) };
+      zoneTool.b = null;
+      dragging = false; moved = true;   // a zone drag never pans or clicks
+      return;
+    }
     dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
   }
 });
@@ -771,6 +901,11 @@ function updateHudCoords(mx, my) {
 function trackToolPoint(mx, my) {
   if (sel.on && sel.a && !sel.done) {
     sel.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+    draw();
+    return true;
+  }
+  if (zoneTool.on && zoneTool.a) {
+    zoneTool.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
     draw();
     return true;
   }
@@ -817,6 +952,10 @@ function endPointer(e) {
     showSelBar();
     return;
   }
+  if (zoneTool.on && zoneTool.a && zoneTool.b && e.type === 'pointerup') {
+    finishZoneDrag();
+    return;
+  }
   if (pointers.size < 2) pinchDist = 0;
   if (e.type === 'pointerup' && dragging && !moved) clickAt(e);
   dragging = false;
@@ -857,10 +996,167 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } if (zoneTool.on) { setZoneOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
+
+// ---------- side-by-side seed compare (#250) ----------
+// A second map pane with its own seed and its own render worker (so a slow
+// compare render never delays the main map), sharing the main viewport:
+// pan/zoom on either canvas moves both, since both draw from `view`.
+// The pure state/viewport logic lives in compare.js.
+let cmpState = createCompareState();
+let cmpWorker = null;                // dedicated engine worker, created on enter
+let cmpGen = 0, cmpRefillTimer = null;
+const cmpTileCache = createTileCache(TILE_GRID_CACHE_MAX);
+const cmpPendingTiles = new Map();   // in-flight compare tile keys -> generation
+let cmpTileQueue = [];
+const cmpCanvas = $('#cmpMap'), cmpCtx = cmpCanvas.getContext('2d');
+
+function cmpWorld() { return compareWorldFor(world, cmpState.seed); }
+function ensureCmpWorker() {
+  if (cmpWorker) return;
+  cmpWorker = new Worker('./worker.js', { type: 'module' });
+  cmpWorker.engineReady = false;
+  cmpWorker.pending = [];
+  cmpWorker.onerror = (e) => { console.error('CMP WORKER ERROR:', e.message); sendErrorEvent('worker', e.message, e.filename, e.lineno); };
+  cmpWorker.onmessage = (e) => {
+    const d = e.data;
+    if (d.type === 'fatal') { showFatal(d.message); return; }
+    if (d.type === 'ready') { engineUp(cmpWorker); return; }
+    if (d.type === 'gridTile') onCmpGridTile(d);
+  };
+  if (altPalette) post(cmpWorker, { type: 'palette', alt: true });
+}
+// same skip/refill protocol as the main grid pipeline (onGridTile)
+function onCmpGridTile(d) {
+  if (d.skipped) {
+    if (cmpPendingTiles.get(d.key) === d.gen) cmpPendingTiles.delete(d.key);
+    pumpCmpTileQueue();
+    clearTimeout(cmpRefillTimer);
+    cmpRefillTimer = setTimeout(() => requestCompareTiles(false), 60);
+    return;
+  }
+  cmpPendingTiles.delete(d.key);
+  pumpCmpTileQueue();
+  if (!d.ok) return;
+  cmpTileCache.put({ ...tileCanvasOf(d), worldKey: d.wk, key: d.key, present: d.present });
+  // tiles of a previous compare seed/world stay cached but are not drawn
+  if (d.wk !== tileWorldKey(cmpWorld(), yLayer, reliefOn())) return;
+  drawCompare();
+}
+function pumpCmpTileQueue() {
+  while (cmpPendingTiles.size < TILE_INFLIGHT_MAX && cmpTileQueue.length) {
+    const msg = cmpTileQueue.shift();
+    if (cmpPendingTiles.has(msg.key)) continue;
+    cmpPendingTiles.set(msg.key, msg.gen);
+    post(cmpWorker, msg);
+  }
+}
+// progressive checkerboard of the compare pane, center-first like the main map
+function requestCompareTiles(bump = true) {
+  if (!cmpState.on) return;
+  if (bump) {
+    cmpGen++;
+    post(cmpWorker, { type: 'tileGen', gen: cmpGen });
+  }
+  const W = Math.ceil(cmpCanvas.width / dpr), H = Math.ceil(cmpCanvas.height / dpr);
+  const scale = renderScaleFor(view.bpp);
+  const wk = tileWorldKey(cmpWorld(), yLayer, reliefOn());
+  const cached = new Set(cmpTileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
+  const wanted = tilesForView(view, W, H, scale);
+  cmpTileCache.setMax(Math.max(TILE_GRID_CACHE_MAX, wanted.length + 16));
+  cmpTileQueue = [];
+  for (const pos of wanted) {
+    const key = tileKey(wk, scale, pos.originX, pos.originZ);
+    if (cached.has(key)) { cmpTileCache.touch(key); continue; }
+    if (cmpPendingTiles.has(key)) continue;
+    cmpTileQueue.push({
+      type: 'renderTile', gen: cmpGen, key, wk, scale, relief: reliefOn(),
+      originX: pos.originX, originZ: pos.originZ,
+      seed: cmpState.seed, mc: world.mc, large: world.large, dim: world.dim, y: yLayer
+    });
+  }
+  pumpCmpTileQueue();
+}
+function drawCompare() {
+  cmpCtx.save();
+  cmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = cmpCanvas.width / dpr, H = cmpCanvas.height / dpr;
+  cmpCtx.clearRect(0, 0, W, H);
+  cmpCtx.fillStyle = mapBg; cmpCtx.fillRect(0, 0, W, H);
+  cmpCtx.imageSmoothingEnabled = false;
+  const nw = screenToWorld(view, W, H, 0, 0), se = screenToWorld(view, W, H, W, H);
+  const rect = { x0: nw.x, z0: nw.z, x1: se.x, z1: se.z };
+  const scale = renderScaleFor(view.bpp);
+  const cap = Math.max(TILE_PAINT_MAX, tilesForView(view, W, H, scale).length);
+  for (const e of tilesInView(cmpTileCache.entries(), tileWorldKey(cmpWorld(), yLayer, reliefOn()), rect, cap, scale)) {
+    cmpTileCache.touch(e.key);
+    const p = worldToScreen(view, W, H, e.originX, e.originZ);
+    cmpCtx.drawImage(e.canvas, p.x, p.y, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
+  }
+  // center crosshair mirrors the main map: the shared center stays visible
+  cmpCtx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
+  cmpCtx.lineWidth = 1;
+  cmpCtx.beginPath(); cmpCtx.moveTo(W / 2 - 7, H / 2); cmpCtx.lineTo(W / 2 + 7, H / 2);
+  cmpCtx.moveTo(W / 2, H / 2 - 7); cmpCtx.lineTo(W / 2, H / 2 + 7); cmpCtx.stroke();
+  cmpCtx.restore();
+}
+// enter/leave compare mode; leaving stops the dedicated worker and frees
+// its tiles so nothing keeps rendering behind the single-map view
+function setCompareMode(on, seed) {
+  cmpState = on ? enterCompare(cmpState, seed ?? $('#cmpSeed').value, world.seed) : exitCompare(cmpState);
+  document.querySelector('.mapwrap').classList.toggle('comparing', on);
+  $('#cmpPane').hidden = !on;
+  const btn = $('#cmpBtn');
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', String(on));
+  if (on) {
+    $('#cmpSeed').value = cmpState.seed;
+    ensureCmpWorker();
+  } else if (cmpWorker) {
+    cmpWorker.terminate();
+    cmpWorker = null;
+    cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
+    clearTimeout(cmpRefillTimer);
+  }
+  resize();   // the map halves changed size; redraws and re-requests both panes
+}
+// the compare seed field re-targets the pane (empty falls back to the main seed)
+function applyCompareSeed() {
+  cmpState = enterCompare(cmpState, $('#cmpSeed').value, world.seed);
+  $('#cmpSeed').value = cmpState.seed;
+  drawCompare();
+  requestCompareTiles();
+}
+// pan/zoom on the compare canvas drives the shared viewport, so the main
+// map follows (draw() repaints both panes; requestRender() refills both)
+let cmpDragging = false, cmpLastX = 0, cmpLastY = 0;
+cmpCanvas.addEventListener('pointerdown', (e) => {
+  try { cmpCanvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  cmpDragging = true; cmpLastX = e.clientX; cmpLastY = e.clientY;
+});
+cmpCanvas.addEventListener('pointermove', (e) => {
+  if (!cmpDragging) return;
+  Object.assign(view, panViewport(view, e.clientX - cmpLastX, e.clientY - cmpLastY));
+  cmpLastX = e.clientX; cmpLastY = e.clientY;
+  draw();
+});
+function endCmpPointer() {
+  if (!cmpDragging) return;
+  cmpDragging = false;
+  requestRender(0); syncHash();
+}
+cmpCanvas.addEventListener('pointerup', endCmpPointer);
+cmpCanvas.addEventListener('pointercancel', endCmpPointer);
+cmpCanvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const r = cmpCanvas.getBoundingClientRect();
+  Object.assign(view, zoomViewportAt(view, cmpCanvas.width / dpr, cmpCanvas.height / dpr,
+    e.clientX - r.left, e.clientY - r.top, Math.exp(e.deltaY * 0.0012)));
+  draw(); requestRender(); syncHash();
+}, { passive: false });
 
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
@@ -881,6 +1177,9 @@ function clickAt(e) {
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
   }
+  // hit-test zones (under the pins: a pin inside a zone stays clickable)
+  const zHit = zoneAt(mx, my);
+  if (zHit) { showZoneEditor(zHit.zone); return; }
   // clicked empty map: deselect and dismiss the popup
   hidePopup();
 }
@@ -1121,6 +1420,73 @@ function runSearch() {
   });
 }
 
+// ---------- nearest rare biome (#252) ----------
+// One button per rare biome: the worker scans growing rings around the view
+// center and reports the closest occurrence, with the same progress/cancel
+// pattern as the cancellable search (#20). The active button flips to Cancel.
+let rareReq = 0, rareBusy = false, rareBtn = null;
+function setRareBusy(on, btn) {
+  rareBusy = on;
+  const prog = $('#rareProgress');
+  prog.hidden = !on;
+  prog.value = 0;
+  if (on) {
+    rareBtn = btn;
+    btn.textContent = t('cancelBtn');
+  } else if (rareBtn) {
+    rareBtn.textContent = biomeLabel(rareBtn.dataset.biome);
+    rareBtn = null;
+  }
+}
+function startRareSearch(biome, btn) {
+  if (rareBusy) { sendSearch({ type: 'cancelRare', reqId: rareReq }); return; }
+  rarePin = null;
+  const info = $('#rareInfo');
+  info.textContent = t('searching'); info.className = 'info busy';
+  rareReq = reqSeq++;
+  setRareBusy(true, btn);
+  sendSearch({
+    type: 'rareBiome', reqId: rareReq, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
+    y: yLayer, cx: Math.round(view.cx), cz: Math.round(view.cz), biome
+  });
+}
+function onRareResult(d) {
+  if (d.reqId !== rareReq) return;   // stale
+  setRareBusy(false);
+  const info = $('#rareInfo');
+  if (d.error === 'cancelled') {
+    info.textContent = t('searchCancelled'); info.className = 'info empty';
+    return;
+  }
+  if (d.error) {
+    info.textContent = t('searchFailedArea'); info.className = 'info err';
+    return;
+  }
+  if (!d.hit) {
+    info.textContent = t('rareNotFound', { r: RARE_MAX_RADIUS }); info.className = 'info empty';
+    return;
+  }
+  rarePin = d.hit;
+  view.cx = d.hit.x; view.cz = d.hit.z;
+  if (view.bpp > 4) view.bpp = 3;
+  info.textContent = t('rareFound', { x: d.hit.x, z: d.hit.z, ms: d.ms }); info.className = 'info ok';
+  draw(); requestRender(0); syncHash(); showPopup(d.hit);
+}
+// the biome names are the engine's technical names: data-biome makes
+// applyI18n retranslate the labels on a language switch, like the dropdowns
+function buildRareBiomeUI() {
+  const box = $('#rareList');
+  for (const b of RARE_BIOMES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn tiny';
+    btn.dataset.biome = b.name;
+    btn.textContent = biomeLabel(b.name);
+    btn.onclick = () => startRareSearch(b.id, btn);
+    box.appendChild(btn);
+  }
+}
+
 // ---------- multi-seed search (worker pool) ----------
 const seedPool = [];
 let seedReq = 0, seedBusy = false;
@@ -1322,7 +1688,17 @@ function seedResultRow(cand) {
     view.cx = cand.hit.x; view.cz = cand.hit.z;
     curReset(); draw(); requestRender(0); syncHash();
   };
-  return li;
+  // side-by-side shortcut: open the compare pane on this candidate (#250)
+  const cmp = document.createElement('button');
+  cmp.className = 'btn tiny seedcmp';
+  cmp.textContent = '⇆';
+  cmp.title = t('compareSeedResult'); cmp.dataset.i18nTitle = 'compareSeedResult';
+  cmp.setAttribute('aria-label', t('compareSeedResult')); cmp.dataset.i18nAria = 'compareSeedResult';
+  cmp.onclick = () => setCompareMode(true, cand.seed);
+  const row = document.createElement('div');
+  row.className = 'seedrow';
+  row.append(li, cmp);
+  return row;
 }
 function onSearchResult(d) {
   if (d.reqId !== searchReq) return;   // stale
@@ -1503,6 +1879,14 @@ function setUserMarkers(list) {
   try { localStorage.setItem('markers', JSON.stringify(userMarkers)); } catch { /* ignore */ }
   buildMarkerList(); draw();
 }
+let userZones = parseZones((() => {
+  try { return localStorage.getItem('zones'); } catch { return null; }
+})());
+function setUserZones(list) {
+  userZones = list;
+  try { localStorage.setItem('zones', JSON.stringify(userZones)); } catch { /* ignore */ }
+  draw();
+}
 let markerMode = false;
 function setMarkerMode(on) {
   markerMode = on;
@@ -1602,6 +1986,7 @@ function favRow(f) {
 }
 
 function hidePopup() {
+  if (rarePin) { rarePin = null; draw(); }   // the rare pin lives with the popup
   if (selected !== -1) {
     selected = -1;
     [...resultsEl.children].forEach((c) => c.classList.remove('sel'));
@@ -1778,16 +2163,17 @@ function importProfileText(txt) {
     return;
   }
   const merged = mergeProfile(
-    { favorites, userPresets, history: searchHistory, markers: userMarkers }, imported);
+    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }, imported);
   setFavorites(merged.favorites);
   userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
   searchHistory = merged.history;
   try { localStorage.setItem('searchHistory', JSON.stringify(searchHistory)); } catch { /* ignore */ }
   buildHistList();
   setUserMarkers(merged.markers);
+  setUserZones(merged.zones);
   info.textContent = t('profileImported', {
     f: imported.favorites.length, p: imported.userPresets.length,
-    h: imported.history.length, m: imported.markers.length
+    h: imported.history.length, m: imported.markers.length, z: imported.zones.length
   });
 }
 function downloadFile(name, text, mime) {
@@ -2151,6 +2537,10 @@ function applyPalette(alt, persist) {
   send({ type: 'palette', alt });
   // every cached or in-flight tile was painted with the old table
   tileCache.clear(); pendingTiles.clear(); tileQueue = []; minimapTile = null;
+  if (cmpWorker) {
+    post(cmpWorker, { type: 'palette', alt });
+    cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
+  }
   draw(); requestRender(0); requestMinimap(0);
   buildLegend(legendPresent);
 }
@@ -2279,6 +2669,7 @@ function closeTopmost() {
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
   if (sel.on) setSelOn(false);
+  if (zoneTool.on) setZoneOn(false);
   hidePopup();
 }
 const KEY_ACTIONS = {
@@ -2336,6 +2727,9 @@ async function init() {
     if (searchBusy) sendSearch({ type: 'cancelSearch', reqId: searchReq });
     else runSearch();
   };
+  $('#cmpBtn').onclick = () => setCompareMode(!cmpState.on);
+  $('#cmpClose').onclick = () => setCompareMode(false);
+  $('#cmpSeed').onchange = applyCompareSeed;
   $('#seedResumeBtn').onclick = resumeSeedSearch;
   updateSeedResumeBtn();
   $('#seedSearchBtn').onclick = () => {
@@ -2358,6 +2752,7 @@ async function init() {
   $('#exportJson').onclick = () => exportResults('json');
   buildPresetSelect();
   wirePresetSave();
+  buildRareBiomeUI();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addPct').onclick = () => addPctRow();
@@ -2417,6 +2812,7 @@ async function init() {
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
+  $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
   $('#selPng').onclick = exportSelectionPNG;
   $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
   $('#selClose').onclick = () => setSelOn(false);
@@ -2435,7 +2831,7 @@ async function init() {
   // profile: one-file backup/restore of every local store
   $('#profileExport').onclick = () => {
     downloadFile('seedcartographer-profile.json',
-      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers }),
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }),
       'application/json');
   };
   const profileImportInput = $('#profileImportFile');
@@ -2450,7 +2846,7 @@ async function init() {
   // handy between devices with no easy file transfer.
   const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
   $('#syncCodeShow').onclick = () => {
-    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers })))
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones })))
       .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
   };
   $('#syncCodePaste').onclick = () => {
@@ -2491,6 +2887,12 @@ async function init() {
   resize();
   // first visit: walk the newcomer through seed → criteria → search → share
   if (isFirstVisit(tourSeenValue())) startTour();
+  // discreet topbar indicator while the browser reports no connectivity (#253)
+  const offlineBadge = $('#offlineBadge');
+  const syncOfflineBadge = () => { offlineBadge.hidden = navigator.onLine; };
+  window.addEventListener('online', syncOfflineBadge);
+  window.addEventListener('offline', syncOfflineBadge);
+  syncOfflineBadge();
   // offline support (PWA); requires a secure context, harmless otherwise
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
@@ -2500,5 +2902,10 @@ function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg)
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
-Object.assign(window, { syncHash, decodeShareHash, ruler, tileCache, pendingTiles });
+Object.assign(window, {
+  syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
+  zonesOnMap: () => zonesFor(userZones, world),
+  cmpTileCache, cmpPendingTiles, compareOn: () => cmpState.on,
+  viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
+});
 await init();

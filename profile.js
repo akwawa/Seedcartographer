@@ -8,6 +8,7 @@ import { parseFavorites, addFavorite } from './favorites.js';
 import { parseUserPresets, addUserPreset } from './userpresets.js';
 import { parseHistory, addHistoryEntry } from './searchhistory.js';
 import { parseMarkers, mergeMarkers } from './usermarkers.js';
+import { parseZones, mergeZones } from './userzones.js';
 
 export const PROFILE_KIND = 'seedcartographer-profile';
 export const PROFILE_VERSION = 1;
@@ -16,7 +17,8 @@ export const PROFILE_VERSION = 1;
  * @typedef {{favorites: import('./favorites.js').Favorite[],
  *            userPresets: Array<{id: number, name: string, dim: number, c: object}>,
  *            history: import('./searchhistory.js').HistoryEntry[],
- *            markers: import('./usermarkers.js').UserMarker[]}} ProfileState
+ *            markers: import('./usermarkers.js').UserMarker[],
+ *            zones: import('./userzones.js').UserZone[]}} ProfileState
  */
 
 // The export payload, ready to stringify: a kind marker guards against
@@ -29,7 +31,7 @@ export function exportProfile(state) {
   return JSON.stringify({
     kind: PROFILE_KIND, version: PROFILE_VERSION,
     favorites: state.favorites, userPresets: state.userPresets,
-    history: state.history, markers: state.markers
+    history: state.history, markers: state.markers, zones: state.zones
   }, null, 2);
 }
 
@@ -49,7 +51,8 @@ export function parseProfile(json) {
     favorites: parseFavorites(list(raw.favorites)),
     userPresets: parseUserPresets(list(raw.userPresets)),
     history: parseHistory(list(raw.history)),
-    markers: parseMarkers(list(raw.markers))
+    markers: parseMarkers(list(raw.markers)),
+    zones: parseZones(list(raw.zones))
   };
 }
 
@@ -72,5 +75,9 @@ export function mergeProfile(current, imported) {
   for (const e of [...imported.history].sort((a, b) => a.at - b.at)) {
     history = addHistoryEntry(history, e);
   }
-  return { favorites, userPresets, history, markers: mergeMarkers(current.markers, imported.markers) };
+  return {
+    favorites, userPresets, history,
+    markers: mergeMarkers(current.markers, imported.markers),
+    zones: mergeZones(current.zones, imported.zones)
+  };
 }

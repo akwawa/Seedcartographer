@@ -16,6 +16,44 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Comparateur de seeds côte à côte : un bouton « Comparer des seeds » dans la
+  barre supérieure (ou le raccourci ⇆ sur chaque candidate de la recherche
+  multi-seeds) scinde la carte en deux vues synchronisées — même centre et
+  même zoom, le déplacement et le zoom sur l'une entraînant l'autre dans les
+  deux sens. La vue de droite a son propre champ de seed (« Seed B ») et son
+  propre worker de rendu avec cache de tuiles dédié, de sorte que le rendu de
+  comparaison ne ralentit jamais la carte principale. La sortie du mode
+  restaure la carte unique et libère le worker et les tuiles de comparaison.
+  Libellés traduits dans les dix langues, logique pure extraite dans
+  `compare.js` (état du mode, synchronisation du viewport) couverte par des
+  tests unitaires, et test e2e de synchronisation. (#250)
+- Annotations de zones sur la carte : un outil « zone » dans la barre
+  d'outils permet de dessiner au glisser un rectangle nommé en coordonnées
+  monde (« base ici », « farm là »), avec nom et couleur (petite palette)
+  modifiables et suppression via un éditeur ouvert au clic sur la zone. Les
+  zones suivent le zoom et le déplacement, s'affichent au-dessus des tuiles
+  et sont converties Nether⇄Overworld (1:8, bordure pointillée) lors d'un
+  changement de dimension. Elles sont persistées dans le profil
+  (localStorage) et incluses dans l'export/import de profil ainsi que dans
+  le code de synchronisation, avec les mêmes règles de fusion que les
+  marqueurs. Libellés traduits dans les dix langues. (#251)
+- Section « Biomes rares » : un bouton par biome rare (champs de champignons,
+  badlands, badlands érodés, bosquet de cerisiers, pics de glace, jungle,
+  jungle de bambous, marais de mangrove) lance une recherche du plus proche
+  en anneaux croissants depuis le centre de la vue, dans le worker, avec
+  barre de progression et annulation. Le rayon s'étend automatiquement
+  jusqu'à 10 240 blocs ; le résultat centre la carte avec un pin temporaire
+  et sa pop-up, et un message clair (traduit dans les dix langues) s'affiche
+  si le biome est introuvable dans la limite. (#252)
+- Indicateur discret « hors ligne » dans la barre supérieure quand le
+  navigateur perd la connexion (événements online/offline), traduit dans les
+  dix langues, et test e2e du mode hors-ligne complet : démarrage de
+  l'application, rendu des tuiles, recherche et disponibilité de
+  `gallery.json` et du worker via le service worker sans réseau. (#253)
+
 ## [0.10.0](https://github.com/akwawa/Seedcartographer/compare/v0.9.0...v0.10.0) (2026-07-17)
 
 ### Ajouté

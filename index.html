@@ -16,6 +16,7 @@
 <body>
 <header class="topbar">
   <div class="brand"><span class="mark"></span>Seedcartographer</div>
+  <output id="offlineBadge" class="offline-badge" hidden data-i18n="offlineBadge">Offline</output>
   <div class="world">
     <label class="lbl"><span data-i18n="seed">Seed</span>
       <input id="seed" class="mono" spellcheck="false" autocomplete="off">
@@ -31,6 +32,7 @@
       <select id="dimSel" class="ver"></select>
     </label>
     <button id="loadBtn" class="btn" data-i18n="loadSeed">Load seed</button>
+    <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
   </div>
   <select id="pngSizeSel" class="ver pngsize" title="PNG export size" aria-label="PNG export size" data-i18n-title="exportSizeTitle" data-i18n-aria="exportSizeTitle">
     <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
@@ -121,6 +123,14 @@
       <button id="searchBtn" class="btn primary" data-i18n="searchBtn">Search this area</button>
       <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="searchInfo" class="info"></output>
+    </section>
+
+    <section id="rareCard" class="card">
+      <h3 data-i18n="rareTitle">Rare biomes</h3>
+      <p class="lede" data-i18n="rareLede">One click finds the nearest occurrence, searching in growing rings around the view center.</p>
+      <div id="rareList" class="export rarelist"></div>
+      <progress id="rareProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
+      <output id="rareInfo" class="info"></output>
     </section>
 
     <section class="card">
@@ -217,6 +227,15 @@
 
   <div class="mapwrap">
     <canvas id="map" tabindex="0" aria-label="Interactive map" data-i18n-aria="mapAria"></canvas>
+    <div id="cmpPane" class="cmppane" hidden>
+      <canvas id="cmpMap" tabindex="0" aria-label="Compare map (second seed)" data-i18n-aria="compareMapAria"></canvas>
+      <div class="cmpbar">
+        <label class="lbl"><span data-i18n="compareSeedLbl">Seed B</span>
+          <input id="cmpSeed" class="mono" spellcheck="false" autocomplete="off">
+        </label>
+        <button id="cmpClose" class="btn tiny" title="Exit compare mode" data-i18n-title="compareClose" aria-label="Exit compare mode" data-i18n-aria="compareClose">×</button>
+      </div>
+    </div>
     <div id="hud" class="hud" aria-hidden="true"><span class="coords mono">0, 0</span><span class="sep">·</span><span class="biome">—</span></div>
     <dialog id="popup" class="popup"></dialog>
     <div class="maptoggles">
@@ -235,6 +254,7 @@
     <button id="rulerBtn" class="btn tiny rulerbtn" title="Measure a distance" aria-label="Measure a distance" data-i18n-title="rulerTitle" data-i18n-aria="rulerTitle">📏</button>
     <button id="markerBtn" class="btn tiny markerbtn" title="Place a marker (click the map)" aria-label="Place a marker" data-i18n-title="markerTitle" data-i18n-aria="markerTitle">📍</button>
     <button id="selBtn" class="btn tiny selbtn" title="Select an area (drag on the map)" aria-label="Select an area" data-i18n-title="selTitle" data-i18n-aria="selTitle">⬚</button>
+    <button id="zoneBtn" class="btn tiny annotbtn" title="Draw a zone (drag on the map)" aria-label="Draw a zone" data-i18n-title="zoneTitle" data-i18n-aria="zoneTitle">▧</button>
     <div id="selBar" class="selbar" hidden>
       <span id="selInfo" class="mono"></span>
       <button id="selPng" class="btn tiny" data-i18n="selPng">PNG</button>

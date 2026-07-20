@@ -9,6 +9,7 @@ import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from '
 import { altBiomeColors } from './palette.js';
 import { TILE_CELLS } from './tilegrid.js';
 import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
+import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_RING_BLOCKS } from './rarebiomes.js';
 import { hdCellSpan, hdCellIndex } from './export.js';
 
 let M = null;            // the WASM module
@@ -340,6 +341,64 @@ async function runSearchJob(d) {
   }
 }
 
+// ---- nearest rare biome (#252): growing square rings from the view center ----
+// One ring at a time (ring 0 = central square, then non-overlapping frames),
+// keeping the hit closest to the center; the scan stops as soon as no
+// unexplored cell can beat it (rareSearchDone). Shares the search worker's
+// busy flag and scratch buffer, and yields between rects so a cancelRare
+// message gets through (same reqId/yield pattern as the sliced search, #20).
+let rareCancelId = 0;
+const RARE_SC = 16;
+
+/** @param {number} reqId @param {{x:number,z:number}|null} hit @param {number} t0 @param {string} [error] */
+function postRare(reqId, hit, t0, error) {
+  postMessage({ type: 'rare', reqId, hit, ms: Math.round(performance.now() - t0), ...(error ? { error } : {}) });
+}
+
+// generate + scan the 1-4 rects of ring k; returns the updated best hit, or
+// undefined when the engine rejects a rect (area too large)
+async function scanRareRing(d, k, half, ccx, ccz, best) {
+  for (const r of ringRects(k, half)) {
+    ensureSearchArea(r.cols * r.rows);
+    if (!M._genBiomeArea(searchPtr, ccx + r.ci0, ccz + r.cj0, r.cols, r.rows, RARE_SC, scaledY(d.y))) {
+      return undefined;
+    }
+    const grid = M.HEAP32.subarray(searchPtr >> 2, (searchPtr >> 2) + r.cols * r.rows);
+    best = nearestMatch(grid, r.cols, r.rows, r.ci0, r.cj0, d.biome, best);
+    await yieldToQueue();
+  }
+  return best;
+}
+
+async function runRareJob(d) {
+  searchBusy = true;
+  const t0 = performance.now();
+  try {
+    applyWorld(d.seed, d.mc, d.large, d.dim);
+    const half = RARE_RING_BLOCKS / RARE_SC;
+    const rings = rareRingCount();
+    const ccx = Math.round(d.cx / RARE_SC), ccz = Math.round(d.cz / RARE_SC);
+    let best = null;
+    for (let k = 0; k < rings; k++) {
+      if (rareCancelId === d.reqId) { postRare(d.reqId, null, t0, 'cancelled'); return; }
+      best = await scanRareRing(d, k, half, ccx, ccz, best);
+      if (best === undefined) { postRare(d.reqId, null, t0, 'area-too-large'); return; }
+      postMessage({ type: 'rareProgress', reqId: d.reqId, pct: Math.round(100 * (k + 1) / rings) });
+      if (rareSearchDone(best, k, half)) break;
+    }
+    postRare(d.reqId, best ? rareHit(best, ccx, ccz, RARE_SC) : null, t0);
+  } finally {
+    searchBusy = false;
+  }
+}
+function handleRareMsg(d) {
+  if (searchBusy) {
+    postMessage({ type: 'rare', reqId: d.reqId, hit: null, ms: 0, error: 'busy' });
+    return;
+  }
+  runRareJob(d); // async: yields between ring rects so cancel stays responsive
+}
+
 // ---- multi-seed search: test the criteria around the origin of many seeds ----
 let seedCancelId = 0;
 
@@ -620,6 +679,8 @@ const HANDLERS = {
   structures: handleStructures,
   biome: handleBiomeMsg,
   cancelSearch: (d) => { searchCancelId = d.reqId; },
+  rareBiome: handleRareMsg,
+  cancelRare: (d) => { rareCancelId = d.reqId; },
   seedSearch: runSeedSearchJob, // async: yields between seeds so cancel is processed
   cancelSeedSearch: (d) => { seedCancelId = d.reqId; },
   search: handleSearchMsg,

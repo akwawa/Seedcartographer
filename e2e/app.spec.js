@@ -893,6 +893,45 @@ test('custom markers: place on click, rename, persist, delete', async ({ page })
   await expect(page.locator('#markerList .fav')).toHaveCount(0);
 });
 
+test('zone annotations: drag to draw, rename, persist across reload, delete', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#zoneBtn');
+  await expect(page.locator('#zoneBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.move(box.x + 260, box.y + 240);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 420, box.y + 360);
+  await page.mouse.up();
+  // the drag created the zone and opened its editor; name it
+  await expect(page.locator('#popup .zone-name')).toBeVisible();
+  await expect(page.locator('#zoneBtn')).not.toHaveClass(/on/);
+  await page.fill('#popup .zone-name', 'Ma base');
+  await page.press('#popup .zone-name', 'Enter');
+  // zones survive a reload (localStorage) and render on the map
+  await page.reload();
+  await waitForApp(page);
+  const zones = await page.evaluate(() => window.zonesOnMap());
+  expect(zones).toHaveLength(1);
+  expect(zones[0].zone.name).toBe('Ma base');
+  // the zone's border color is painted somewhere on the canvas
+  await page.waitForFunction((hex) => {
+    const c = document.querySelector('#map');
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (Math.abs(d[i] - r) < 12 && Math.abs(d[i + 1] - g) < 12 && Math.abs(d[i + 2] - b) < 12) return true;
+    }
+    return false;
+  }, zones[0].zone.color);
+  // clicking inside the zone reopens the editor; delete removes it for good
+  await page.mouse.click(box.x + 340, box.y + 300);
+  await expect(page.locator('#popup .zone-del')).toBeVisible();
+  await page.click('#popup .zone-del');
+  await expect(page.locator('#popup .zone-del')).toBeHidden();
+  expect(await page.evaluate(() => window.zonesOnMap().length)).toBe(0);
+});
+
 test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -1102,4 +1141,55 @@ test('a page error sends a privacy-safe event to Umami if loaded', async ({ page
   const calls = await page.evaluate(() => window.__umamiCalls);
   expect(calls).toHaveLength(1);
   expect(calls[0]).toEqual(['error', { kind: 'error', message: 'synthetic e2e error', source: 'app.js', line: 7 }]);
+});
+
+/* global cmpTileCache, cmpPendingTiles */
+test('side-by-side seed compare: two renders, synced pan, clean exit (#250)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await expect(page.locator('#cmpPane')).toBeHidden();
+  // enter compare mode from the topbar with a dedicated second seed
+  await page.click('#cmpBtn');
+  await expect(page.locator('#cmpPane')).toBeVisible();
+  // the compare seed defaults to the main seed, then takes its own value
+  await expect(page.locator('#cmpSeed')).toHaveValue('141');
+  await page.fill('#cmpSeed', '4242');
+  await page.press('#cmpSeed', 'Enter');
+  // both panes render tiles (each pipeline settles with a non-empty cache)
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  await page.waitForFunction(() => cmpPendingTiles.size === 0 && cmpTileCache.size() > 0);
+  // the compare canvas received biome pixels (not the flat background)
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#cmpMap');
+    const d = c.getContext('2d').getImageData(0, Math.floor(c.height / 2), c.width, 1).data;
+    for (let i = 0; i < d.length; i += 4) if (d[i] !== 12 || d[i + 1] !== 16 || d[i + 2] !== 22) return true;
+    return false;
+  });
+  // a drag on the COMPARE canvas pans the shared viewport (both maps move)
+  const before = await page.evaluate(() => window.viewCenter());
+  const box = await page.locator('#cmpMap').boundingBox();
+  await page.mouse.move(box.x + 200, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 120, box.y + 160);
+  await page.mouse.up();
+  const after = await page.evaluate(() => window.viewCenter());
+  expect(after.x).toBeGreaterThan(before.x);   // dragged left: center moved east
+  expect(after.z).toBeGreaterThan(before.z);
+  expect(after.b).toBe(before.b);              // zoom untouched by a pan
+  // a pan on the MAIN map refreshes the compare pipeline too (same center)
+  await page.waitForFunction(() => cmpPendingTiles.size === 0);
+  await page.focus('#map');
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(() => pendingTiles.size === 0 && cmpPendingTiles.size === 0);
+  const synced = await page.evaluate(() => window.viewCenter());
+  expect(synced.x).toBe(after.x + 60 * after.b);
+  // exit restores the single map and releases the compare resources
+  await page.click('#cmpClose');
+  await expect(page.locator('#cmpPane')).toBeHidden();
+  expect(await page.evaluate(() => window.compareOn())).toBe(false);
+  expect(await page.evaluate(() => cmpTileCache.size())).toBe(0);
+  // the main map still lives: a fresh pan settles its tile pipeline
+  await page.focus('#map');
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
 });
