@@ -43,7 +43,8 @@ import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from '
 import { altRgb } from './palette.js';
 import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
 import {
-  panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare
+  panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare,
+  structQueryRect, structuresRequestFor
 } from './compare.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
@@ -416,7 +417,7 @@ function draw() {
   // named zone annotations sit right above the tiles, under every marker
   drawZones(W, H);
 
-  drawStructLayers(W, H);
+  drawStructLayers(ctx, W, H, (tg) => tg.points);
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
@@ -446,12 +447,16 @@ function draw() {
   if (cmpState.on) drawCompare();
 }
 
-// structure / slime layers (only points in view)
-function drawStructLayers(W, H) {
-  for (const t of structToggles) {
-    if (!t.on || !t.points) continue;
-    if (t.slime) drawSlimeLayer(t.points, W, H);
-    else drawStructMarkers(t, W, H);
+// structure / slime layers (only points in view); the same toggles drive
+// both panes — `pointsOf` picks the per-pane dataset (seed-A points live on
+// the toggle, seed-B points in the compare store) and `g` the target canvas
+function drawStructLayers(g, W, H, pointsOf) {
+  for (const tg of structToggles) {
+    if (!tg.on) continue;
+    const points = pointsOf(tg);
+    if (!points) continue;
+    if (tg.slime) drawSlimeLayer(g, points, W, H);
+    else drawStructMarkers(g, tg.color, points, W, H);
   }
 }
 
@@ -696,22 +701,22 @@ function drawMinimap() {
   c.strokeRect(r.x, r.y, r.w, r.h);
 }
 
-function drawStructMarkers(t, W, H) {
-  ctx.fillStyle = t.color; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1;
-  for (const [x, z] of t.points) {
-    const sx = w2sx(x), sy = w2sy(z);
+function drawStructMarkers(g, color, points, W, H) {
+  g.fillStyle = color; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 1;
+  for (const [x, z] of points) {
+    const { x: sx, y: sy } = worldToScreen(view, W, H, x, z);
     if (sx < -8 || sy < -8 || sx > W + 8 || sy > H + 8) continue;
-    ctx.beginPath(); ctx.rect(sx - 3, sy - 3, 6, 6); ctx.fill(); ctx.stroke();
+    g.beginPath(); g.rect(sx - 3, sy - 3, 6, 6); g.fill(); g.stroke();
   }
 }
 // slime chunks render as chunk-sized overlay squares rather than fixed markers
-function drawSlimeLayer(points, W, H) {
+function drawSlimeLayer(g, points, W, H) {
   const size = 16 / view.bpp;
-  ctx.fillStyle = 'rgba(111,206,78,.4)'; ctx.strokeStyle = 'rgba(30,80,20,.7)'; ctx.lineWidth = 1;
+  g.fillStyle = 'rgba(111,206,78,.4)'; g.strokeStyle = 'rgba(30,80,20,.7)'; g.lineWidth = 1;
   for (const [x, z] of points) {
-    const sx = w2sx(x), sy = w2sy(z);
+    const { x: sx, y: sy } = worldToScreen(view, W, H, x, z);
     if (sx < -size || sy < -size || sx > W || sy > H) continue;
-    ctx.beginPath(); ctx.rect(sx, sy, size, size); ctx.fill(); ctx.stroke();
+    g.beginPath(); g.rect(sx, sy, size, size); g.fill(); g.stroke();
   }
 }
 
@@ -845,16 +850,15 @@ function requestMinimap(delay = 400) {
   }, delay);
 }
 function requestStructures() {
-  const active = structToggles.filter((t) => t.on);
-  if (!active.length) return;
-  const W = canvas.width / dpr, H = canvas.height / dpr;
-  const m = 200 * view.bpp; // small margin
-  send({
-    type: 'structures', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
-    types: active.map((t) => t.type),
-    x0: Math.floor(s2wx(0) - m), z0: Math.floor(s2wz(0) - m),
-    x1: Math.ceil(s2wx(W) + m), z1: Math.ceil(s2wz(H) + m)
-  });
+  const types = structToggles.filter((tg) => tg.on).map((tg) => tg.type);
+  if (!types.length) return;
+  send(structuresRequestFor(reqSeq++, world, types, mainStructRect()));
+  requestCompareStructures(types);
+}
+// query bounds of the main canvas, also used by the compare pane: both
+// panes share the viewport, so the same rect (same budget) covers both
+function mainStructRect() {
+  return structQueryRect(view, canvas.width / dpr, canvas.height / dpr);
 }
 
 // ---------- pan / zoom ----------
@@ -1012,6 +1016,8 @@ let cmpGen = 0, cmpRefillTimer = null;
 const cmpTileCache = createTileCache(TILE_GRID_CACHE_MAX);
 const cmpPendingTiles = new Map();   // in-flight compare tile keys -> generation
 let cmpTileQueue = [];
+let cmpStructReq = 0;                // last structure listing sent to the compare worker
+const cmpStructPoints = new Map();   // seed-B structure points: type -> [[x, z], ...]
 const cmpCanvas = $('#cmpMap'), cmpCtx = cmpCanvas.getContext('2d');
 
 function cmpWorld() { return compareWorldFor(world, cmpState.seed); }
@@ -1025,7 +1031,8 @@ function ensureCmpWorker() {
     const d = e.data;
     if (d.type === 'fatal') { showFatal(d.message); return; }
     if (d.type === 'ready') { engineUp(cmpWorker); return; }
-    if (d.type === 'gridTile') onCmpGridTile(d);
+    if (d.type === 'gridTile') { onCmpGridTile(d); return; }
+    if (d.type === 'structures') onCmpStructures(d);
   };
   if (altPalette) post(cmpWorker, { type: 'palette', alt: true });
 }
@@ -1053,6 +1060,19 @@ function pumpCmpTileQueue() {
     cmpPendingTiles.set(msg.key, msg.gen);
     post(cmpWorker, msg);
   }
+}
+// structure listing of the compare pane (#261): same protocol as the main
+// map but computed for seed B on the dedicated worker; called by
+// requestStructures (shared toggles) and when the compare seed changes
+function requestCompareStructures(types = structToggles.filter((tg) => tg.on).map((tg) => tg.type)) {
+  if (!cmpState.on || !types.length) return;
+  cmpStructReq = reqSeq++;
+  post(cmpWorker, structuresRequestFor(cmpStructReq, cmpWorld(), types, mainStructRect()));
+}
+function onCmpStructures(d) {
+  if (d.reqId !== cmpStructReq) return;   // stale (older view or seed)
+  for (const g of d.groups) cmpStructPoints.set(g.type, g.points);
+  drawCompare();
 }
 // progressive checkerboard of the compare pane, center-first like the main map
 function requestCompareTiles(bump = true) {
@@ -1096,6 +1116,10 @@ function drawCompare() {
     const p = worldToScreen(view, W, H, e.originX, e.originZ);
     cmpCtx.drawImage(e.canvas, p.x, p.y, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
   }
+  // active structure layers, computed for seed B (the shared toggles apply
+  // to both panes); personal overlays (pins, favorites, markers, zones) are
+  // tied to seed A and stay on the main map only
+  drawStructLayers(cmpCtx, W, H, (tg) => cmpStructPoints.get(tg.type));
   // center crosshair mirrors the main map: the shared center stays visible
   cmpCtx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
   cmpCtx.lineWidth = 1;
@@ -1119,6 +1143,7 @@ function setCompareMode(on, seed) {
     cmpWorker.terminate();
     cmpWorker = null;
     cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
+    cmpStructPoints.clear();
     clearTimeout(cmpRefillTimer);
   }
   resize();   // the map halves changed size; redraws and re-requests both panes
@@ -1127,8 +1152,10 @@ function setCompareMode(on, seed) {
 function applyCompareSeed() {
   cmpState = enterCompare(cmpState, $('#cmpSeed').value, world.seed);
   $('#cmpSeed').value = cmpState.seed;
+  cmpStructPoints.clear();   // points of the previous compare seed
   drawCompare();
   requestCompareTiles();
+  requestCompareStructures();
 }
 // pan/zoom on the compare canvas drives the shared viewport, so the main
 // map follows (draw() repaints both panes; requestRender() refills both)
@@ -2080,7 +2107,12 @@ function buildStructToggleUI() {
     const lbl = document.createElement('span');
     lbl.dataset.i18n = tg.labelKey; lbl.textContent = t(tg.labelKey);
     row.append(input, dot, lbl);
-    input.onchange = (e) => { tg.on = e.target.checked; if (tg.on) requestStructures(); else { tg.points = null; draw(); } };
+    input.onchange = (e) => {
+      tg.on = e.target.checked;
+      if (tg.on) { requestStructures(); return; }
+      // both panes drop the layer at once (compare keeps no stale points)
+      tg.points = null; cmpStructPoints.delete(tg.type); draw();
+    };
     box.appendChild(row);
   });
 }
@@ -2898,14 +2930,14 @@ async function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
 }
-function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); buildMarkerList(); }
+function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); hidePopup(); buildFavList(); buildMarkerList(); }
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
 Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
   zonesOnMap: () => zonesFor(userZones, world),
-  cmpTileCache, cmpPendingTiles, compareOn: () => cmpState.on,
+  cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
 });
 await init();

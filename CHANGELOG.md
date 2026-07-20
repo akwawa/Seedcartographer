@@ -19,6 +19,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Corrigé
+- Mode compare : les couches de structures activées (villages, temples,
+  slime chunks…) s'affichent désormais aussi sur la carte de droite,
+  calculées pour la seed B via son worker dédié, avec les mêmes toggles que
+  la carte principale ; les surcouches personnelles (pins de résultats,
+  favoris, marqueurs, zones) restent liées à la seed A sur la carte
+  principale, et la sortie du mode libère les points de la seed B. (#261)
 - Image Docker : la version affichée dans le dialogue d'aide restait le
   placeholder « dev » car `version.js` était copié tel quel sans passer par
   les scripts d'estampillage. Le Dockerfile estampille désormais la version

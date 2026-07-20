@@ -3,7 +3,8 @@ import assert from 'node:assert';
 import {
   COMPARE_MIN_BPP, COMPARE_MAX_BPP, clampBpp, panViewport, zoomViewportAt,
   sameViewport, normalizeCompareSeed, compareWorldFor,
-  createCompareState, enterCompare, exitCompare
+  createCompareState, enterCompare, exitCompare,
+  STRUCT_QUERY_MARGIN_PX, structQueryRect, structuresRequestFor
 } from '../compare.js';
 
 test('clampBpp bounds the zoom to the supported range', () => {
@@ -80,4 +81,29 @@ test('compare-mode state transitions', () => {
   const s3 = exitCompare(s1);
   assert.deepStrictEqual(s3, { on: false, seed: '99' });   // seed kept for re-entry
   assert.strictEqual(s1.on, true);                          // inputs never mutated
+});
+
+test('structQueryRect covers the view plus the off-screen margin, in blocks', () => {
+  const view = { cx: 100, cz: -50, bpp: 2 };
+  const r = structQueryRect(view, 400, 300);
+  assert.deepStrictEqual(r, {
+    x0: 100 - (200 + STRUCT_QUERY_MARGIN_PX) * 2, z0: -50 - (150 + STRUCT_QUERY_MARGIN_PX) * 2,
+    x1: 100 + (200 + STRUCT_QUERY_MARGIN_PX) * 2, z1: -50 + (150 + STRUCT_QUERY_MARGIN_PX) * 2
+  });
+  // the viewport is never mutated
+  assert.deepStrictEqual(view, { cx: 100, cz: -50, bpp: 2 });
+});
+
+test('structQueryRect rounds outward to whole blocks', () => {
+  const r = structQueryRect({ cx: 0.4, cz: -0.4, bpp: 1 }, 11, 7);
+  assert.deepStrictEqual(r, { x0: -206, z0: -204, x1: 206, z1: 204 });
+});
+
+test('structuresRequestFor builds the worker listing message for a pane', () => {
+  const world = { seed: '4242', mc: 28, large: true, dim: -1 };
+  const rect = { x0: -10, z0: -20, x1: 30, z1: 40 };
+  assert.deepStrictEqual(structuresRequestFor(7, world, [3, 'slime'], rect), {
+    type: 'structures', reqId: 7, seed: '4242', mc: 28, large: true, dim: -1,
+    types: [3, 'slime'], x0: -10, z0: -20, x1: 30, z1: 40
+  });
 });
