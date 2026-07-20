@@ -66,6 +66,21 @@ export function stampAppVersion(source, version, commit) {
   return out;
 }
 
+// Short commit from a git checkout, with an environment fallback for
+// contexts without .git (the Docker build stage receives GIT_COMMIT as a
+// build argument instead). Anything that does not look like a hex sha is
+// ignored rather than stamped verbatim.
+/**
+ * @param {string} gitDir the .git directory
+ * @param {string|undefined} envValue GIT_COMMIT-style fallback value
+ * @returns {string} 7-char commit hash, or ''
+ */
+export function resolveCommit(gitDir, envValue) {
+  const fromGit = gitShortCommit(gitDir);
+  if (fromGit) return fromGit;
+  return /^[0-9a-f]{7,40}$/.test(envValue || '') ? String(envValue).slice(0, 7) : '';
+}
+
 // stamp `dir`/version.js in place from the repo's package.json + git HEAD
 /**
  * @param {string} dir site directory containing version.js
@@ -73,7 +88,7 @@ export function stampAppVersion(source, version, commit) {
  */
 export function stampDir(dir) {
   const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
-  const commit = gitShortCommit(path.resolve('.git'));
+  const commit = resolveCommit(path.resolve('.git'), process.env.GIT_COMMIT);
   const root = insideCwd(fs.realpathSync(path.resolve(dir)));
   const file = insideCwd(path.resolve(root, 'version.js'));
   fs.writeFileSync(file, stampAppVersion(fs.readFileSync(file, 'utf8'), pkg.version, commit));

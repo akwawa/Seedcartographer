@@ -5,7 +5,6 @@ test
 cubiomes
 *.md
 LICENSE
-package.json
 mcfinder.c
 Dockerfile
 .dockerignore
