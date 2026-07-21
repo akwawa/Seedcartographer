@@ -1754,6 +1754,9 @@ function onSearchResult(d) {
   searchInfo.textContent = pins.length > 1 ? t('foundMany', { n: pins.length, ms: d.ms }) : t('foundOne', { ms: d.ms });
   searchInfo.className = 'info ok';
   renderResultsList();
+  // #268: the list lives well below #searchInfo in the panel; bring it into
+  // view after a user-launched search (scroll only, never steal focus)
+  resultsEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   selectPin(0);
 }
 // displayed order: as searched, or closest-to-spawn first (Overworld only)

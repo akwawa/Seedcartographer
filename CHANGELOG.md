@@ -30,6 +30,14 @@ et la release GitHub.
   menu à l'étape du lien de partage. (#266)
 
 ### Corrigé
+- Après une recherche réussie, la liste des résultats est amenée dans la zone
+  visible du panneau (`scrollIntoView` fluide, sans vol de focus) au lieu de
+  rester ~1300 px sous le message « N locations found ». Sur mobile, la popup
+  résultat (Copy /tp) est désormais rendue au-dessus des contrôles carte
+  (toggles Grid/Nether, curseur Y) : z-index dédié et ancrage en bas du
+  canvas, largeur bornée au viewport. Gardes e2e : liste visible dans le
+  panneau après recherche (desktop) ; popup entièrement dans le viewport
+  390×844 avec bouton /tp réellement cliquable (`elementFromPoint`). (#268)
 - Dialogues (aide, galerie) utilisables sur mobile : leur largeur est bornée
   à la fenêtre (`min(540px, calc(100vw - 2rem))`, 920 px pour la galerie),
   leur hauteur est limitée avec défilement interne, et ils restent centrés
