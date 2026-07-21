@@ -2603,6 +2603,41 @@ function initTheme() {
   if (altPalette) applyPalette(true, false);
 }
 
+// ---------- "⋯" overflow menu (#266) ----------
+// Secondary topbar actions (export, share, compare, language, theme…) live
+// in a keyboard-accessible popover of native controls, so the main topbar
+// never overflows horizontally. On small screens the world options (Large
+// Biomes, Java version, dimension) relocate into the menu too — the nodes
+// themselves move, so every control keeps its id and its handlers.
+function setMoreMenu(open) {
+  $('#moreMenu').hidden = !open;
+  $('#moreBtn').setAttribute('aria-expanded', String(open));
+}
+function placeWorldOpts(compact) {
+  const opts = $('#worldOpts');
+  if (compact) $('#menuWorldSlot').append(opts);
+  else $('#loadBtn').before(opts);
+}
+function initMoreMenu() {
+  const btn = $('#moreBtn'), menu = $('#moreMenu');
+  btn.onclick = () => setMoreMenu(menu.hidden);
+  // a click/tap anywhere else dismisses the menu
+  document.addEventListener('pointerdown', (e) => {
+    const t = e.target instanceof Node ? e.target : null;
+    if (!menu.hidden && !(t && (menu.contains(t) || btn.contains(t)))) setMoreMenu(false);
+  });
+  // Escape from inside the menu closes it and returns focus to its button
+  menu.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    setMoreMenu(false);
+    btn.focus();
+  });
+  const mq = window.matchMedia('(max-width:820px)');
+  mq.addEventListener('change', () => placeWorldOpts(mq.matches));
+  placeWorldOpts(mq.matches);
+}
+
 // ---------- first-visit guided tour (#229) ----------
 // DOM glue over the pure logic in tour.js: overlay + highlight ring + bubble
 // positioned next to the real UI elements, keyboard-driven (Tab trapped in
@@ -2620,6 +2655,7 @@ function endTour() {
   window.removeEventListener('resize', tourReposition);
   tourUi.overlay.remove(); tourUi.ring.remove(); tourUi.bubble.remove();
   tourUi = null;
+  setMoreMenu(false);   // step 4 may have opened the "⋯" menu (#266)
   markTourSeen();
 }
 function tourReposition() {
@@ -2640,6 +2676,8 @@ function tourReposition() {
 }
 function tourShowStep(step) {
   tourUi.step = step;
+  // targets living in the "⋯" menu (share link) need the menu open (#266)
+  setMoreMenu($('#moreMenu').contains(document.querySelector(TOUR_STEPS[step].target)));
   tourUi.text.textContent = t(TOUR_STEPS[step].key);
   tourUi.counter.textContent = t('tourProgress', { n: step + 1, t: TOUR_STEPS.length });
   tourUi.next.textContent = t(isLastStep(step, TOUR_STEPS.length) ? 'tourDone' : 'tourNext');
@@ -2698,6 +2736,7 @@ function closeTopmost() {
   const help = $('#helpDlg'), gallery = $('#galleryDlg');
   if (help.open) { help.close(); return; }
   if (gallery.open) { gallery.close(); return; }
+  if (!$('#moreMenu').hidden) { setMoreMenu(false); return; }
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
   if (sel.on) setSelOn(false);
@@ -2910,6 +2949,7 @@ async function init() {
   $('#tourReplay').onclick = () => { $('#helpDlg').close(); startTour(); };
   $('#galleryBtn').onclick = openGallery;
   $('#galleryClose').onclick = () => $('#galleryDlg').close();
+  initMoreMenu();
   buildDimSelect();
   buildFavList();
   initTheme();

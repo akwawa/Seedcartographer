@@ -18,6 +18,17 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Modifié
+- Topbar responsive : les actions secondaires (export PNG avec étiquette
+  visible pour la taille, lien de partage, comparaison de seeds, comparaison
+  de versions, langue, thème, palette, galerie) sont regroupées dans un menu
+  « ⋯ » accessible au clavier ; la topbar principale garde l'essentiel
+  (marque, seed + chargement, badge hors-ligne, aide) et ne provoque plus
+  aucun défilement horizontal de la page (garde e2e à 1280/1440/1920/390 px).
+  Sur mobile, les options de monde (Large Biomes, version Java, dimension)
+  rejoignent le menu pour une topbar compacte, et le tour guidé ouvre le
+  menu à l'étape du lien de partage. (#266)
+
 ### Corrigé
 - Mode compare : les couches de structures activées (villages, temples,
   slime chunks…) s'affichent désormais aussi sur la carte de droite,
