@@ -1,5 +1,5 @@
 /* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
-import { test, expect, openMoreMenu, closeMoreMenu, selectLang } from './fixtures.js';
+import { test, expect, openMoreMenu, closeMoreMenu, selectLang, openCritSection } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
 test.beforeEach(({ page }) => {
@@ -32,6 +32,29 @@ test('app boots: engine ready, map rendered, demo criteria populated', async ({ 
     for (let i = 0; i < d.length; i += 4) if (d[i] !== 12 || d[i + 1] !== 16 || d[i + 2] !== 22) return true;
     return false;
   });
+});
+
+// #269: optional criteria sections are collapsed while empty, sections that
+// received clauses (demo defaults here) are open, and the search button is
+// visible without scrolling on desktop and phone viewports alike.
+test('criteria panel: empty sections collapsed, filled ones open, search button above the fold', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria add an adjacency and a structure clause: their sections open
+  await expect(page.locator('#adjClauses .row').first()).toBeVisible();
+  await expect(page.locator('#structClauses .row').first()).toBeVisible();
+  // the empty optional sections stay collapsed (summary visible, body hidden)
+  for (const sec of ['#pctClauses', '#shapeClauses', '#pairClauses']) {
+    await expect(page.locator(sec)).toBeHidden();
+  }
+  await expect(page.locator('#searchBtn')).toBeInViewport();
+  // phone viewport: still no scroll needed to reach the search button
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#searchBtn')).toBeInViewport();
+  // opening a collapsed section by its summary reveals its add button
+  await page.click('details.critsec:has(#pctClauses) > summary');
+  await expect(page.locator('#addPct')).toBeVisible();
 });
 
 test('demo search finds the seed-141 spot and shows the popup', async ({ page }) => {
@@ -173,6 +196,7 @@ test('Nether dimension: biome list, map, search and share link work', async ({ p
   // biome rows now only offer the five Nether biomes (plus "any biome")
   await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 6);
   // structure criteria only offer Nether structures
+  await openCritSection(page, '#addStruct');
   await page.click('#addStruct');
   await expect(page.locator('#structClauses .row select option')).toHaveCount(3);
   await page.click('#structClauses .row .rm');
@@ -681,6 +705,7 @@ test('structure pair criterion finds village+outpost spots', async ({ page }) =>
   while (await page.locator('#structClauses .row').count()) {
     await page.click('#structClauses .row .rm');
   }
+  await openCritSection(page, '#addPair');
   await page.click('#addPair');
   const sels = page.locator('#pairClauses .row select');
   await sels.nth(0).selectOption({ label: 'Village' });
@@ -1012,6 +1037,7 @@ test('a biome-share criterion filters results and survives the share link', asyn
   await waitForApp(page);
   // demo criteria + "at least 20% cherry grove within 100 blocks": the spot
   // cell itself is a cherry grove, so a small disc keeps a high share
+  await openCritSection(page, '#addPct');
   await page.click('#addPct');
   const row = page.locator('#pctClauses .row');
   await row.locator('select').selectOption({ label: 'Cherry Grove' });
@@ -1081,6 +1107,7 @@ test('a geographic-pattern clause runs the search and shares', async ({ page, co
   await waitForApp(page);
   // demo criteria + "the spot is on an island of at most 500 blocks": the
   // demo cherry grove is on the mainland, so the search completes empty
+  await openCritSection(page, '#addShape');
   await page.click('#addShape');
   const row = page.locator('#shapeClauses .row');
   await row.locator('select').first().selectOption('island');

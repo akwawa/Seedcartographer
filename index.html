@@ -94,43 +94,39 @@
         <button id="addMainBiome" class="btn tiny" data-i18n="addBiome">+ Add biome</button>
       </div>
 
-      <div class="field">
-        <label><span data-i18n="adjacentBiomes">Adjacent biomes</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="adjMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="adjacentBiomes">Adjacent biomes</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="adjMode" class="mode" aria-label="Adjacent biomes" data-i18n-aria="adjacentBiomes"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="adjClauses" class="crit"></div>
         <button id="addAdj" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <label><span data-i18n="pctBiomes">Biome share</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="pctMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="pctBiomes">Biome share</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="pctMode" class="mode" aria-label="Biome share" data-i18n-aria="pctBiomes"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="pctClauses" class="crit"></div>
         <button id="addPct" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <label><span data-i18n="shapePatterns">Geographic patterns</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="shapeMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="shapePatterns">Geographic patterns</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="shapeMode" class="mode" aria-label="Geographic patterns" data-i18n-aria="shapePatterns"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="shapeClauses" class="crit"></div>
         <button id="addShape" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <label><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="structMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="structMode" class="mode" aria-label="Nearby structures" data-i18n-aria="nearbyStructures"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="structClauses" class="crit"></div>
         <button id="addStruct" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <div class="crit-lbl"><span data-i18n="pairStructures">Structure pairs</span> <span class="opt" data-i18n="optional">optional</span></div>
+      <details class="field critsec">
+        <summary><span data-i18n="pairStructures">Structure pairs</span> <span class="opt" data-i18n="optional">optional</span></summary>
         <div id="pairClauses" class="crit"></div>
         <button id="addPair" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
       <div class="field two">
         <div><label for="range" data-i18n="searchRadius">Search radius</label><input id="range" class="num" type="number" min="500" step="500" value="5000"></div>
@@ -142,7 +138,7 @@
         <div><label for="surfMax"><span data-i18n="surfaceMax">Surface Y max</span> <span class="opt" data-i18n="optional">optional</span></label><input id="surfMax" class="num" type="number" step="1" min="-64" max="320"></div>
       </div>
 
-      <button id="searchBtn" class="btn primary" data-i18n="searchBtn">Search this area</button>
+      <button id="searchBtn" class="btn primary search-btn" data-i18n="searchBtn">Search this area</button>
       <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="searchInfo" class="info"></output>
     </section>

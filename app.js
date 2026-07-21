@@ -354,6 +354,7 @@ function setDimension(dim) {
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
+  collapseCritSections();
   const presetSel = $('#presetSel');
   if (presetSel) presetSel.value = '';   // criteria no longer match any preset
   addMainBiomeRow();
@@ -1291,6 +1292,15 @@ function addRow(container, parts) {
   rm.onclick = () => row.remove();
   row.appendChild(rm);
   container.appendChild(row);
+  // optional sections are collapsed by default (#269): any clause added here
+  // (by hand, permalink, preset, history or import) reveals its section
+  const sec = container.closest('details.critsec');
+  if (sec) sec.open = true;
+}
+// Collapse the optional criteria sections back down (#269); the addRow calls
+// that follow a clear re-open exactly the sections that receive clauses.
+function collapseCritSections() {
+  document.querySelectorAll('#criteriaCard details.critsec').forEach((d) => { d.open = false; });
 }
 function addMainBiomeRow(biome) {
   addRow($('#mainBiomes'), [aria(mainBiomeSelect(biome), 'ariaBiome')]);
@@ -2454,6 +2464,7 @@ function readHash() {
 function applyCriteria(raw) {
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
+  collapseCritSections();
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
   if (!c) return;

@@ -19,6 +19,16 @@ et la release GitHub.
 ## [Non publié]
 
 ### Modifié
+- Panneau de critères allégé : les cinq sections optionnelles (biomes
+  adjacents, part de biome, motifs géographiques, structures proches, paires
+  de structures) deviennent des `<details>`/`<summary>` natifs repliés par
+  défaut lorsqu'ils sont vides ; toute section recevant une clause (ajout
+  manuel, permalien, preset, historique ou import) s'ouvre automatiquement.
+  Le bouton « Chercher dans cette zone » est rendu collant en bas du panneau
+  (fond opaque) et reste visible au chargement — l'étape 3 du tour guidé
+  pointe donc un bouton à l'écran. Gardes e2e : bouton visible sans
+  défilement à 1280×900 et 390×844, sections repliées/dépliées selon leur
+  contenu. (#269)
 - Topbar responsive : les actions secondaires (export PNG avec étiquette
   visible pour la taille, lien de partage, comparaison de seeds, comparaison
   de versions, langue, thème, palette, galerie) sont regroupées dans un menu
