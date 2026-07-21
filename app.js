@@ -294,8 +294,10 @@ function buildVersionSelect() {
   const sel = $('#mcver'), cmp = $('#cmpVer');
   sel.textContent = ''; cmp.textContent = '';
   const versions = MC_VERSIONS[0][0] === MC_NEWEST ? MC_VERSIONS : [[MC_NEWEST, 'newest']];
+  // explicit translated placeholder so version comparison is discoverable (#271);
+  // data-i18n keeps it translated when the language changes
   const off = document.createElement('option');
-  off.value = ''; off.textContent = '—';
+  off.value = ''; off.textContent = t('cmpVerNone'); off.dataset.i18n = 'cmpVerNone';
   cmp.appendChild(off);
   for (const [v, label] of versions) {
     const o = document.createElement('option');

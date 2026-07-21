@@ -19,6 +19,15 @@ et la release GitHub.
 ## [Non publié]
 
 ### Modifié
+- Découvrabilité : le sélecteur de comparaison de versions `#cmpVer` affiche
+  une première option explicite traduite (« Comparer avec… ») au lieu d'un
+  « — » nu ; les infobulles/aria des contrôles indiquent leur raccourci
+  clavier — règle (R), permutation de version (V), aide (?), aller aux
+  coordonnées (G), recherche (Entrée) — via i18n ; le dialogue d'aide gagne
+  une section « Outils carte » décrivant règle, marqueur, sélection de zone
+  et zone annotée, traduite dans les 10 langues. Gardes : test i18n de
+  présence des raccourcis dans chaque locale, e2e (placeholder fr non vide,
+  « (R) » dans le title de la règle, section outils carte dans l'aide). (#271)
 - Panneau de critères allégé : les cinq sections optionnelles (biomes
   adjacents, part de biome, motifs géographiques, structures proches, paires
   de structures) deviennent des `<details>`/`<summary>` natifs repliés par
