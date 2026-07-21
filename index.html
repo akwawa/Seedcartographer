@@ -21,33 +21,55 @@
     <label class="lbl"><span data-i18n="seed">Seed</span>
       <input id="seed" class="mono" spellcheck="false" autocomplete="off">
     </label>
-    <label class="chk"><input type="checkbox" id="large"> <span data-i18n="largeBiomes">Large Biomes</span></label>
-    <label class="lbl">Java
-      <select id="mcver" class="ver" title="Generation version"></select>
-      <span class="opt">vs</span>
-      <select id="cmpVer" class="ver" title="Compare with version" data-i18n-title="cmpVerTitle" aria-label="Compare with version" data-i18n-aria="cmpVerTitle"></select>
-      <button id="cmpSwap" class="btn tiny" hidden title="Swap generation version (V)" data-i18n-title="cmpSwapTitle" aria-label="Swap generation version" data-i18n-aria="cmpSwapTitle">⇄</button>
-    </label>
-    <label class="lbl"><span data-i18n="dimension">Dimension</span>
-      <select id="dimSel" class="ver"></select>
-    </label>
+    <div id="worldOpts" class="worldopts">
+      <label class="chk"><input type="checkbox" id="large"> <span data-i18n="largeBiomes">Large Biomes</span></label>
+      <label class="lbl">Java
+        <select id="mcver" class="ver" title="Generation version"></select>
+      </label>
+      <label class="lbl"><span data-i18n="dimension">Dimension</span>
+        <select id="dimSel" class="ver"></select>
+      </label>
+    </div>
     <button id="loadBtn" class="btn" data-i18n="loadSeed">Load seed</button>
-    <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
   </div>
-  <select id="pngSizeSel" class="ver pngsize" title="PNG export size" aria-label="PNG export size" data-i18n-title="exportSizeTitle" data-i18n-aria="exportSizeTitle">
-    <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
-    <option value="2048">2048 px</option>
-    <option value="4096">4096 px</option>
-  </select>
-  <button id="pngBtn" class="btn ghost" data-i18n="exportPng">Export PNG</button>
-  <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
-  <button id="shareBtn" class="btn ghost" data-i18n="shareLink">Share link</button>
-  <select id="langSel" class="ver" title="Language" aria-label="Language" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
-  <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
-  <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
-  <button id="paletteBtn" class="btn tiny palettebtn" aria-pressed="false" title="High-visibility colors" data-i18n-title="paletteTitle" data-i18n-aria="paletteTitle" aria-label="High-visibility colors">🎨</button>
-  <button id="galleryBtn" type="button" class="btn tiny gallerylink" data-i18n="galleryLink">Gallery</button>
-  <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
+  <div class="topactions">
+    <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
+    <button id="moreBtn" class="btn tiny" aria-expanded="false" aria-controls="moreMenu" title="More actions" data-i18n-title="moreMenuTitle" aria-label="More actions" data-i18n-aria="moreMenuTitle">⋯</button>
+    <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
+    <div id="moreMenu" class="moremenu" hidden>
+      <div id="menuWorldSlot" class="menuworld"></div>
+      <div class="menurow">
+        <label class="menulbl" for="pngSizeSel" data-i18n="exportSizeTitle">PNG export size</label>
+        <select id="pngSizeSel" class="ver" title="PNG export size" data-i18n-title="exportSizeTitle">
+          <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
+          <option value="2048">2048 px</option>
+          <option value="4096">4096 px</option>
+        </select>
+      </div>
+      <button id="pngBtn" class="btn" data-i18n="exportPng">Export PNG</button>
+      <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
+      <button id="shareBtn" class="btn" data-i18n="shareLink">Share link</button>
+      <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
+      <div class="menurow">
+        <label class="menulbl" for="cmpVer" data-i18n="cmpVerTitle">Compare with version</label>
+        <span class="vsgroup">
+          <select id="cmpVer" class="ver" title="Compare with version" data-i18n-title="cmpVerTitle"></select>
+          <button id="cmpSwap" class="btn tiny" hidden title="Swap generation version (V)" data-i18n-title="cmpSwapTitle" aria-label="Swap generation version" data-i18n-aria="cmpSwapTitle">⇄</button>
+        </span>
+      </div>
+      <div class="menurow">
+        <label class="menulbl" for="langSel" data-i18n="langTitle">Language</label>
+        <select id="langSel" class="ver" title="Language" data-i18n-title="langTitle"></select>
+      </div>
+      <div class="menurow">
+        <span class="vsgroup">
+          <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
+          <button id="paletteBtn" class="btn tiny palettebtn" aria-pressed="false" title="High-visibility colors" data-i18n-title="paletteTitle" data-i18n-aria="paletteTitle" aria-label="High-visibility colors">🎨</button>
+        </span>
+        <button id="galleryBtn" type="button" class="btn tiny gallerylink" data-i18n="galleryLink">Gallery</button>
+      </div>
+    </div>
+  </div>
 </header>
 
 <main>

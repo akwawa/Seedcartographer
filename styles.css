@@ -33,7 +33,7 @@ button,input,select{font:inherit;color:inherit}
 
 /* ---------- topbar ---------- */
 .topbar{
-  display:flex;align-items:center;gap:18px;padding:10px 16px;
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:10px 16px;
   background:linear-gradient(180deg,var(--top1),var(--top2));
   border-bottom:1px solid var(--line);flex:0 0 auto;
 }
@@ -51,12 +51,32 @@ button,input,select{font:inherit;color:inherit}
 .lbl input{width:190px}
 .chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
 .ver{font-family:var(--mono);font-size:12px;color:var(--faint);border:1px solid var(--line);padding:3px 8px;border-radius:5px}
-.topbar .ghost{margin-left:auto}
-/* the PNG size selector carries the auto margin so the export controls
-   (size + button + progress) stay grouped on the right (#231) */
-.topbar .pngsize{margin-left:auto}
-.topbar .pngsize ~ .ghost{margin-left:0}
-.topbar .pngprogress{width:70px}
+/* transparent wrapper around the world options (Large Biomes, Java version,
+   dimension): laid out inline in the topbar on desktop, relocated as a block
+   into the "⋯" menu on small screens (#266) */
+.world .worldopts{display:contents}
+
+/* right-aligned cluster: panel toggle (mobile), "⋯" menu, help */
+.topactions{margin-left:auto;display:flex;align-items:center;gap:8px;position:relative}
+
+/* the "⋯" overflow menu (#266): secondary actions grouped in a keyboard-
+   accessible popover of native controls anchored under its toggle button */
+.moremenu{
+  position:absolute;top:calc(100% + 10px);right:0;z-index:30;
+  min-width:250px;max-width:min(320px,calc(100vw - 16px));
+  max-height:min(72vh,540px);overflow:auto;
+  display:flex;flex-direction:column;gap:10px;padding:12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 10px 32px rgba(0,0,0,.45);
+}
+.moremenu[hidden]{display:none}
+.menurow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.menulbl{color:var(--muted);font-size:12px}
+.vsgroup{display:flex;align-items:center;gap:6px}
+.moremenu .progress{margin-top:0}
+.moremenu .worldopts{display:flex;flex-direction:column;gap:10px}
+.moremenu .worldopts .lbl{justify-content:space-between}
+.menuworld:empty{display:none}
 
 input,select{
   background:var(--panel2);border:1px solid var(--line);border-radius:7px;
@@ -299,7 +319,6 @@ main{flex:1 1 auto;display:flex;min-height:0}
   main{flex-direction:column}
   .panel{width:100%;flex:0 0 auto;max-height:46%;border-right:none;border-bottom:1px solid var(--line)}
   .world .lbl input{width:120px}
-  .topbar{flex-wrap:wrap;gap:10px}
   .panel-toggle{display:block}
   body.panel-collapsed .panel{display:none}
 }

@@ -1,5 +1,5 @@
 /* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
-import { test, expect } from './fixtures.js';
+import { test, expect, openMoreMenu, closeMoreMenu, selectLang } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
 test.beforeEach(({ page }) => {
@@ -121,41 +121,48 @@ test('share link restores seed, criteria and modes', async ({ page, context }) =
 test('language switch translates UI and biome names live', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
-  await page.selectOption('#langSel', 'fr');
+  await selectLang(page, 'fr');
   await expect(page.locator('#searchBtn')).toHaveText('Chercher dans cette zone');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosquet de cerisiers');
-  await page.selectOption('#langSel', 'de');
+  await selectLang(page, 'de');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Kirschhain');
-  await page.selectOption('#langSel', 'it');
+  await selectLang(page, 'it');
   await expect(page.locator('#searchBtn')).toHaveText('Cerca in questa area');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosco di ciliegi');
-  await page.selectOption('#langSel', 'pt');
+  await selectLang(page, 'pt');
   await expect(page.locator('#searchBtn')).toHaveText('Buscar nesta área');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosque de cerejeiras');
-  await page.selectOption('#langSel', 'ja');
+  await selectLang(page, 'ja');
   await expect(page.locator('#searchBtn')).toHaveText('このエリアを検索');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('桜の森');
-  await page.selectOption('#langSel', 'ru');
+  await selectLang(page, 'ru');
   await expect(page.locator('#searchBtn')).toHaveText('Искать в этой области');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Вишнёвая роща');
-  await page.selectOption('#langSel', 'pl');
+  await selectLang(page, 'pl');
   await expect(page.locator('#searchBtn')).toHaveText('Przeszukaj ten obszar');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Wiśniowy gaj');
-  await page.selectOption('#langSel', 'zh-CN');
+  await selectLang(page, 'zh-CN');
   await expect(page.locator('#searchBtn')).toHaveText('搜索此区域');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('樱花树林');
-  // long labels (ru/pl) and ideograms must not overflow the panel horizontally
-  // long labels (ru/pl) and ideograms must not push the layout further than
-  // the widest pre-existing locale already does (the topbar overflows and is
-  // clipped by design at some widths, in every language)
+  // no locale may create a horizontal page overflow anymore (#266)
   const overflowOf = async (lang) => {
-    await page.selectOption('#langSel', lang);
+    await selectLang(page, lang);
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   };
-  let baseline = 0;
-  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt']) baseline = Math.max(baseline, await overflowOf(lang));
-  for (const lang of ['ja', 'ru', 'pl', 'zh-CN']) {
-    expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(baseline);
+  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt', 'ja', 'ru', 'pl', 'zh-CN']) {
+    expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(0);
+  }
+});
+
+// #266 guard: the topbar no longer forces a horizontal page scroll anywhere
+test('no horizontal page scroll at any supported width (#266)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  for (const width of [1920, 1440, 1280, 390]) {
+    await page.setViewportSize({ width, height: width < 800 ? 740 : 800 });
+    const over = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth);
+    expect(over, `overflow at ${width}px`).toBeLessThanOrEqual(0);
   }
 });
 
@@ -270,7 +277,7 @@ test('legend lists visible biomes and hovering an entry dims the map', async ({ 
     return c.getContext('2d').getImageData(0, 0, c.width, 1).data.join(',') !== prev;
   }, before, { timeout: 15000 });
   // language switch retranslates the legend labels in place
-  await page.selectOption('#langSel', 'fr');
+  await selectLang(page, 'fr');
   await expect(page.locator('#legend summary')).toHaveText('Légende');
 });
 
@@ -279,6 +286,7 @@ test('Export PNG downloads a snapshot of the current view', async ({ page }) => 
   await waitForApp(page);
   // wait for a rendered tile so the snapshot has content
   await page.waitForFunction(() => document.querySelectorAll('#legendList .lg').length > 0);
+  await openMoreMenu(page);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.click('#pngBtn')
@@ -305,6 +313,7 @@ test('high-resolution export downloads a 2048 px PNG with a scaled cartouche', a
     const g = hdExportGeometry({ cx: 0, cz: 0, bpp: 1 }, c.width, c.height, 2048);
     return { w: g.outW, h: g.outH + cartoucheMetrics(2048).band };
   });
+  await openMoreMenu(page);
   await page.selectOption('#pngSizeSel', '2048');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -347,6 +356,7 @@ test('theme toggle switches to light, updates theme-color and persists', async (
   await waitForApp(page);
   // dark by default (headless prefers dark is not guaranteed; force via toggle)
   const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+  await openMoreMenu(page);
   await page.click('#themeBtn');
   const flipped = theme === 'dark' ? 'light' : 'dark';
   await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
@@ -368,7 +378,11 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
   await expect(page.locator('#helpVersion')).toHaveText(/^v/);
   // the credits disclose the anonymous Umami usage statistics
   await expect(page.locator('#helpDlg')).toContainText('Umami');
-  await page.selectOption('#langSel', 'fr');
+  await page.click('#helpClose');
+  await expect(page.locator('#helpDlg')).toBeHidden();
+  // the language switch (now inside the "⋯" menu) retranslates the dialog
+  await selectLang(page, 'fr');
+  await page.click('#helpBtn');
   await expect(page.locator('#helpDlg h2')).toHaveText('Aide');
   await page.click('#helpClose');
   await expect(page.locator('#helpDlg')).toBeHidden();
@@ -377,6 +391,7 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
 test('gallery modal: thumbnail cards, clicking one applies the entry', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
+  await openMoreMenu(page);
   await page.click('#galleryBtn');
   await expect(page.locator('#galleryDlg')).toBeVisible();
   const cards = page.locator('#galleryCards .gallerycard');
@@ -475,6 +490,8 @@ test('axe-core audit: no WCAG A/AA violations in either theme', async ({ page })
   const { default: AxeBuilder } = await import('@axe-core/playwright');
   await page.goto('/');
   await waitForApp(page);
+  // the "⋯" menu content must be audited too: scan with it open (#266)
+  await openMoreMenu(page);
   for (const theme of ['dark', 'light']) {
     await page.evaluate((th) => document.documentElement.dataset.theme = th, theme);
     const results = await new AxeBuilder({ page })
@@ -813,6 +830,7 @@ test('the high-visibility palette repaints the map and persists', async ({ page 
     return d[3] === 255;
   });
   const before = await centerPixel();
+  await openMoreMenu(page);
   await page.click('#paletteBtn');
   await expect(page.locator('#paletteBtn')).toHaveClass(/on/);
   // the tile re-renders with the remapped table: the center pixel changes
@@ -853,7 +871,8 @@ test('the A/B version compare swaps the generation and keeps the view', async ({
   });
   await expect(page.locator('#cmpSwap')).toBeHidden();
   const mainVer = await page.locator('#mcver').inputValue();
-  // arm a compare version different from the current one
+  // arm a compare version different from the current one (via the "⋯" menu)
+  await openMoreMenu(page);
   const other = await page.$eval('#cmpVer', (sel, cur) =>
     [...sel.options].map((o) => o.value).find((v) => v && v !== cur), mainVer);
   await page.selectOption('#cmpVer', other);
@@ -865,6 +884,7 @@ test('the A/B version compare swaps the generation and keeps the view', async ({
   expect(s1.x).toBe(before.x);               // view preserved
   expect(s1.z).toBe(before.z);
   await expect(page.locator('#cmpVer')).toHaveValue(mainVer);
+  await closeMoreMenu(page);
   // the V key swaps back
   await page.focus('#map');
   await page.keyboard.press('v');
@@ -1148,8 +1168,10 @@ test('side-by-side seed compare: two renders, synced pan, clean exit (#250)', as
   await page.goto('/');
   await waitForApp(page);
   await expect(page.locator('#cmpPane')).toBeHidden();
-  // enter compare mode from the topbar with a dedicated second seed
+  // enter compare mode from the "⋯" menu with a dedicated second seed
+  await openMoreMenu(page);
   await page.click('#cmpBtn');
+  await closeMoreMenu(page);
   await expect(page.locator('#cmpPane')).toBeVisible();
   // the compare seed defaults to the main seed, then takes its own value
   await expect(page.locator('#cmpSeed')).toHaveValue('141');
@@ -1197,7 +1219,9 @@ test('side-by-side seed compare: two renders, synced pan, clean exit (#250)', as
 test('compare mode: structure layers render on both panes and clean up (#261)', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
+  await openMoreMenu(page);
   await page.click('#cmpBtn');
+  await closeMoreMenu(page);
   await page.fill('#cmpSeed', '4242');
   await page.press('#cmpSeed', 'Enter');
   // both tile pipelines settle before sampling pixels
