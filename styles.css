@@ -196,8 +196,9 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .hud .coords{color:var(--text)} .hud .sep{color:var(--faint)} .hud .biome{color:var(--grass);font-weight:600}
 .maphelp{position:absolute;right:14px;bottom:14px;color:var(--faint);font-size:11px;
   background:var(--overlay-soft);border:1px solid var(--line-soft);padding:5px 10px;border-radius:7px}
-/* native non-modal <dialog>, anchored above the selected pin */
-.popup{position:absolute;left:50%;top:50%;margin:0;transform:translate(-50%,-150%);
+/* native non-modal <dialog>, anchored above the selected pin;
+   stacked above the map controls (toggles, Y slider, toolbar) — #268 */
+.popup{position:absolute;left:50%;top:50%;margin:0;transform:translate(-50%,-150%);z-index:35;
   color:var(--text);background:var(--popup-bg);border:1px solid var(--amber);border-radius:9px;padding:9px 22px 9px 11px;
   text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .popup .pop-close{position:absolute;top:1px;right:1px;background:none;border:none;color:var(--muted);
@@ -328,6 +329,10 @@ dialog :is(button,a):focus-visible{outline:2px solid var(--lapis-hi);outline-off
   .world .lbl input{width:120px}
   .panel-toggle{display:block}
   body.panel-collapsed .panel{display:none}
+  /* #268: on the short stacked map the pin popup used to open under the
+     Grid/Nether toggles and the Y slider; anchor it to the bottom of the
+     map canvas instead, clamped to the available width */
+  .popup{top:auto;bottom:14px;transform:translateX(-50%);max-width:calc(100% - 28px)}
 }
 
 /* comfortable touch targets on coarse-pointer devices */

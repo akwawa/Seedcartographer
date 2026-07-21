@@ -1298,3 +1298,44 @@ test('compare mode: structure layers render on both panes and clean up (#261)', 
   await expect(page.locator('#cmpPane')).toBeHidden();
   expect(await page.evaluate(() => window.cmpStructPoints.size)).toBe(0);
 });
+
+// #268 guard: after a successful search the results list is scrolled into
+// the panel's visible area (before, it sat ~1300px below #searchInfo)
+test('search brings the results list into the panel view (#268)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  // smooth scroll: poll until the list intersects the panel's viewport
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('#panel').getBoundingClientRect();
+    const list = document.querySelector('#results').getBoundingClientRect();
+    return list.top < panel.bottom && list.bottom > panel.top;
+  });
+});
+
+// #268 guard: on a phone viewport the result popup is fully inside the
+// viewport, above the map controls, and its /tp button is really clickable
+test('mobile: result popup fully visible, /tp button not covered (#268)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  await page.locator('#results .result').first().click();
+  await expect(page.locator('#popup')).toBeVisible();
+  const check = await page.evaluate(() => {
+    const r = document.querySelector('#popup').getBoundingClientRect();
+    const inViewport = r.top >= 0 && r.left >= 0
+      && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+    const btn = document.querySelector('#popup .pop-tp');
+    const b = btn.getBoundingClientRect();
+    const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { inViewport, tpOnTop: hit === btn };
+  });
+  expect(check.inViewport).toBe(true);
+  expect(check.tpOnTop).toBe(true);
+  await page.click('#popup .pop-tp');   // clickable for real, no interception
+});
