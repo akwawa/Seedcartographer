@@ -63,7 +63,8 @@ const hud = $('#hud'), resultsEl = $('#results'), searchInfo = $('#searchInfo');
 // ---------- state ----------
 const world = { seed: '141', mc: MC_NEWEST, large: false, dim: 0 };
 let yLayer = 60;                                // altitude for tiles, probe and search
-const DIMENSIONS = [[0, 'Overworld'], [-1, 'Nether'], [1, 'End']];
+// [value, canonical English name (kept in data exports), i18n key for the UI]
+const DIMENSIONS = [[0, 'Overworld', 'dimOverworld'], [-1, 'Nether', 'dimNether'], [1, 'End', 'dimEnd']];
 const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
 let pins = [];                                  // [{x,z,count}] as displayed (sorted)
@@ -329,9 +330,10 @@ function swapCompareVersion() {
 // ---------- dimension ----------
 function buildDimSelect() {
   const sel = $('#dimSel');
-  for (const [v, label] of DIMENSIONS) {
+  for (const [v, , key] of DIMENSIONS) {
     const o = document.createElement('option');
-    o.value = v; o.textContent = label;
+    // data-i18n keeps the option translated when the language changes
+    o.value = v; o.textContent = t(key); o.dataset.i18n = key;
     sel.appendChild(o);
   }
   sel.value = String(world.dim);
@@ -1895,7 +1897,7 @@ function buildHistList() {
     return;
   }
   for (const h of searchHistory) {
-    const dimName = (DIMENSIONS.find(([v]) => v === h.dim) || [0, 'Overworld'])[1];
+    const dimName = t((DIMENSIONS.find(([v]) => v === h.dim) || DIMENSIONS[0])[2]);
     const btn = document.createElement('button');
     btn.className = 'hist mono';
     btn.textContent = `${h.seed} · ${dimName} · ${h.cx}, ${h.cz}`;

@@ -147,8 +147,15 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await selectLang(page, 'fr');
   await expect(page.locator('#searchBtn')).toHaveText('Chercher dans cette zone');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosquet de cerisiers');
+  // #270 guard: no leftover English labels in the topbar or criteria card
+  await expect(page.locator('label[for="presetSel"]')).toHaveText('Préréglages');
+  await expect(page.locator('#mcver')).toHaveAttribute('title', 'Version de génération');
+  await expect(page.locator('#themeBtn')).toHaveAttribute('title', 'Basculer entre thème clair et sombre');
+  await expect(page.locator('#importFile')).toHaveAttribute('title', 'Importer CSV');
   await selectLang(page, 'de');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Kirschhain');
+  // dimension names follow each language's official Minecraft terminology (#270)
+  await expect(page.locator('#dimSel option')).toHaveText(['Oberwelt', 'Nether', 'Ende']);
   await selectLang(page, 'it');
   await expect(page.locator('#searchBtn')).toHaveText('Cerca in questa area');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosco di ciliegi');

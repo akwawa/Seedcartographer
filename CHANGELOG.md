@@ -40,6 +40,17 @@ et la release GitHub.
   menu à l'étape du lien de partage. (#266)
 
 ### Corrigé
+- i18n : les derniers libellés restés en anglais sont traduits dans les
+  10 langues — titre de section « Presets » (fr « Préréglages », es
+  « Preajustes »), options du sélecteur de dimension `#dimSel` (terminologie
+  Minecraft officielle par langue : de « Oberwelt/Nether/Ende », ru « Обычный
+  мир/Нижний мир/Край », ja/zh-CN incluses ; l'anglais est conservé là où la
+  communauté l'utilise, ex. fr « Overworld »), libellé « Java » et infobulle
+  « Generation version » du sélecteur de version, infobulle du bouton de
+  thème et des inputs d'import (CSV/JSON/profil), nom de dimension dans
+  l'historique des recherches. Gardes : test Node (clés présentes dans les
+  10 langues ; tout attribut `title` d'index.html porte `data-i18n-title`)
+  et e2e (libellés français/allemands attendus). (#270)
 - Après une recherche réussie, la liste des résultats est amenée dans la zone
   visible du panneau (`scrollIntoView` fluide, sans vol de focus) au lieu de
   rester ~1300 px sous le message « N locations found ». Sur mobile, la popup
