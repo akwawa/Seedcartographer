@@ -23,8 +23,8 @@
     </label>
     <div id="worldOpts" class="worldopts">
       <label class="chk"><input type="checkbox" id="large"> <span data-i18n="largeBiomes">Large Biomes</span></label>
-      <label class="lbl">Java
-        <select id="mcver" class="ver" title="Generation version"></select>
+      <label class="lbl"><span data-i18n="verJavaLbl">Java</span>
+        <select id="mcver" class="ver" title="Generation version" data-i18n-title="mcverTitle"></select>
       </label>
       <label class="lbl"><span data-i18n="dimension">Dimension</span>
         <select id="dimSel" class="ver"></select>
@@ -63,7 +63,7 @@
       </div>
       <div class="menurow">
         <span class="vsgroup">
-          <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
+          <button id="themeBtn" class="btn tiny" title="Toggle light/dark theme" data-i18n-title="themeToggle">☀</button>
           <button id="paletteBtn" class="btn tiny palettebtn" aria-pressed="false" title="High-visibility colors" data-i18n-title="paletteTitle" data-i18n-aria="paletteTitle" aria-label="High-visibility colors">🎨</button>
         </span>
         <button id="galleryBtn" type="button" class="btn tiny gallerylink" data-i18n="galleryLink">Gallery</button>
@@ -183,7 +183,7 @@
       <div class="export">
         <button id="importCsv" class="btn tiny" data-i18n="importCsv">Import CSV</button>
         <label for="importFile" hidden data-i18n="importCsv">Import CSV</label>
-        <input id="importFile" type="file" accept=".csv,text/csv" title="Import CSV" hidden>
+        <input id="importFile" type="file" accept=".csv,text/csv" title="Import CSV" data-i18n-title="importCsv" hidden>
       </div>
       <label id="sortCtl" class="sortctl" hidden><span data-i18n="sortResults">Sort</span>
         <select id="sortSel">
@@ -210,7 +210,7 @@
         <button id="markerExport" class="btn tiny" data-i18n="markerExport">Export JSON</button>
         <button id="markerImport" class="btn tiny" data-i18n="markerImport">Import JSON</button>
         <label for="markerImportFile" hidden data-i18n="markerImport">Import JSON</label>
-        <input id="markerImportFile" type="file" accept=".json,application/json" title="Import JSON" hidden>
+        <input id="markerImportFile" type="file" accept=".json,application/json" title="Import JSON" data-i18n-title="markerImport" hidden>
       </div>
       <div id="markerList" class="favs"></div>
     </section>
@@ -222,7 +222,7 @@
         <button id="profileExport" class="btn tiny" data-i18n="profileExport">Export profile</button>
         <button id="profileImport" class="btn tiny" data-i18n="profileImport">Import profile</button>
         <label for="profileImportFile" hidden data-i18n="profileImport">Import profile</label>
-        <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" hidden>
+        <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" data-i18n-title="profileImport" hidden>
       </div>
       <output id="profileInfo" class="muted small"></output>
       <p class="muted small" data-i18n="syncLede">Or move it to another device without a file: a sync code to copy on one device and paste on the other.</p>
