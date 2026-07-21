@@ -520,6 +520,48 @@ test.describe('mobile', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
 
+  // #267 guard: dialogs fit the mobile viewport and keep the keyboard focus visible
+  test('help dialog fits the viewport and keeps a visible keyboard focus (#267)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await waitForApp(page);
+    await page.click('#helpBtn');
+    const dlg = page.locator('#helpDlg');
+    await expect(dlg).toBeVisible();
+    // the dialog box is entirely inside the 390x844 window
+    const box = await dlg.evaluate((d) => {
+      const r = d.getBoundingClientRect();
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(390);
+    expect(box.bottom).toBeLessThanOrEqual(844);
+    // its long content scrolls internally instead of overflowing the page
+    const scroll = await dlg.evaluate((d) => ({
+      overflowY: getComputedStyle(d).overflowY,
+      scrollable: d.scrollHeight > d.clientHeight
+    }));
+    expect(['auto', 'scroll']).toContain(scroll.overflowY);
+    expect(scroll.scrollable).toBe(true);
+    // Tab reaches a control and the focus ring is actually painted
+    await page.keyboard.press('Tab');
+    const focus = await page.evaluate(() => {
+      const el = document.activeElement;
+      const cs = getComputedStyle(el);
+      return {
+        inDialog: !!el.closest('#helpDlg'),
+        outlineWidth: cs.outlineWidth,
+        outlineStyle: cs.outlineStyle,
+        boxShadow: cs.boxShadow
+      };
+    });
+    expect(focus.inDialog).toBe(true);
+    const visible = (focus.outlineStyle !== 'none' && parseFloat(focus.outlineWidth) > 0) ||
+      focus.boxShadow !== 'none';
+    expect(visible, JSON.stringify(focus)).toBe(true);
+  });
+
   test('two-finger pinch zooms the map', async ({ page }) => {
     await page.goto('/');
     await waitForApp(page);
