@@ -30,6 +30,13 @@ et la release GitHub.
   menu à l'étape du lien de partage. (#266)
 
 ### Corrigé
+- Dialogues (aide, galerie) utilisables sur mobile : leur largeur est bornée
+  à la fenêtre (`min(540px, calc(100vw - 2rem))`, 920 px pour la galerie),
+  leur hauteur est limitée avec défilement interne, et ils restent centrés
+  dans la fenêtre visible. Le focus clavier est désormais visible sur les
+  boutons et liens des dialogues (contour 2 px identique au reste de
+  l'interface). Garde e2e mobile 390×844 : dialogue d'aide entièrement dans
+  le viewport, contenu défilable et anneau de focus effectivement peint. (#267)
 - Mode compare : les couches de structures activées (villages, temples,
   slime chunks…) s'affichent désormais aussi sur la carte de droite,
   calculées pour la seed B via son worker dédié, avec les mêmes toggles que
