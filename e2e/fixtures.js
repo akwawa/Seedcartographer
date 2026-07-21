@@ -31,3 +31,13 @@ export async function selectLang(page, lang) {
   await openMoreMenu(page);
   await page.selectOption('#langSel', lang);
 }
+
+// The optional criteria sections are native <details> collapsed while empty
+// (#269): reveal one (by any selector inside it, e.g. its "+ Add criterion"
+// button) before interacting with its controls, like a user opening it first.
+export async function openCritSection(page, selector) {
+  await page.$eval(selector, (el) => {
+    const d = el.closest('details.critsec');
+    if (d) d.open = true;
+  });
+}
