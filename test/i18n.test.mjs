@@ -68,3 +68,22 @@ test('resolveNavLang falls back to English for unknown or missing values', () =>
   assert.strictEqual(resolveNavLang(''), 'en');
   assert.strictEqual(resolveNavLang(undefined), 'en');
 });
+
+// #271: tooltips advertise their keyboard shortcut in every locale
+test('shortcut-bearing tooltips mention their key in every locale', () => {
+  const hints = { rulerTitle: 'R', cmpSwapTitle: 'V', gotoAria: 'G', helpBtnTitle: '\\?' };
+  for (const [key, letter] of Object.entries(hints))
+    for (const lang of Object.keys(I18N))
+      assert.match(I18N[lang][key], new RegExp(`[(（]${letter}[)）]`), `${lang}.${key} misses (${letter})`);
+  for (const lang of Object.keys(I18N))
+    assert.match(I18N[lang].searchBtnTitle, /[(（](Enter|Entrée|Invio)[)）]/, `${lang}.searchBtnTitle misses (Enter)`);
+});
+
+// #271: the help dialog documents the four map tools
+test('index.html help dialog lists the map tools with i18n keys', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const tools = html.match(/<ul class="help-keys help-tools">[\s\S]*?<\/ul>/);
+  assert.ok(tools, 'missing .help-tools list in the help dialog');
+  for (const key of ['helpToolRuler', 'helpToolMarker', 'helpToolSel', 'helpToolZone'])
+    assert.match(tools[0], new RegExp(`data-i18n="${key}"`), `missing ${key} entry`);
+});

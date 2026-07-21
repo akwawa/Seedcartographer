@@ -1373,3 +1373,17 @@ test('mobile: result popup fully visible, /tp button not covered (#268)', async 
   expect(check.tpOnTop).toBe(true);
   await page.click('#popup .pop-tp');   // clickable for real, no interception
 });
+
+// #271: discoverability — the compare select has an explicit translated
+// placeholder, tooltips advertise their shortcut, the help lists the map tools
+test('discoverability: compare placeholder, shortcut tooltips, map-tools help (#271)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await selectLang(page, 'fr');
+  await expect(page.locator('#cmpVer option').first()).toHaveText('Comparer avec…');
+  await expect(page.locator('#rulerBtn')).toHaveAttribute('title', /\(R\)/);
+  await page.click('#helpBtn');
+  await expect(page.locator('#helpDlg')).toContainText('Outils carte');
+  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(4);
+  await page.click('#helpClose');
+});

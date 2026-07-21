@@ -35,7 +35,7 @@
   <div class="topactions">
     <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
     <button id="moreBtn" class="btn tiny" aria-expanded="false" aria-controls="moreMenu" title="More actions" data-i18n-title="moreMenuTitle" aria-label="More actions" data-i18n-aria="moreMenuTitle">⋯</button>
-    <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
+    <button id="helpBtn" class="btn tiny" data-i18n-title="helpBtnTitle" title="Help (?)">?</button>
     <div id="moreMenu" class="moremenu" hidden>
       <div id="menuWorldSlot" class="menuworld"></div>
       <div class="menurow">
@@ -138,7 +138,7 @@
         <div><label for="surfMax"><span data-i18n="surfaceMax">Surface Y max</span> <span class="opt" data-i18n="optional">optional</span></label><input id="surfMax" class="num" type="number" step="1" min="-64" max="320"></div>
       </div>
 
-      <button id="searchBtn" class="btn primary search-btn" data-i18n="searchBtn">Search this area</button>
+      <button id="searchBtn" class="btn primary search-btn" data-i18n="searchBtn" title="Search the visible area (Enter)" data-i18n-title="searchBtnTitle">Search this area</button>
       <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="searchInfo" class="info"></output>
     </section>
@@ -267,9 +267,9 @@
     </label>
     <form id="gotoForm" class="goto">
       <input id="gotoInput" class="mono" placeholder="x, z" spellcheck="false" autocomplete="off" aria-label="Go to coordinates" data-i18n-aria="gotoAria">
-      <button class="btn tiny" data-i18n="gotoBtn" data-i18n-title="gotoAria" title="Go to coordinates">Go</button>
+      <button class="btn tiny" data-i18n="gotoBtn" data-i18n-title="gotoAria" title="Go to coordinates (x, z) (G)">Go</button>
     </form>
-    <button id="rulerBtn" class="btn tiny rulerbtn" title="Measure a distance" aria-label="Measure a distance" data-i18n-title="rulerTitle" data-i18n-aria="rulerTitle">📏</button>
+    <button id="rulerBtn" class="btn tiny rulerbtn" title="Measure a distance (R)" aria-label="Measure a distance (R)" data-i18n-title="rulerTitle" data-i18n-aria="rulerTitle">📏</button>
     <button id="markerBtn" class="btn tiny markerbtn" title="Place a marker (click the map)" aria-label="Place a marker" data-i18n-title="markerTitle" data-i18n-aria="markerTitle">📍</button>
     <button id="selBtn" class="btn tiny selbtn" title="Select an area (drag on the map)" aria-label="Select an area" data-i18n-title="selTitle" data-i18n-aria="selTitle">⬚</button>
     <button id="zoneBtn" class="btn tiny annotbtn" title="Draw a zone (drag on the map)" aria-label="Draw a zone" data-i18n-title="zoneTitle" data-i18n-aria="zoneTitle">▧</button>
@@ -308,6 +308,13 @@
     <li><kbd>R</kbd> <span data-i18n="keyRuler">toggle the ruler tool</span></li>
     <li><kbd>?</kbd> <span data-i18n="keyHelp">open this help</span></li>
     <li><kbd>Esc</kbd> <span data-i18n="keyEsc">close the active dialog, tool or popup</span></li>
+  </ul>
+  <h3 data-i18n="helpToolsTitle">Map tools</h3>
+  <ul class="help-keys help-tools">
+    <li><span class="help-tool-icon" aria-hidden="true">📏</span> <span data-i18n="helpToolRuler">ruler — measure a distance in blocks (two clicks)</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">📍</span> <span data-i18n="helpToolMarker">marker — pin a named point on the map</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">⬚</span> <span data-i18n="helpToolSel">selection — select an area to export a PNG or copy its coordinates</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">▧</span> <span data-i18n="helpToolZone">zone — draw a named colored zone, kept in your browser</span></li>
   </ul>
   <h3 data-i18n="helpLimitsTitle">Known limits</h3>
   <p data-i18n="helpLimits"></p>
