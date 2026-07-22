@@ -19,6 +19,17 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Outil chemin/itinéraire avec distance cumulée (#285) : nouvel outil 〰 dans
+  la barre d'outils carte — des clics successifs ajoutent les points d'une
+  polyligne, un double-clic ou Échap termine le tracé. Un petit éditeur au
+  clic sur le chemin affiche la distance cumulée (somme des segments, en
+  blocs) et son équivalent Nether (÷8), et permet de renommer ou supprimer le
+  chemin. Les chemins sont persistés dans le profil (localStorage), inclus
+  dans l'export/import de profil et le code de synchronisation (mêmes règles
+  de fusion que les marqueurs/zones) et convertis Nether⇄Overworld à
+  l'affichage (1:8, tracé pointillé) comme les zones. Modèle pur
+  `userpaths.js` couvert à 100 %, libellés dans les 10 langues, entrée dans
+  l'aide « Outils carte » et test e2e du parcours complet.
 - Calculateur de portails du Nether (#284) : nouvel outil 🌀 dans la barre
   d'outils carte — un clic place un portail dans la dimension courante et
   l'app calcule la destination idéale dans l'autre dimension (÷8 / ×8 avec

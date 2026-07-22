@@ -26,6 +26,10 @@ import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
 import { ZONE_COLORS, ZONE_NAME_MAX, addZone, removeZone, renameZone, recolorZone, zonesFor, parseZones } from './userzones.js';
+import {
+  PATH_NAME_MAX, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
+  addPath, removePath, renamePath, pathsFor, parsePaths
+} from './userpaths.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
@@ -80,6 +84,10 @@ const ruler = { on: false, a: null, b: null, done: false };
 const sel = { on: false, a: null, b: null, done: false };
 // zone tool: a/b world corners dragged on the map, turned into a named zone
 const zoneTool = { on: false, a: null, b: null };
+// path tool (#285): waypoints clicked so far, plus the live point under the
+// pointer; double-click or Escape turns them into a named persisted path
+const pathTool = { on: false, pts: [], hover: null };
+const PATH_COLOR = '#7ee0c0';
 // portal calculator (#284): the placed portal {dim,x,z}; survives dimension
 // switches so the linked pin shows up in the other dimension
 let portal = null;
@@ -432,6 +440,8 @@ function draw() {
 
   // named zone annotations sit right above the tiles, under every marker
   drawZones(W, H);
+  // path polylines render above the zones, under the markers and pins
+  drawPaths();
 
   drawStructLayers(ctx, W, H, (tg) => tg.points);
 
@@ -688,6 +698,93 @@ function showZoneEditor(z) {
   del.className = 'btn tiny zone-del'; del.textContent = t('zoneDelete');
   del.onclick = () => { setUserZones(removeZone(userZones, z.id)); hidePopup(); };
   pop.append(close, name, colors, del);
+  if (!pop.open) pop.show();
+}
+// ---------- path tool (#285) ----------
+// a polyline with a dot on every waypoint; converted (linked-dimension)
+// paths render dashed, like zones
+function strokePolyline(pts, dashed) {
+  ctx.strokeStyle = PATH_COLOR; ctx.fillStyle = PATH_COLOR; ctx.lineWidth = 2;
+  ctx.setLineDash(dashed ? [5, 4] : []);
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(w2sx(p.x), w2sy(p.z)) : ctx.moveTo(w2sx(p.x), w2sy(p.z))));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  for (const p of pts) {
+    ctx.beginPath(); ctx.arc(w2sx(p.x), w2sy(p.z), 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+// saved paths with a "name · distance" label at the start; while tracing,
+// the pending polyline follows the pointer with its live cumulative distance
+function drawPaths() {
+  ctx.save();
+  ctx.font = '12px monospace';
+  for (const d of pathsFor(userPaths, world)) {
+    strokePolyline(d.pts, d.converted);
+    ctx.fillText(`${d.path.name} · ${pathDistance(d.pts)} ${t('blocks')}`,
+      w2sx(d.pts[0].x) + 6, w2sy(d.pts[0].z) - 6);
+  }
+  if (pathTool.on && pathTool.pts.length) {
+    const pts = pathTool.hover ? appendPathPoint(pathTool.pts, pathTool.hover.x, pathTool.hover.z) : pathTool.pts;
+    strokePolyline(pts, true);
+    const last = pts.at(-1);
+    ctx.fillText(`${pathDistance(pts)} ${t('blocks')}`, w2sx(last.x) + 8, w2sy(last.z) - 8);
+  }
+  ctx.restore();
+}
+function setPathOn(on) {
+  pathTool.on = on; pathTool.pts = []; pathTool.hover = null;
+  $('#pathBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+  draw();
+}
+// trace finished (double-click or Escape): persist the path, leave the tool
+// and open its editor — degenerate traces (fewer than 2 points) are dropped
+function finishPathDraw() {
+  const next = addPath(userPaths, { ...world, pts: pathTool.pts });
+  const created = next.length > userPaths.length ? next.at(-1) : null;
+  setUserPaths(next);
+  setPathOn(false);
+  if (created) showPathEditor(created);
+}
+// topmost path whose polyline passes within 6 screen pixels of the point
+function pathAt(mx, my) {
+  const ds = pathsFor(userPaths, world);
+  for (let i = ds.length - 1; i >= 0; i--) {
+    const pts = ds[i].pts;
+    for (let j = 1; j < pts.length; j++) {
+      const near = pointSegmentDist(mx, my,
+        w2sx(pts[j - 1].x), w2sy(pts[j - 1].z), w2sx(pts[j].x), w2sy(pts[j].z)) < 6;
+      if (near) return ds[i];
+    }
+  }
+  return null;
+}
+// small editor in the map popup: rename, read the cumulative distance and
+// its linked-dimension equivalent (÷8 / ×8), delete — like the zone editor
+function showPathEditor(p) {
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.setAttribute('aria-label', p.name);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const name = document.createElement('input');
+  name.className = 'path-name mono'; name.value = p.name;
+  name.maxLength = PATH_NAME_MAX;
+  name.placeholder = t('pathNamePh');
+  name.setAttribute('aria-label', t('pathNamePh'));
+  name.onchange = () => setUserPaths(renamePath(userPaths, p.id, name.value));
+  const dist = document.createElement('p');
+  dist.className = 'mono small path-dist';
+  const total = pathDistance(p.pts);
+  const linked = linkedDistance(p.dim, total);
+  dist.textContent = `${total} ${t('blocks')}`
+    + (linked ? ` · ${t(linked.dim === -1 ? 'dimNether' : 'dimOverworld')} ≈ ${linked.dist}` : '');
+  const del = document.createElement('button');
+  del.className = 'btn tiny path-del'; del.textContent = t('pathDelete');
+  del.onclick = () => { setUserPaths(removePath(userPaths, p.id)); hidePopup(); };
+  pop.append(close, name, dist, del);
   if (!pop.open) pop.show();
 }
 // ---------- portal calculator (#284) ----------
@@ -1038,13 +1135,17 @@ canvas.addEventListener('pointermove', (e) => {
     view.cx -= dx * view.bpp; view.cz -= dy * view.bpp;
     lastX = e.clientX; lastY = e.clientY; draw();
   } else {
-    if (ruler.on && ruler.a && !ruler.done) {
-      ruler.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
-      draw();
-    }
+    trackHoverPoint(mx, my);
     clearTimeout(probeTimer); probeTimer = setTimeout(() => probeBiome(mx, my), 120);
   }
 });
+// live endpoint tracking for the click-shaped tools (ruler, path): the last
+// segment follows the pointer until the next click ends it
+function trackHoverPoint(mx, my) {
+  const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+  if (ruler.on && ruler.a && !ruler.done) { ruler.b = p; draw(); }
+  else if (pathTool.on && pathTool.pts.length) { pathTool.hover = p; draw(); }
+}
 function endPointer(e) {
   pointers.delete(e.pointerId);
   if (sel.on && sel.a && sel.b && !sel.done && e.type === 'pointerup') {
@@ -1063,6 +1164,9 @@ function endPointer(e) {
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
+// double-click ends the path being traced (the two clicks landed on the
+// same spot, which appendPathPoint already deduplicated)
+canvas.addEventListener('dblclick', () => { if (pathTool.on) finishPathDraw(); });
 let probeTimer = null;
 function probeBiome(mx, my) {
   biomeProbeReq = reqSeq++;
@@ -1101,8 +1205,10 @@ canvas.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-// disarm every map tool and close the pin popup (Escape cascade)
+// disarm every map tool and close the pin popup (Escape cascade); a path
+// being traced is finished (and persisted) first, per the tool's contract
 function dismissMapTools() {
+  if (pathTool.on) { finishPathDraw(); return; }
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
   if (portalMode) setPortalMode(false);
@@ -1291,31 +1397,36 @@ cmpCanvas.addEventListener('wheel', (e) => {
   draw(); requestRender(); syncHash();
 }, { passive: false });
 
+// clicks consumed by an armed point-based tool (marker, portal, path, ruler)
+function toolClick(mx, my) {
+  const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+  if (markerMode) { setUserMarkers(addMarker(userMarkers, { ...world, ...p })); return true; }
+  if (portalMode) { placePortal(p.x, p.z); return true; }
+  if (pathTool.on) {
+    pathTool.pts = appendPathPoint(pathTool.pts, p.x, p.z);
+    draw();
+    return true;
+  }
+  if (ruler.on) {
+    if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
+    else { ruler.b = p; ruler.done = true; }
+    draw(); return true;
+  }
+  return false;
+}
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
-  if (markerMode) {
-    setUserMarkers(addMarker(userMarkers, {
-      ...world, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my))
-    }));
-    return;
-  }
-  if (portalMode) {
-    placePortal(Math.round(s2wx(mx)), Math.round(s2wz(my)));
-    return;
-  }
-  if (ruler.on) {
-    const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
-    if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
-    else { ruler.b = p; ruler.done = true; }
-    draw(); return;
-  }
+  if (toolClick(mx, my)) return;
   // hit-test pins
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
   }
   // hit-test the portal pins: clicking one re-opens the portal popup
   if (portal && portalPinAt(mx, my)) { showPortalPopup(); return; }
+  // hit-test paths (above the zones: a path crossing a zone stays clickable)
+  const pHit = pathAt(mx, my);
+  if (pHit) { showPathEditor(pHit.path); return; }
   // hit-test zones (under the pins: a pin inside a zone stays clickable)
   const zHit = zoneAt(mx, my);
   if (zHit) { showZoneEditor(zHit.zone); return; }
@@ -2038,6 +2149,14 @@ function setUserZones(list) {
   try { localStorage.setItem('zones', JSON.stringify(userZones)); } catch { /* ignore */ }
   draw();
 }
+let userPaths = parsePaths((() => {
+  try { return localStorage.getItem('paths'); } catch { return null; }
+})());
+function setUserPaths(list) {
+  userPaths = list;
+  try { localStorage.setItem('paths', JSON.stringify(userPaths)); } catch { /* ignore */ }
+  draw();
+}
 let markerMode = false;
 function setMarkerMode(on) {
   markerMode = on;
@@ -2319,7 +2438,7 @@ function importProfileText(txt) {
     return;
   }
   const merged = mergeProfile(
-    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }, imported);
+    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }, imported);
   setFavorites(merged.favorites);
   userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
   searchHistory = merged.history;
@@ -2327,9 +2446,11 @@ function importProfileText(txt) {
   buildHistList();
   setUserMarkers(merged.markers);
   setUserZones(merged.zones);
+  setUserPaths(merged.paths);
   info.textContent = t('profileImported', {
     f: imported.favorites.length, p: imported.userPresets.length,
-    h: imported.history.length, m: imported.markers.length, z: imported.zones.length
+    h: imported.history.length, m: imported.markers.length, z: imported.zones.length,
+    c: imported.paths.length
   });
 }
 function downloadFile(name, text, mime) {
@@ -3006,6 +3127,7 @@ async function init() {
   $('#portalBtn').onclick = () => setPortalMode(!portalMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
   $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
+  $('#pathBtn').onclick = () => setPathOn(!pathTool.on);
   $('#selPng').onclick = exportSelectionPNG;
   $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
   $('#selClose').onclick = () => setSelOn(false);
@@ -3024,7 +3146,7 @@ async function init() {
   // profile: one-file backup/restore of every local store
   $('#profileExport').onclick = () => {
     downloadFile('seedcartographer-profile.json',
-      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }),
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }),
       'application/json');
   };
   const profileImportInput = $('#profileImportFile');
@@ -3039,7 +3161,7 @@ async function init() {
   // handy between devices with no easy file transfer.
   const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
   $('#syncCodeShow').onclick = () => {
-    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones })))
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths })))
       .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
   };
   $('#syncCodePaste').onclick = () => {
@@ -3100,6 +3222,7 @@ Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
   portalState: () => portal,
   zonesOnMap: () => zonesFor(userZones, world),
+  pathsOnMap: () => pathsFor(userPaths, world),
   cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
 });

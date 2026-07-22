@@ -7,7 +7,8 @@ const PRESET = { id: 1, name: 'cerisiers', dim: 0, c: { m: [5] } };
 const HIST = { seed: '141', mc: 22, large: false, dim: 0, cx: 0, cz: 0, crit: { m: [5] }, at: 1000 };
 const MARKER = { id: 1, seed: '141', mc: 22, large: false, dim: 0, x: 7, z: 8, name: 'portail' };
 const ZONE = { id: 1, seed: '141', mc: 22, large: false, dim: 0, x0: 0, z0: 0, x1: 100, z1: 80, name: 'base', color: '#e07a7a' };
-const STATE = { favorites: [FAV], userPresets: [PRESET], history: [HIST], markers: [MARKER], zones: [ZONE] };
+const PATH = { id: 1, seed: '141', mc: 22, large: false, dim: 0, pts: [{ x: 0, z: 0 }, { x: 300, z: 400 }], name: 'route' };
+const STATE = { favorites: [FAV], userPresets: [PRESET], history: [HIST], markers: [MARKER], zones: [ZONE], paths: [PATH] };
 
 test('exportProfile -> parseProfile round-trips every store', () => {
   const back = parseProfile(exportProfile(STATE));
@@ -29,13 +30,15 @@ test('parseProfile drops malformed entries and tolerates missing lists', () => {
     favorites: [FAV, { bogus: true }, 42],
     userPresets: 'nope',
     markers: [{ ...MARKER, dim: 9 }],
-    zones: [{ ...ZONE, x1: 0, z1: 0 }]
+    zones: [{ ...ZONE, x1: 0, z1: 0 }],
+    paths: [{ ...PATH, pts: [{ x: 1, z: 1 }] }]
   }));
   assert.deepStrictEqual(p.favorites, [FAV]);
   assert.deepStrictEqual(p.userPresets, []);
   assert.deepStrictEqual(p.history, []);
   assert.deepStrictEqual(p.markers, []);
   assert.deepStrictEqual(p.zones, []);
+  assert.deepStrictEqual(p.paths, []);
 });
 
 test('mergeProfile skips duplicates and reassigns ids', () => {
@@ -44,7 +47,8 @@ test('mergeProfile skips duplicates and reassigns ids', () => {
     userPresets: [{ ...PRESET, c: { m: [7] } }, { id: 2, name: 'autre', dim: -1, c: {} }],
     history: [HIST, { ...HIST, cx: 5, at: 2000 }],
     markers: [MARKER, { ...MARKER, id: 4, x: 100 }],
-    zones: [ZONE, { ...ZONE, id: 5, x1: 500 }]
+    zones: [ZONE, { ...ZONE, id: 5, x1: 500 }],
+    paths: [PATH, { ...PATH, id: 6, pts: [{ x: 9, z: 9 }, { x: 20, z: 20 }] }]
   }));
   const merged = mergeProfile(STATE, incoming);
   // same-spot favorite skipped, new spot appended with a fresh id
@@ -64,6 +68,10 @@ test('mergeProfile skips duplicates and reassigns ids', () => {
   assert.strictEqual(merged.zones.length, 2);
   assert.strictEqual(merged.zones[1].x1, 500);
   assert.strictEqual(merged.zones[1].id, 2);
+  // same-waypoints path skipped, new route appended with a fresh id
+  assert.strictEqual(merged.paths.length, 2);
+  assert.deepStrictEqual(merged.paths[1].pts, [{ x: 9, z: 9 }, { x: 20, z: 20 }]);
+  assert.strictEqual(merged.paths[1].id, 2);
 });
 
 test('mergeProfile leaves its inputs untouched', () => {
