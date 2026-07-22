@@ -43,7 +43,8 @@ import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from '
 import { altRgb } from './palette.js';
 import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
 import {
-  panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare
+  panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare,
+  structQueryRect, structuresRequestFor
 } from './compare.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
@@ -62,7 +63,8 @@ const hud = $('#hud'), resultsEl = $('#results'), searchInfo = $('#searchInfo');
 // ---------- state ----------
 const world = { seed: '141', mc: MC_NEWEST, large: false, dim: 0 };
 let yLayer = 60;                                // altitude for tiles, probe and search
-const DIMENSIONS = [[0, 'Overworld'], [-1, 'Nether'], [1, 'End']];
+// [value, canonical English name (kept in data exports), i18n key for the UI]
+const DIMENSIONS = [[0, 'Overworld', 'dimOverworld'], [-1, 'Nether', 'dimNether'], [1, 'End', 'dimEnd']];
 const view = { cx: -392, cz: 56, bpp: 2.2 };   // bpp = blocks per pixel
 let tile = null;                                // {canvas, originX, originZ, scale, cols, rows}
 let pins = [];                                  // [{x,z,count}] as displayed (sorted)
@@ -292,8 +294,10 @@ function buildVersionSelect() {
   const sel = $('#mcver'), cmp = $('#cmpVer');
   sel.textContent = ''; cmp.textContent = '';
   const versions = MC_VERSIONS[0][0] === MC_NEWEST ? MC_VERSIONS : [[MC_NEWEST, 'newest']];
+  // explicit translated placeholder so version comparison is discoverable (#271);
+  // data-i18n keeps it translated when the language changes
   const off = document.createElement('option');
-  off.value = ''; off.textContent = '—';
+  off.value = ''; off.textContent = t('cmpVerNone'); off.dataset.i18n = 'cmpVerNone';
   cmp.appendChild(off);
   for (const [v, label] of versions) {
     const o = document.createElement('option');
@@ -328,9 +332,10 @@ function swapCompareVersion() {
 // ---------- dimension ----------
 function buildDimSelect() {
   const sel = $('#dimSel');
-  for (const [v, label] of DIMENSIONS) {
+  for (const [v, , key] of DIMENSIONS) {
     const o = document.createElement('option');
-    o.value = v; o.textContent = label;
+    // data-i18n keeps the option translated when the language changes
+    o.value = v; o.textContent = t(key); o.dataset.i18n = key;
     sel.appendChild(o);
   }
   sel.value = String(world.dim);
@@ -353,6 +358,7 @@ function setDimension(dim) {
   // criteria and layers reference biomes/structures of the old dimension: rebuild
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
+  collapseCritSections();
   const presetSel = $('#presetSel');
   if (presetSel) presetSel.value = '';   // criteria no longer match any preset
   addMainBiomeRow();
@@ -416,7 +422,7 @@ function draw() {
   // named zone annotations sit right above the tiles, under every marker
   drawZones(W, H);
 
-  drawStructLayers(W, H);
+  drawStructLayers(ctx, W, H, (tg) => tg.points);
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
@@ -446,12 +452,16 @@ function draw() {
   if (cmpState.on) drawCompare();
 }
 
-// structure / slime layers (only points in view)
-function drawStructLayers(W, H) {
-  for (const t of structToggles) {
-    if (!t.on || !t.points) continue;
-    if (t.slime) drawSlimeLayer(t.points, W, H);
-    else drawStructMarkers(t, W, H);
+// structure / slime layers (only points in view); the same toggles drive
+// both panes — `pointsOf` picks the per-pane dataset (seed-A points live on
+// the toggle, seed-B points in the compare store) and `g` the target canvas
+function drawStructLayers(g, W, H, pointsOf) {
+  for (const tg of structToggles) {
+    if (!tg.on) continue;
+    const points = pointsOf(tg);
+    if (!points) continue;
+    if (tg.slime) drawSlimeLayer(g, points, W, H);
+    else drawStructMarkers(g, tg.color, points, W, H);
   }
 }
 
@@ -696,22 +706,22 @@ function drawMinimap() {
   c.strokeRect(r.x, r.y, r.w, r.h);
 }
 
-function drawStructMarkers(t, W, H) {
-  ctx.fillStyle = t.color; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1;
-  for (const [x, z] of t.points) {
-    const sx = w2sx(x), sy = w2sy(z);
+function drawStructMarkers(g, color, points, W, H) {
+  g.fillStyle = color; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 1;
+  for (const [x, z] of points) {
+    const { x: sx, y: sy } = worldToScreen(view, W, H, x, z);
     if (sx < -8 || sy < -8 || sx > W + 8 || sy > H + 8) continue;
-    ctx.beginPath(); ctx.rect(sx - 3, sy - 3, 6, 6); ctx.fill(); ctx.stroke();
+    g.beginPath(); g.rect(sx - 3, sy - 3, 6, 6); g.fill(); g.stroke();
   }
 }
 // slime chunks render as chunk-sized overlay squares rather than fixed markers
-function drawSlimeLayer(points, W, H) {
+function drawSlimeLayer(g, points, W, H) {
   const size = 16 / view.bpp;
-  ctx.fillStyle = 'rgba(111,206,78,.4)'; ctx.strokeStyle = 'rgba(30,80,20,.7)'; ctx.lineWidth = 1;
+  g.fillStyle = 'rgba(111,206,78,.4)'; g.strokeStyle = 'rgba(30,80,20,.7)'; g.lineWidth = 1;
   for (const [x, z] of points) {
-    const sx = w2sx(x), sy = w2sy(z);
+    const { x: sx, y: sy } = worldToScreen(view, W, H, x, z);
     if (sx < -size || sy < -size || sx > W || sy > H) continue;
-    ctx.beginPath(); ctx.rect(sx, sy, size, size); ctx.fill(); ctx.stroke();
+    g.beginPath(); g.rect(sx, sy, size, size); g.fill(); g.stroke();
   }
 }
 
@@ -845,16 +855,15 @@ function requestMinimap(delay = 400) {
   }, delay);
 }
 function requestStructures() {
-  const active = structToggles.filter((t) => t.on);
-  if (!active.length) return;
-  const W = canvas.width / dpr, H = canvas.height / dpr;
-  const m = 200 * view.bpp; // small margin
-  send({
-    type: 'structures', reqId: reqSeq++, seed: world.seed, mc: world.mc, large: world.large, dim: world.dim,
-    types: active.map((t) => t.type),
-    x0: Math.floor(s2wx(0) - m), z0: Math.floor(s2wz(0) - m),
-    x1: Math.ceil(s2wx(W) + m), z1: Math.ceil(s2wz(H) + m)
-  });
+  const types = structToggles.filter((tg) => tg.on).map((tg) => tg.type);
+  if (!types.length) return;
+  send(structuresRequestFor(reqSeq++, world, types, mainStructRect()));
+  requestCompareStructures(types);
+}
+// query bounds of the main canvas, also used by the compare pane: both
+// panes share the viewport, so the same rect (same budget) covers both
+function mainStructRect() {
+  return structQueryRect(view, canvas.width / dpr, canvas.height / dpr);
 }
 
 // ---------- pan / zoom ----------
@@ -1012,6 +1021,8 @@ let cmpGen = 0, cmpRefillTimer = null;
 const cmpTileCache = createTileCache(TILE_GRID_CACHE_MAX);
 const cmpPendingTiles = new Map();   // in-flight compare tile keys -> generation
 let cmpTileQueue = [];
+let cmpStructReq = 0;                // last structure listing sent to the compare worker
+const cmpStructPoints = new Map();   // seed-B structure points: type -> [[x, z], ...]
 const cmpCanvas = $('#cmpMap'), cmpCtx = cmpCanvas.getContext('2d');
 
 function cmpWorld() { return compareWorldFor(world, cmpState.seed); }
@@ -1025,7 +1036,8 @@ function ensureCmpWorker() {
     const d = e.data;
     if (d.type === 'fatal') { showFatal(d.message); return; }
     if (d.type === 'ready') { engineUp(cmpWorker); return; }
-    if (d.type === 'gridTile') onCmpGridTile(d);
+    if (d.type === 'gridTile') { onCmpGridTile(d); return; }
+    if (d.type === 'structures') onCmpStructures(d);
   };
   if (altPalette) post(cmpWorker, { type: 'palette', alt: true });
 }
@@ -1053,6 +1065,19 @@ function pumpCmpTileQueue() {
     cmpPendingTiles.set(msg.key, msg.gen);
     post(cmpWorker, msg);
   }
+}
+// structure listing of the compare pane (#261): same protocol as the main
+// map but computed for seed B on the dedicated worker; called by
+// requestStructures (shared toggles) and when the compare seed changes
+function requestCompareStructures(types = structToggles.filter((tg) => tg.on).map((tg) => tg.type)) {
+  if (!cmpState.on || !types.length) return;
+  cmpStructReq = reqSeq++;
+  post(cmpWorker, structuresRequestFor(cmpStructReq, cmpWorld(), types, mainStructRect()));
+}
+function onCmpStructures(d) {
+  if (d.reqId !== cmpStructReq) return;   // stale (older view or seed)
+  for (const g of d.groups) cmpStructPoints.set(g.type, g.points);
+  drawCompare();
 }
 // progressive checkerboard of the compare pane, center-first like the main map
 function requestCompareTiles(bump = true) {
@@ -1096,6 +1121,10 @@ function drawCompare() {
     const p = worldToScreen(view, W, H, e.originX, e.originZ);
     cmpCtx.drawImage(e.canvas, p.x, p.y, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
   }
+  // active structure layers, computed for seed B (the shared toggles apply
+  // to both panes); personal overlays (pins, favorites, markers, zones) are
+  // tied to seed A and stay on the main map only
+  drawStructLayers(cmpCtx, W, H, (tg) => cmpStructPoints.get(tg.type));
   // center crosshair mirrors the main map: the shared center stays visible
   cmpCtx.strokeStyle = curTheme === 'light' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
   cmpCtx.lineWidth = 1;
@@ -1119,6 +1148,7 @@ function setCompareMode(on, seed) {
     cmpWorker.terminate();
     cmpWorker = null;
     cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
+    cmpStructPoints.clear();
     clearTimeout(cmpRefillTimer);
   }
   resize();   // the map halves changed size; redraws and re-requests both panes
@@ -1127,8 +1157,10 @@ function setCompareMode(on, seed) {
 function applyCompareSeed() {
   cmpState = enterCompare(cmpState, $('#cmpSeed').value, world.seed);
   $('#cmpSeed').value = cmpState.seed;
+  cmpStructPoints.clear();   // points of the previous compare seed
   drawCompare();
   requestCompareTiles();
+  requestCompareStructures();
 }
 // pan/zoom on the compare canvas drives the shared viewport, so the main
 // map follows (draw() repaints both panes; requestRender() refills both)
@@ -1264,6 +1296,15 @@ function addRow(container, parts) {
   rm.onclick = () => row.remove();
   row.appendChild(rm);
   container.appendChild(row);
+  // optional sections are collapsed by default (#269): any clause added here
+  // (by hand, permalink, preset, history or import) reveals its section
+  const sec = container.closest('details.critsec');
+  if (sec) sec.open = true;
+}
+// Collapse the optional criteria sections back down (#269); the addRow calls
+// that follow a clear re-open exactly the sections that receive clauses.
+function collapseCritSections() {
+  document.querySelectorAll('#criteriaCard details.critsec').forEach((d) => { d.open = false; });
 }
 function addMainBiomeRow(biome) {
   addRow($('#mainBiomes'), [aria(mainBiomeSelect(biome), 'ariaBiome')]);
@@ -1727,6 +1768,9 @@ function onSearchResult(d) {
   searchInfo.textContent = pins.length > 1 ? t('foundMany', { n: pins.length, ms: d.ms }) : t('foundOne', { ms: d.ms });
   searchInfo.className = 'info ok';
   renderResultsList();
+  // #268: the list lives well below #searchInfo in the panel; bring it into
+  // view after a user-launched search (scroll only, never steal focus)
+  resultsEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   selectPin(0);
 }
 // displayed order: as searched, or closest-to-spawn first (Overworld only)
@@ -1855,7 +1899,7 @@ function buildHistList() {
     return;
   }
   for (const h of searchHistory) {
-    const dimName = (DIMENSIONS.find(([v]) => v === h.dim) || [0, 'Overworld'])[1];
+    const dimName = t((DIMENSIONS.find(([v]) => v === h.dim) || DIMENSIONS[0])[2]);
     const btn = document.createElement('button');
     btn.className = 'hist mono';
     btn.textContent = `${h.seed} · ${dimName} · ${h.cx}, ${h.cz}`;
@@ -2080,7 +2124,12 @@ function buildStructToggleUI() {
     const lbl = document.createElement('span');
     lbl.dataset.i18n = tg.labelKey; lbl.textContent = t(tg.labelKey);
     row.append(input, dot, lbl);
-    input.onchange = (e) => { tg.on = e.target.checked; if (tg.on) requestStructures(); else { tg.points = null; draw(); } };
+    input.onchange = (e) => {
+      tg.on = e.target.checked;
+      if (tg.on) { requestStructures(); return; }
+      // both panes drop the layer at once (compare keeps no stale points)
+      tg.points = null; cmpStructPoints.delete(tg.type); draw();
+    };
     box.appendChild(row);
   });
 }
@@ -2419,6 +2468,7 @@ function readHash() {
 function applyCriteria(raw) {
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
+  collapseCritSections();
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
   if (!c) return;
@@ -2571,6 +2621,41 @@ function initTheme() {
   if (altPalette) applyPalette(true, false);
 }
 
+// ---------- "⋯" overflow menu (#266) ----------
+// Secondary topbar actions (export, share, compare, language, theme…) live
+// in a keyboard-accessible popover of native controls, so the main topbar
+// never overflows horizontally. On small screens the world options (Large
+// Biomes, Java version, dimension) relocate into the menu too — the nodes
+// themselves move, so every control keeps its id and its handlers.
+function setMoreMenu(open) {
+  $('#moreMenu').hidden = !open;
+  $('#moreBtn').setAttribute('aria-expanded', String(open));
+}
+function placeWorldOpts(compact) {
+  const opts = $('#worldOpts');
+  if (compact) $('#menuWorldSlot').append(opts);
+  else $('#loadBtn').before(opts);
+}
+function initMoreMenu() {
+  const btn = $('#moreBtn'), menu = $('#moreMenu');
+  btn.onclick = () => setMoreMenu(menu.hidden);
+  // a click/tap anywhere else dismisses the menu
+  document.addEventListener('pointerdown', (e) => {
+    const t = e.target instanceof Node ? e.target : null;
+    if (!menu.hidden && !(t && (menu.contains(t) || btn.contains(t)))) setMoreMenu(false);
+  });
+  // Escape from inside the menu closes it and returns focus to its button
+  menu.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    setMoreMenu(false);
+    btn.focus();
+  });
+  const mq = window.matchMedia('(max-width:820px)');
+  mq.addEventListener('change', () => placeWorldOpts(mq.matches));
+  placeWorldOpts(mq.matches);
+}
+
 // ---------- first-visit guided tour (#229) ----------
 // DOM glue over the pure logic in tour.js: overlay + highlight ring + bubble
 // positioned next to the real UI elements, keyboard-driven (Tab trapped in
@@ -2588,6 +2673,7 @@ function endTour() {
   window.removeEventListener('resize', tourReposition);
   tourUi.overlay.remove(); tourUi.ring.remove(); tourUi.bubble.remove();
   tourUi = null;
+  setMoreMenu(false);   // step 4 may have opened the "⋯" menu (#266)
   markTourSeen();
 }
 function tourReposition() {
@@ -2608,6 +2694,8 @@ function tourReposition() {
 }
 function tourShowStep(step) {
   tourUi.step = step;
+  // targets living in the "⋯" menu (share link) need the menu open (#266)
+  setMoreMenu($('#moreMenu').contains(document.querySelector(TOUR_STEPS[step].target)));
   tourUi.text.textContent = t(TOUR_STEPS[step].key);
   tourUi.counter.textContent = t('tourProgress', { n: step + 1, t: TOUR_STEPS.length });
   tourUi.next.textContent = t(isLastStep(step, TOUR_STEPS.length) ? 'tourDone' : 'tourNext');
@@ -2666,6 +2754,7 @@ function closeTopmost() {
   const help = $('#helpDlg'), gallery = $('#galleryDlg');
   if (help.open) { help.close(); return; }
   if (gallery.open) { gallery.close(); return; }
+  if (!$('#moreMenu').hidden) { setMoreMenu(false); return; }
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
   if (sel.on) setSelOn(false);
@@ -2878,6 +2967,7 @@ async function init() {
   $('#tourReplay').onclick = () => { $('#helpDlg').close(); startTour(); };
   $('#galleryBtn').onclick = openGallery;
   $('#galleryClose').onclick = () => $('#galleryDlg').close();
+  initMoreMenu();
   buildDimSelect();
   buildFavList();
   initTheme();
@@ -2898,14 +2988,14 @@ async function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
 }
-function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); hidePopup(); buildFavList(); buildMarkerList(); }
+function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); hidePopup(); buildFavList(); buildMarkerList(); }
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
 Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
   zonesOnMap: () => zonesFor(userZones, world),
-  cmpTileCache, cmpPendingTiles, compareOn: () => cmpState.on,
+  cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
 });
 await init();

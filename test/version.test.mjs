@@ -4,7 +4,7 @@ import { APP_VERSION } from '../version.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { stampAppVersion, stampDir } from '../scripts/app-version.js';
-import { gitShortCommit } from '../scripts/app-version.js';
+import { gitShortCommit, resolveCommit } from '../scripts/app-version.js';
 
 test('the checked-in version.js is the dev placeholder', () => {
   assert.deepStrictEqual(APP_VERSION, { version: 'dev', commit: '' });
@@ -26,6 +26,22 @@ test('stampDir stamps a copy of version.js from package.json', () => {
   assert.strictEqual(version, pkg.version);
   const stamped = fs.readFileSync(path.join(dir, 'version.js'), 'utf8');
   assert.ok(stamped.includes(`version: '${pkg.version}'`));
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('resolveCommit falls back to a validated GIT_COMMIT-style value', () => {
+  const dir = fs.mkdtempSync(path.resolve(import.meta.dirname, '..', '.tmp-swv-'));
+  const sha = 'b'.repeat(40);
+  // a real checkout wins over the environment fallback
+  fs.writeFileSync(path.join(dir, 'HEAD'), sha + '\n');
+  assert.strictEqual(resolveCommit(dir, 'c'.repeat(40)), sha.slice(0, 7));
+  // no checkout: the env value is used, but only if it looks like a sha
+  const absent = path.join(dir, 'absent');
+  assert.strictEqual(resolveCommit(absent, 'c'.repeat(40)), 'c'.repeat(7));
+  assert.strictEqual(resolveCommit(absent, 'abc1234'), 'abc1234');
+  assert.strictEqual(resolveCommit(absent, 'not a sha'), '');
+  assert.strictEqual(resolveCommit(absent, ''), '');
+  assert.strictEqual(resolveCommit(absent, undefined), '');
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

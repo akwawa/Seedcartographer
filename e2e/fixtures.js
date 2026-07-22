@@ -14,3 +14,30 @@ export const test = base.extend({
   }
 });
 export { expect };
+
+// The secondary topbar actions (export, share, compare, language, theme…)
+// live in the "⋯" overflow menu (#266). Shared helpers so every suite
+// reveals/dismisses the menu the same way instead of duplicating the dance.
+export async function openMoreMenu(page) {
+  if (await page.locator('#moreMenu').isHidden()) await page.click('#moreBtn');
+  await expect(page.locator('#moreMenu')).toBeVisible();
+}
+export async function closeMoreMenu(page) {
+  if (await page.locator('#moreMenu').isVisible()) await page.click('#moreBtn');
+  await expect(page.locator('#moreMenu')).toBeHidden();
+}
+// language switches go through the menu; it stays open for chained switches
+export async function selectLang(page, lang) {
+  await openMoreMenu(page);
+  await page.selectOption('#langSel', lang);
+}
+
+// The optional criteria sections are native <details> collapsed while empty
+// (#269): reveal one (by any selector inside it, e.g. its "+ Add criterion"
+// button) before interacting with its controls, like a user opening it first.
+export async function openCritSection(page, selector) {
+  await page.$eval(selector, (el) => {
+    const d = el.closest('details.critsec');
+    if (d) d.open = true;
+  });
+}

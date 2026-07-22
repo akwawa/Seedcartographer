@@ -17,7 +17,8 @@ test('"?" opens the help dialog and Escape closes it', async ({ page }) => {
   await page.locator('#map').focus();
   await page.keyboard.press('?');
   await expect(page.locator('#helpDlg')).toBeVisible();
-  await expect(page.locator('#helpDlg .help-keys li')).toHaveCount(6);
+  // the shortcut list only — the map-tools list (#271) also uses .help-keys
+  await expect(page.locator('#helpDlg .help-keys:not(.help-tools) li')).toHaveCount(6);
   await page.keyboard.press('Escape');
   await expect(page.locator('#helpDlg')).toBeHidden();
 });

@@ -16,6 +16,110 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Vérificateur d'accessibilité WCAG strict dans la CI : nouvelle spec e2e
+  `e2e/a11y.spec.js` (axe-core via @axe-core/playwright) avec tous les tags
+  (`wcag2a`, `wcag2aa`, `wcag2aaa`, `wcag21a`, `wcag21aa`, `wcag22aa`,
+  `best-practice`) et zéro violation tolérée, sur chaque état significatif :
+  chargement en thèmes sombre et clair, menu « ⋯ », dialogue d'aide, galerie,
+  panneau critères ouvert, résultats + popup, mode compare, tour guidé et
+  viewport mobile 390×844. Corrections révélées par le mode strict : le titre
+  de la topbar devient le `<h1>` de la page, le bouton de recherche quitte le
+  flux sticky pour un pied de panneau opaque qui n'obscurcit plus les
+  critères (WCAG 2.5.8), cibles tactiles ≥ 24 px (sélecteurs de mode, boutons
+  ×), et le survol des boutons primaires fonce (`--lapis-deep`) au lieu
+  d'éclaircir pour garder un contraste ≥ 4,5:1. Seule exception documentée :
+  la règle AAA `color-contrast-enhanced` (7:1), désactivée avec justification
+  dans la spec. (#278)
+
+### Modifié
+- Découvrabilité : le sélecteur de comparaison de versions `#cmpVer` affiche
+  une première option explicite traduite (« Comparer avec… ») au lieu d'un
+  « — » nu ; les infobulles/aria des contrôles indiquent leur raccourci
+  clavier — règle (R), permutation de version (V), aide (?), aller aux
+  coordonnées (G), recherche (Entrée) — via i18n ; le dialogue d'aide gagne
+  une section « Outils carte » décrivant règle, marqueur, sélection de zone
+  et zone annotée, traduite dans les 10 langues. Gardes : test i18n de
+  présence des raccourcis dans chaque locale, e2e (placeholder fr non vide,
+  « (R) » dans le title de la règle, section outils carte dans l'aide). (#271)
+- Panneau de critères allégé : les cinq sections optionnelles (biomes
+  adjacents, part de biome, motifs géographiques, structures proches, paires
+  de structures) deviennent des `<details>`/`<summary>` natifs repliés par
+  défaut lorsqu'ils sont vides ; toute section recevant une clause (ajout
+  manuel, permalien, preset, historique ou import) s'ouvre automatiquement.
+  Le bouton « Chercher dans cette zone » est rendu collant en bas du panneau
+  (fond opaque) et reste visible au chargement — l'étape 3 du tour guidé
+  pointe donc un bouton à l'écran. Gardes e2e : bouton visible sans
+  défilement à 1280×900 et 390×844, sections repliées/dépliées selon leur
+  contenu. (#269)
+- Topbar responsive : les actions secondaires (export PNG avec étiquette
+  visible pour la taille, lien de partage, comparaison de seeds, comparaison
+  de versions, langue, thème, palette, galerie) sont regroupées dans un menu
+  « ⋯ » accessible au clavier ; la topbar principale garde l'essentiel
+  (marque, seed + chargement, badge hors-ligne, aide) et ne provoque plus
+  aucun défilement horizontal de la page (garde e2e à 1280/1440/1920/390 px).
+  Sur mobile, les options de monde (Large Biomes, version Java, dimension)
+  rejoignent le menu pour une topbar compacte, et le tour guidé ouvre le
+  menu à l'étape du lien de partage. (#266)
+
+### Corrigé
+- i18n : les derniers libellés restés en anglais sont traduits dans les
+  10 langues — titre de section « Presets » (fr « Préréglages », es
+  « Preajustes »), options du sélecteur de dimension `#dimSel` (terminologie
+  Minecraft officielle par langue : de « Oberwelt/Nether/Ende », ru « Обычный
+  мир/Нижний мир/Край », ja/zh-CN incluses ; l'anglais est conservé là où la
+  communauté l'utilise, ex. fr « Overworld »), libellé « Java » et infobulle
+  « Generation version » du sélecteur de version, infobulle du bouton de
+  thème et des inputs d'import (CSV/JSON/profil), nom de dimension dans
+  l'historique des recherches. Gardes : test Node (clés présentes dans les
+  10 langues ; tout attribut `title` d'index.html porte `data-i18n-title`)
+  et e2e (libellés français/allemands attendus). (#270)
+- Après une recherche réussie, la liste des résultats est amenée dans la zone
+  visible du panneau (`scrollIntoView` fluide, sans vol de focus) au lieu de
+  rester ~1300 px sous le message « N locations found ». Sur mobile, la popup
+  résultat (Copy /tp) est désormais rendue au-dessus des contrôles carte
+  (toggles Grid/Nether, curseur Y) : z-index dédié et ancrage en bas du
+  canvas, largeur bornée au viewport. Gardes e2e : liste visible dans le
+  panneau après recherche (desktop) ; popup entièrement dans le viewport
+  390×844 avec bouton /tp réellement cliquable (`elementFromPoint`). (#268)
+- Dialogues (aide, galerie) utilisables sur mobile : leur largeur est bornée
+  à la fenêtre (`min(540px, calc(100vw - 2rem))`, 920 px pour la galerie),
+  leur hauteur est limitée avec défilement interne, et ils restent centrés
+  dans la fenêtre visible. Le focus clavier est désormais visible sur les
+  boutons et liens des dialogues (contour 2 px identique au reste de
+  l'interface). Garde e2e mobile 390×844 : dialogue d'aide entièrement dans
+  le viewport, contenu défilable et anneau de focus effectivement peint. (#267)
+- Mode compare : les couches de structures activées (villages, temples,
+  slime chunks…) s'affichent désormais aussi sur la carte de droite,
+  calculées pour la seed B via son worker dédié, avec les mêmes toggles que
+  la carte principale ; les surcouches personnelles (pins de résultats,
+  favoris, marqueurs, zones) restent liées à la seed A sur la carte
+  principale, et la sortie du mode libère les points de la seed B. (#261)
+- Image Docker : la version affichée dans le dialogue d'aide restait le
+  placeholder « dev » car `version.js` était copié tel quel sans passer par
+  les scripts d'estampillage. Le Dockerfile estampille désormais la version
+  (et la version de cache du service worker) dans un stage de build dédié,
+  si bien que toute image — construite par la CI ou localement — affiche la
+  version releasée comme GitHub Pages ; la CI injecte le commit via
+  l'argument de build `GIT_COMMIT`. (#260)
+
+### Sécurité
+- Améliorations du score OpenSSF Scorecard : les workflows `docker.yml`,
+  `release-please.yml` et `release.yml` déclarent désormais un bloc
+  `permissions: contents: read` au niveau du workflow, les scopes d'écriture
+  (releases, pull requests) étant réduits aux seuls jobs qui en ont besoin ;
+  les images de base du Dockerfile (`node:24-alpine` et
+  `nginxinc/nginx-unprivileged:alpine`) sont épinglées par digest SHA-256
+  (mis à jour par Dependabot) ; un champ `overrides` npm force les versions
+  corrigées des dépendances transitives vulnérables de `@lhci/cli` et
+  `typed-rest-client` (`tmp` ≥ 0.2.6, `uuid` ≥ 11.1.1, `qs` ≥ 6.15.2 —
+  `npm audit` repasse à zéro vulnérabilité) ; et des tests par propriétés
+  (fast-check, seed fixée pour des runs CI déterministes) couvrent les
+  invariants des modules purs `seed.js`, `keys.js`, `compare.js` et
+  `userzones.js` dans `test/property.test.mjs`. (#280)
+
 ## [0.11.0](https://github.com/akwawa/Seedcartographer/compare/v0.10.0...v0.11.0) (2026-07-20)
 
 ### Ajouté

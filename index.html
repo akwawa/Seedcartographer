@@ -15,43 +15,66 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><span class="mark"></span>Seedcartographer</div>
+  <h1 class="brand"><span class="mark"></span>Seedcartographer</h1>
   <output id="offlineBadge" class="offline-badge" hidden data-i18n="offlineBadge">Offline</output>
   <div class="world">
     <label class="lbl"><span data-i18n="seed">Seed</span>
       <input id="seed" class="mono" spellcheck="false" autocomplete="off">
     </label>
-    <label class="chk"><input type="checkbox" id="large"> <span data-i18n="largeBiomes">Large Biomes</span></label>
-    <label class="lbl">Java
-      <select id="mcver" class="ver" title="Generation version"></select>
-      <span class="opt">vs</span>
-      <select id="cmpVer" class="ver" title="Compare with version" data-i18n-title="cmpVerTitle" aria-label="Compare with version" data-i18n-aria="cmpVerTitle"></select>
-      <button id="cmpSwap" class="btn tiny" hidden title="Swap generation version (V)" data-i18n-title="cmpSwapTitle" aria-label="Swap generation version" data-i18n-aria="cmpSwapTitle">⇄</button>
-    </label>
-    <label class="lbl"><span data-i18n="dimension">Dimension</span>
-      <select id="dimSel" class="ver"></select>
-    </label>
+    <div id="worldOpts" class="worldopts">
+      <label class="chk"><input type="checkbox" id="large"> <span data-i18n="largeBiomes">Large Biomes</span></label>
+      <label class="lbl"><span data-i18n="verJavaLbl">Java</span>
+        <select id="mcver" class="ver" title="Generation version" data-i18n-title="mcverTitle"></select>
+      </label>
+      <label class="lbl"><span data-i18n="dimension">Dimension</span>
+        <select id="dimSel" class="ver"></select>
+      </label>
+    </div>
     <button id="loadBtn" class="btn" data-i18n="loadSeed">Load seed</button>
-    <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
   </div>
-  <select id="pngSizeSel" class="ver pngsize" title="PNG export size" aria-label="PNG export size" data-i18n-title="exportSizeTitle" data-i18n-aria="exportSizeTitle">
-    <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
-    <option value="2048">2048 px</option>
-    <option value="4096">4096 px</option>
-  </select>
-  <button id="pngBtn" class="btn ghost" data-i18n="exportPng">Export PNG</button>
-  <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
-  <button id="shareBtn" class="btn ghost" data-i18n="shareLink">Share link</button>
-  <select id="langSel" class="ver" title="Language" aria-label="Language" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
-  <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
-  <button id="themeBtn" class="btn tiny" title="Theme">☀</button>
-  <button id="paletteBtn" class="btn tiny palettebtn" aria-pressed="false" title="High-visibility colors" data-i18n-title="paletteTitle" data-i18n-aria="paletteTitle" aria-label="High-visibility colors">🎨</button>
-  <button id="galleryBtn" type="button" class="btn tiny gallerylink" data-i18n="galleryLink">Gallery</button>
-  <button id="helpBtn" class="btn tiny" data-i18n-title="helpTitle" title="Help">?</button>
+  <div class="topactions">
+    <button id="panelToggle" class="btn tiny panel-toggle" aria-expanded="true" aria-controls="panel" data-i18n="panelToggle">Search panel</button>
+    <button id="moreBtn" class="btn tiny" aria-expanded="false" aria-controls="moreMenu" title="More actions" data-i18n-title="moreMenuTitle" aria-label="More actions" data-i18n-aria="moreMenuTitle">⋯</button>
+    <button id="helpBtn" class="btn tiny" data-i18n-title="helpBtnTitle" title="Help (?)">?</button>
+    <div id="moreMenu" class="moremenu" hidden>
+      <div id="menuWorldSlot" class="menuworld"></div>
+      <div class="menurow">
+        <label class="menulbl" for="pngSizeSel" data-i18n="exportSizeTitle">PNG export size</label>
+        <select id="pngSizeSel" class="ver" title="PNG export size" data-i18n-title="exportSizeTitle">
+          <option value="view" data-i18n="exportSizeCurrent" selected>Current size</option>
+          <option value="2048">2048 px</option>
+          <option value="4096">4096 px</option>
+        </select>
+      </div>
+      <button id="pngBtn" class="btn" data-i18n="exportPng">Export PNG</button>
+      <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
+      <button id="shareBtn" class="btn" data-i18n="shareLink">Share link</button>
+      <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
+      <div class="menurow">
+        <label class="menulbl" for="cmpVer" data-i18n="cmpVerTitle">Compare with version</label>
+        <span class="vsgroup">
+          <select id="cmpVer" class="ver" title="Compare with version" data-i18n-title="cmpVerTitle"></select>
+          <button id="cmpSwap" class="btn tiny" hidden title="Swap generation version (V)" data-i18n-title="cmpSwapTitle" aria-label="Swap generation version" data-i18n-aria="cmpSwapTitle">⇄</button>
+        </span>
+      </div>
+      <div class="menurow">
+        <label class="menulbl" for="langSel" data-i18n="langTitle">Language</label>
+        <select id="langSel" class="ver" title="Language" data-i18n-title="langTitle"></select>
+      </div>
+      <div class="menurow">
+        <span class="vsgroup">
+          <button id="themeBtn" class="btn tiny" title="Toggle light/dark theme" data-i18n-title="themeToggle">☀</button>
+          <button id="paletteBtn" class="btn tiny palettebtn" aria-pressed="false" title="High-visibility colors" data-i18n-title="paletteTitle" data-i18n-aria="paletteTitle" aria-label="High-visibility colors">🎨</button>
+        </span>
+        <button id="galleryBtn" type="button" class="btn tiny gallerylink" data-i18n="galleryLink">Gallery</button>
+      </div>
+    </div>
+  </div>
 </header>
 
 <main>
   <aside id="panel" class="panel">
+    <div class="panel-scroll">
     <section id="criteriaCard" class="card">
       <h2 data-i18n="findPlace">Find a place</h2>
       <p class="lede" data-i18n="lede">Set the conditions, then search the area you're looking at. Results are spots in this seed.</p>
@@ -72,43 +95,39 @@
         <button id="addMainBiome" class="btn tiny" data-i18n="addBiome">+ Add biome</button>
       </div>
 
-      <div class="field">
-        <label><span data-i18n="adjacentBiomes">Adjacent biomes</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="adjMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="adjacentBiomes">Adjacent biomes</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="adjMode" class="mode" aria-label="Adjacent biomes" data-i18n-aria="adjacentBiomes"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="adjClauses" class="crit"></div>
         <button id="addAdj" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <label><span data-i18n="pctBiomes">Biome share</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="pctMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="pctBiomes">Biome share</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="pctMode" class="mode" aria-label="Biome share" data-i18n-aria="pctBiomes"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="pctClauses" class="crit"></div>
         <button id="addPct" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <label><span data-i18n="shapePatterns">Geographic patterns</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="shapeMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="shapePatterns">Geographic patterns</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="shapeMode" class="mode" aria-label="Geographic patterns" data-i18n-aria="shapePatterns"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="shapeClauses" class="crit"></div>
         <button id="addShape" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <label><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span>
-          <select id="structMode" class="mode"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
-        </label>
+      <details class="field critsec">
+        <summary><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <select id="structMode" class="mode" aria-label="Nearby structures" data-i18n-aria="nearbyStructures"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
         <div id="structClauses" class="crit"></div>
         <button id="addStruct" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
-      <div class="field">
-        <div class="crit-lbl"><span data-i18n="pairStructures">Structure pairs</span> <span class="opt" data-i18n="optional">optional</span></div>
+      <details class="field critsec">
+        <summary><span data-i18n="pairStructures">Structure pairs</span> <span class="opt" data-i18n="optional">optional</span></summary>
         <div id="pairClauses" class="crit"></div>
         <button id="addPair" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
-      </div>
+      </details>
 
       <div class="field two">
         <div><label for="range" data-i18n="searchRadius">Search radius</label><input id="range" class="num" type="number" min="500" step="500" value="5000"></div>
@@ -120,9 +139,6 @@
         <div><label for="surfMax"><span data-i18n="surfaceMax">Surface Y max</span> <span class="opt" data-i18n="optional">optional</span></label><input id="surfMax" class="num" type="number" step="1" min="-64" max="320"></div>
       </div>
 
-      <button id="searchBtn" class="btn primary" data-i18n="searchBtn">Search this area</button>
-      <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
-      <output id="searchInfo" class="info"></output>
     </section>
 
     <section id="rareCard" class="card">
@@ -165,7 +181,7 @@
       <div class="export">
         <button id="importCsv" class="btn tiny" data-i18n="importCsv">Import CSV</button>
         <label for="importFile" hidden data-i18n="importCsv">Import CSV</label>
-        <input id="importFile" type="file" accept=".csv,text/csv" title="Import CSV" hidden>
+        <input id="importFile" type="file" accept=".csv,text/csv" title="Import CSV" data-i18n-title="importCsv" hidden>
       </div>
       <label id="sortCtl" class="sortctl" hidden><span data-i18n="sortResults">Sort</span>
         <select id="sortSel">
@@ -192,7 +208,7 @@
         <button id="markerExport" class="btn tiny" data-i18n="markerExport">Export JSON</button>
         <button id="markerImport" class="btn tiny" data-i18n="markerImport">Import JSON</button>
         <label for="markerImportFile" hidden data-i18n="markerImport">Import JSON</label>
-        <input id="markerImportFile" type="file" accept=".json,application/json" title="Import JSON" hidden>
+        <input id="markerImportFile" type="file" accept=".json,application/json" title="Import JSON" data-i18n-title="markerImport" hidden>
       </div>
       <div id="markerList" class="favs"></div>
     </section>
@@ -204,7 +220,7 @@
         <button id="profileExport" class="btn tiny" data-i18n="profileExport">Export profile</button>
         <button id="profileImport" class="btn tiny" data-i18n="profileImport">Import profile</button>
         <label for="profileImportFile" hidden data-i18n="profileImport">Import profile</label>
-        <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" hidden>
+        <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" data-i18n-title="profileImport" hidden>
       </div>
       <output id="profileInfo" class="muted small"></output>
       <p class="muted small" data-i18n="syncLede">Or move it to another device without a file: a sync code to copy on one device and paste on the other.</p>
@@ -223,6 +239,14 @@
       <h3 data-i18n="showOnMap">Show on map</h3>
       <div id="structLayers" class="layers"></div>
     </section>
+    </div>
+    <!-- non-overlapping panel footer (#278): the search action stays always
+         visible without ever obscuring the scrollable criteria (WCAG 2.5.8) -->
+    <div class="panel-actions">
+      <button id="searchBtn" class="btn primary" data-i18n="searchBtn" title="Search the visible area (Enter)" data-i18n-title="searchBtnTitle">Search this area</button>
+      <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
+      <output id="searchInfo" class="info"></output>
+    </div>
   </aside>
 
   <div class="mapwrap">
@@ -249,9 +273,9 @@
     </label>
     <form id="gotoForm" class="goto">
       <input id="gotoInput" class="mono" placeholder="x, z" spellcheck="false" autocomplete="off" aria-label="Go to coordinates" data-i18n-aria="gotoAria">
-      <button class="btn tiny" data-i18n="gotoBtn" data-i18n-title="gotoAria" title="Go to coordinates">Go</button>
+      <button class="btn tiny" data-i18n="gotoBtn" data-i18n-title="gotoAria" title="Go to coordinates (x, z) (G)">Go</button>
     </form>
-    <button id="rulerBtn" class="btn tiny rulerbtn" title="Measure a distance" aria-label="Measure a distance" data-i18n-title="rulerTitle" data-i18n-aria="rulerTitle">📏</button>
+    <button id="rulerBtn" class="btn tiny rulerbtn" title="Measure a distance (R)" aria-label="Measure a distance (R)" data-i18n-title="rulerTitle" data-i18n-aria="rulerTitle">📏</button>
     <button id="markerBtn" class="btn tiny markerbtn" title="Place a marker (click the map)" aria-label="Place a marker" data-i18n-title="markerTitle" data-i18n-aria="markerTitle">📍</button>
     <button id="selBtn" class="btn tiny selbtn" title="Select an area (drag on the map)" aria-label="Select an area" data-i18n-title="selTitle" data-i18n-aria="selTitle">⬚</button>
     <button id="zoneBtn" class="btn tiny annotbtn" title="Draw a zone (drag on the map)" aria-label="Draw a zone" data-i18n-title="zoneTitle" data-i18n-aria="zoneTitle">▧</button>
@@ -290,6 +314,13 @@
     <li><kbd>R</kbd> <span data-i18n="keyRuler">toggle the ruler tool</span></li>
     <li><kbd>?</kbd> <span data-i18n="keyHelp">open this help</span></li>
     <li><kbd>Esc</kbd> <span data-i18n="keyEsc">close the active dialog, tool or popup</span></li>
+  </ul>
+  <h3 data-i18n="helpToolsTitle">Map tools</h3>
+  <ul class="help-keys help-tools">
+    <li><span class="help-tool-icon" aria-hidden="true">📏</span> <span data-i18n="helpToolRuler">ruler — measure a distance in blocks (two clicks)</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">📍</span> <span data-i18n="helpToolMarker">marker — pin a named point on the map</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">⬚</span> <span data-i18n="helpToolSel">selection — select an area to export a PNG or copy its coordinates</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">▧</span> <span data-i18n="helpToolZone">zone — draw a named colored zone, kept in your browser</span></li>
   </ul>
   <h3 data-i18n="helpLimitsTitle">Known limits</h3>
   <p data-i18n="helpLimits"></p>

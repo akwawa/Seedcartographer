@@ -1,5 +1,5 @@
 /* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
-import { test, expect } from './fixtures.js';
+import { test, expect, openMoreMenu, closeMoreMenu, selectLang, openCritSection } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
 test.beforeEach(({ page }) => {
@@ -32,6 +32,29 @@ test('app boots: engine ready, map rendered, demo criteria populated', async ({ 
     for (let i = 0; i < d.length; i += 4) if (d[i] !== 12 || d[i + 1] !== 16 || d[i + 2] !== 22) return true;
     return false;
   });
+});
+
+// #269: optional criteria sections are collapsed while empty, sections that
+// received clauses (demo defaults here) are open, and the search button is
+// visible without scrolling on desktop and phone viewports alike.
+test('criteria panel: empty sections collapsed, filled ones open, search button above the fold', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await waitForApp(page);
+  // demo criteria add an adjacency and a structure clause: their sections open
+  await expect(page.locator('#adjClauses .row').first()).toBeVisible();
+  await expect(page.locator('#structClauses .row').first()).toBeVisible();
+  // the empty optional sections stay collapsed (summary visible, body hidden)
+  for (const sec of ['#pctClauses', '#shapeClauses', '#pairClauses']) {
+    await expect(page.locator(sec)).toBeHidden();
+  }
+  await expect(page.locator('#searchBtn')).toBeInViewport();
+  // phone viewport: still no scroll needed to reach the search button
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#searchBtn')).toBeInViewport();
+  // opening a collapsed section by its summary reveals its add button
+  await page.click('details.critsec:has(#pctClauses) > summary');
+  await expect(page.locator('#addPct')).toBeVisible();
 });
 
 test('demo search finds the seed-141 spot and shows the popup', async ({ page }) => {
@@ -121,41 +144,55 @@ test('share link restores seed, criteria and modes', async ({ page, context }) =
 test('language switch translates UI and biome names live', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
-  await page.selectOption('#langSel', 'fr');
+  await selectLang(page, 'fr');
   await expect(page.locator('#searchBtn')).toHaveText('Chercher dans cette zone');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosquet de cerisiers');
-  await page.selectOption('#langSel', 'de');
+  // #270 guard: no leftover English labels in the topbar or criteria card
+  await expect(page.locator('label[for="presetSel"]')).toHaveText('Préréglages');
+  await expect(page.locator('#mcver')).toHaveAttribute('title', 'Version de génération');
+  await expect(page.locator('#themeBtn')).toHaveAttribute('title', 'Basculer entre thème clair et sombre');
+  await expect(page.locator('#importFile')).toHaveAttribute('title', 'Importer CSV');
+  await selectLang(page, 'de');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Kirschhain');
-  await page.selectOption('#langSel', 'it');
+  // dimension names follow each language's official Minecraft terminology (#270)
+  await expect(page.locator('#dimSel option')).toHaveText(['Oberwelt', 'Nether', 'Ende']);
+  await selectLang(page, 'it');
   await expect(page.locator('#searchBtn')).toHaveText('Cerca in questa area');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosco di ciliegi');
-  await page.selectOption('#langSel', 'pt');
+  await selectLang(page, 'pt');
   await expect(page.locator('#searchBtn')).toHaveText('Buscar nesta área');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Bosque de cerejeiras');
-  await page.selectOption('#langSel', 'ja');
+  await selectLang(page, 'ja');
   await expect(page.locator('#searchBtn')).toHaveText('このエリアを検索');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('桜の森');
-  await page.selectOption('#langSel', 'ru');
+  await selectLang(page, 'ru');
   await expect(page.locator('#searchBtn')).toHaveText('Искать в этой области');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Вишнёвая роща');
-  await page.selectOption('#langSel', 'pl');
+  await selectLang(page, 'pl');
   await expect(page.locator('#searchBtn')).toHaveText('Przeszukaj ten obszar');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('Wiśniowy gaj');
-  await page.selectOption('#langSel', 'zh-CN');
+  await selectLang(page, 'zh-CN');
   await expect(page.locator('#searchBtn')).toHaveText('搜索此区域');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('樱花树林');
-  // long labels (ru/pl) and ideograms must not overflow the panel horizontally
-  // long labels (ru/pl) and ideograms must not push the layout further than
-  // the widest pre-existing locale already does (the topbar overflows and is
-  // clipped by design at some widths, in every language)
+  // no locale may create a horizontal page overflow anymore (#266)
   const overflowOf = async (lang) => {
-    await page.selectOption('#langSel', lang);
+    await selectLang(page, lang);
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   };
-  let baseline = 0;
-  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt']) baseline = Math.max(baseline, await overflowOf(lang));
-  for (const lang of ['ja', 'ru', 'pl', 'zh-CN']) {
-    expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(baseline);
+  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt', 'ja', 'ru', 'pl', 'zh-CN']) {
+    expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(0);
+  }
+});
+
+// #266 guard: the topbar no longer forces a horizontal page scroll anywhere
+test('no horizontal page scroll at any supported width (#266)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  for (const width of [1920, 1440, 1280, 390]) {
+    await page.setViewportSize({ width, height: width < 800 ? 740 : 800 });
+    const over = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth);
+    expect(over, `overflow at ${width}px`).toBeLessThanOrEqual(0);
   }
 });
 
@@ -166,6 +203,7 @@ test('Nether dimension: biome list, map, search and share link work', async ({ p
   // biome rows now only offer the five Nether biomes (plus "any biome")
   await page.waitForFunction(() => document.querySelectorAll('#mainBiomes .row select option').length === 6);
   // structure criteria only offer Nether structures
+  await openCritSection(page, '#addStruct');
   await page.click('#addStruct');
   await expect(page.locator('#structClauses .row select option')).toHaveCount(3);
   await page.click('#structClauses .row .rm');
@@ -270,7 +308,7 @@ test('legend lists visible biomes and hovering an entry dims the map', async ({ 
     return c.getContext('2d').getImageData(0, 0, c.width, 1).data.join(',') !== prev;
   }, before, { timeout: 15000 });
   // language switch retranslates the legend labels in place
-  await page.selectOption('#langSel', 'fr');
+  await selectLang(page, 'fr');
   await expect(page.locator('#legend summary')).toHaveText('Légende');
 });
 
@@ -279,6 +317,7 @@ test('Export PNG downloads a snapshot of the current view', async ({ page }) => 
   await waitForApp(page);
   // wait for a rendered tile so the snapshot has content
   await page.waitForFunction(() => document.querySelectorAll('#legendList .lg').length > 0);
+  await openMoreMenu(page);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.click('#pngBtn')
@@ -305,6 +344,7 @@ test('high-resolution export downloads a 2048 px PNG with a scaled cartouche', a
     const g = hdExportGeometry({ cx: 0, cz: 0, bpp: 1 }, c.width, c.height, 2048);
     return { w: g.outW, h: g.outH + cartoucheMetrics(2048).band };
   });
+  await openMoreMenu(page);
   await page.selectOption('#pngSizeSel', '2048');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -347,6 +387,7 @@ test('theme toggle switches to light, updates theme-color and persists', async (
   await waitForApp(page);
   // dark by default (headless prefers dark is not guaranteed; force via toggle)
   const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+  await openMoreMenu(page);
   await page.click('#themeBtn');
   const flipped = theme === 'dark' ? 'light' : 'dark';
   await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
@@ -368,7 +409,11 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
   await expect(page.locator('#helpVersion')).toHaveText(/^v/);
   // the credits disclose the anonymous Umami usage statistics
   await expect(page.locator('#helpDlg')).toContainText('Umami');
-  await page.selectOption('#langSel', 'fr');
+  await page.click('#helpClose');
+  await expect(page.locator('#helpDlg')).toBeHidden();
+  // the language switch (now inside the "⋯" menu) retranslates the dialog
+  await selectLang(page, 'fr');
+  await page.click('#helpBtn');
   await expect(page.locator('#helpDlg h2')).toHaveText('Aide');
   await page.click('#helpClose');
   await expect(page.locator('#helpDlg')).toBeHidden();
@@ -377,6 +422,7 @@ test('help dialog opens, is translated live and closes', async ({ page }) => {
 test('gallery modal: thumbnail cards, clicking one applies the entry', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
+  await openMoreMenu(page);
   await page.click('#galleryBtn');
   await expect(page.locator('#galleryDlg')).toBeVisible();
   const cards = page.locator('#galleryCards .gallerycard');
@@ -475,6 +521,8 @@ test('axe-core audit: no WCAG A/AA violations in either theme', async ({ page })
   const { default: AxeBuilder } = await import('@axe-core/playwright');
   await page.goto('/');
   await waitForApp(page);
+  // the "⋯" menu content must be audited too: scan with it open (#266)
+  await openMoreMenu(page);
   for (const theme of ['dark', 'light']) {
     await page.evaluate((th) => document.documentElement.dataset.theme = th, theme);
     const results = await new AxeBuilder({ page })
@@ -501,6 +549,48 @@ test.describe('mobile', () => {
     await toggle.click();
     await expect(page.locator('#panel')).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  // #267 guard: dialogs fit the mobile viewport and keep the keyboard focus visible
+  test('help dialog fits the viewport and keeps a visible keyboard focus (#267)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await waitForApp(page);
+    await page.click('#helpBtn');
+    const dlg = page.locator('#helpDlg');
+    await expect(dlg).toBeVisible();
+    // the dialog box is entirely inside the 390x844 window
+    const box = await dlg.evaluate((d) => {
+      const r = d.getBoundingClientRect();
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(390);
+    expect(box.bottom).toBeLessThanOrEqual(844);
+    // its long content scrolls internally instead of overflowing the page
+    const scroll = await dlg.evaluate((d) => ({
+      overflowY: getComputedStyle(d).overflowY,
+      scrollable: d.scrollHeight > d.clientHeight
+    }));
+    expect(['auto', 'scroll']).toContain(scroll.overflowY);
+    expect(scroll.scrollable).toBe(true);
+    // Tab reaches a control and the focus ring is actually painted
+    await page.keyboard.press('Tab');
+    const focus = await page.evaluate(() => {
+      const el = document.activeElement;
+      const cs = getComputedStyle(el);
+      return {
+        inDialog: !!el.closest('#helpDlg'),
+        outlineWidth: cs.outlineWidth,
+        outlineStyle: cs.outlineStyle,
+        boxShadow: cs.boxShadow
+      };
+    });
+    expect(focus.inDialog).toBe(true);
+    const visible = (focus.outlineStyle !== 'none' && parseFloat(focus.outlineWidth) > 0) ||
+      focus.boxShadow !== 'none';
+    expect(visible, JSON.stringify(focus)).toBe(true);
   });
 
   test('two-finger pinch zooms the map', async ({ page }) => {
@@ -622,6 +712,7 @@ test('structure pair criterion finds village+outpost spots', async ({ page }) =>
   while (await page.locator('#structClauses .row').count()) {
     await page.click('#structClauses .row .rm');
   }
+  await openCritSection(page, '#addPair');
   await page.click('#addPair');
   const sels = page.locator('#pairClauses .row select');
   await sels.nth(0).selectOption({ label: 'Village' });
@@ -813,6 +904,7 @@ test('the high-visibility palette repaints the map and persists', async ({ page 
     return d[3] === 255;
   });
   const before = await centerPixel();
+  await openMoreMenu(page);
   await page.click('#paletteBtn');
   await expect(page.locator('#paletteBtn')).toHaveClass(/on/);
   // the tile re-renders with the remapped table: the center pixel changes
@@ -853,7 +945,8 @@ test('the A/B version compare swaps the generation and keeps the view', async ({
   });
   await expect(page.locator('#cmpSwap')).toBeHidden();
   const mainVer = await page.locator('#mcver').inputValue();
-  // arm a compare version different from the current one
+  // arm a compare version different from the current one (via the "⋯" menu)
+  await openMoreMenu(page);
   const other = await page.$eval('#cmpVer', (sel, cur) =>
     [...sel.options].map((o) => o.value).find((v) => v && v !== cur), mainVer);
   await page.selectOption('#cmpVer', other);
@@ -865,6 +958,7 @@ test('the A/B version compare swaps the generation and keeps the view', async ({
   expect(s1.x).toBe(before.x);               // view preserved
   expect(s1.z).toBe(before.z);
   await expect(page.locator('#cmpVer')).toHaveValue(mainVer);
+  await closeMoreMenu(page);
   // the V key swaps back
   await page.focus('#map');
   await page.keyboard.press('v');
@@ -950,6 +1044,7 @@ test('a biome-share criterion filters results and survives the share link', asyn
   await waitForApp(page);
   // demo criteria + "at least 20% cherry grove within 100 blocks": the spot
   // cell itself is a cherry grove, so a small disc keeps a high share
+  await openCritSection(page, '#addPct');
   await page.click('#addPct');
   const row = page.locator('#pctClauses .row');
   await row.locator('select').selectOption({ label: 'Cherry Grove' });
@@ -1019,6 +1114,7 @@ test('a geographic-pattern clause runs the search and shares', async ({ page, co
   await waitForApp(page);
   // demo criteria + "the spot is on an island of at most 500 blocks": the
   // demo cherry grove is on the mainland, so the search completes empty
+  await openCritSection(page, '#addShape');
   await page.click('#addShape');
   const row = page.locator('#shapeClauses .row');
   await row.locator('select').first().selectOption('island');
@@ -1148,8 +1244,10 @@ test('side-by-side seed compare: two renders, synced pan, clean exit (#250)', as
   await page.goto('/');
   await waitForApp(page);
   await expect(page.locator('#cmpPane')).toBeHidden();
-  // enter compare mode from the topbar with a dedicated second seed
+  // enter compare mode from the "⋯" menu with a dedicated second seed
+  await openMoreMenu(page);
   await page.click('#cmpBtn');
+  await closeMoreMenu(page);
   await expect(page.locator('#cmpPane')).toBeVisible();
   // the compare seed defaults to the main seed, then takes its own value
   await expect(page.locator('#cmpSeed')).toHaveValue('141');
@@ -1192,4 +1290,100 @@ test('side-by-side seed compare: two renders, synced pan, clean exit (#250)', as
   await page.focus('#map');
   await page.keyboard.press('ArrowLeft');
   await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+});
+
+test('compare mode: structure layers render on both panes and clean up (#261)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await openMoreMenu(page);
+  await page.click('#cmpBtn');
+  await closeMoreMenu(page);
+  await page.fill('#cmpSeed', '4242');
+  await page.press('#cmpSeed', 'Enter');
+  // both tile pipelines settle before sampling pixels
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  await page.waitForFunction(() => cmpPendingTiles.size === 0 && cmpTileCache.size() > 0);
+  // sparse checksum of a canvas: cheap, and any overlay square shifts it
+  const sum = (sel) => page.evaluate((s) => {
+    const c = document.querySelector(s);
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let acc = 0;
+    for (let i = 0; i < d.length; i += 397) acc += d[i];
+    return acc;
+  }, sel);
+  const mainBefore = await sum('#map'), cmpBefore = await sum('#cmpMap');
+  // slime chunks: dense deterministic layer, visible on any viewport
+  const slime = page.locator('#structLayers .layer', { hasText: 'Slime chunks' });
+  await slime.locator('input').check();
+  // seed-A points land on the toggle, seed-B points in the compare store
+  await page.waitForFunction(() =>
+    [...window.cmpStructPoints.values()].some((pts) => pts && pts.length > 0));
+  await expect.poll(() => sum('#map')).not.toBe(mainBefore);
+  await expect.poll(() => sum('#cmpMap')).not.toBe(cmpBefore);
+  // unchecking clears the layer from BOTH panes (no stale seed-B points)
+  await slime.locator('input').uncheck();
+  await page.waitForFunction(() => window.cmpStructPoints.size === 0);
+  await expect.poll(() => sum('#map')).toBe(mainBefore);
+  await expect.poll(() => sum('#cmpMap')).toBe(cmpBefore);
+  // leaving compare mode releases the seed-B structure points too
+  await slime.locator('input').check();
+  await page.waitForFunction(() => window.cmpStructPoints.size > 0);
+  await page.click('#cmpClose');
+  await expect(page.locator('#cmpPane')).toBeHidden();
+  expect(await page.evaluate(() => window.cmpStructPoints.size)).toBe(0);
+});
+
+// #268 guard: after a successful search the results list is scrolled into
+// the panel's visible area (before, it sat ~1300px below #searchInfo)
+test('search brings the results list into the panel view (#268)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  // smooth scroll: poll until the list intersects the panel's viewport
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('#panel').getBoundingClientRect();
+    const list = document.querySelector('#results').getBoundingClientRect();
+    return list.top < panel.bottom && list.bottom > panel.top;
+  });
+});
+
+// #268 guard: on a phone viewport the result popup is fully inside the
+// viewport, above the map controls, and its /tp button is really clickable
+test('mobile: result popup fully visible, /tp button not covered (#268)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#searchBtn');
+  await waitForSearchDone(page);
+  await expect(page.locator('#searchInfo')).toHaveClass(/ok/);
+  await page.locator('#results .result').first().click();
+  await expect(page.locator('#popup')).toBeVisible();
+  const check = await page.evaluate(() => {
+    const r = document.querySelector('#popup').getBoundingClientRect();
+    const inViewport = r.top >= 0 && r.left >= 0
+      && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+    const btn = document.querySelector('#popup .pop-tp');
+    const b = btn.getBoundingClientRect();
+    const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { inViewport, tpOnTop: hit === btn };
+  });
+  expect(check.inViewport).toBe(true);
+  expect(check.tpOnTop).toBe(true);
+  await page.click('#popup .pop-tp');   // clickable for real, no interception
+});
+
+// #271: discoverability — the compare select has an explicit translated
+// placeholder, tooltips advertise their shortcut, the help lists the map tools
+test('discoverability: compare placeholder, shortcut tooltips, map-tools help (#271)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await selectLang(page, 'fr');
+  await expect(page.locator('#cmpVer option').first()).toHaveText('Comparer avec…');
+  await expect(page.locator('#rulerBtn')).toHaveAttribute('title', /\(R\)/);
+  await page.click('#helpBtn');
+  await expect(page.locator('#helpDlg')).toContainText('Outils carte');
+  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(4);
+  await page.click('#helpClose');
 });
