@@ -18,27 +18,6 @@ et la release GitHub.
 
 ## [0.12.0](https://github.com/akwawa/Seedcartographer/compare/v0.11.0...v0.12.0) (2026-07-22)
 
-
-### Ajouté
-
-* **a11y:** strict WCAG axe-core audit in CI with zero tolerated violations ([#279](https://github.com/akwawa/Seedcartographer/issues/279)) ([505b7ad](https://github.com/akwawa/Seedcartographer/commit/505b7adb1add67d36ff5a8e86c58f2f4e9afa30a)), closes [#278](https://github.com/akwawa/Seedcartographer/issues/278)
-* milestone 0.12 — UX overhaul, strict a11y, supply-chain hardening ([055477f](https://github.com/akwawa/Seedcartographer/commit/055477f59208c566e8afe5ec1786224af8685935))
-* **ui:** group secondary topbar actions in a responsive overflow menu ([#272](https://github.com/akwawa/Seedcartographer/issues/272)) ([14ee65f](https://github.com/akwawa/Seedcartographer/commit/14ee65f23ecb8daa58e55f96191adc24a7509386)), closes [#266](https://github.com/akwawa/Seedcartographer/issues/266)
-* **ux:** collapse empty optional criteria sections, keep search button visible ([#275](https://github.com/akwawa/Seedcartographer/issues/275)) ([7e2bfb6](https://github.com/akwawa/Seedcartographer/commit/7e2bfb61a0f473618614d766f8f3cd378ef875d2))
-* **ux:** make version compare, shortcuts and map tools discoverable ([#277](https://github.com/akwawa/Seedcartographer/issues/277)) ([7eaa9a6](https://github.com/akwawa/Seedcartographer/commit/7eaa9a6ac5e3e835d260c7954fc3bf7e9ad79454)), closes [#271](https://github.com/akwawa/Seedcartographer/issues/271)
-
-
-### Corrigé
-
-* **compare:** render structure layers on both panes ([#263](https://github.com/akwawa/Seedcartographer/issues/263)) ([9e2affe](https://github.com/akwawa/Seedcartographer/commit/9e2affe207524bdac91323e4c5dbb87be0477ae2)), closes [#261](https://github.com/akwawa/Seedcartographer/issues/261)
-* **docker:** stamp the deployed version inside the image build ([#262](https://github.com/akwawa/Seedcartographer/issues/262)) ([aa147ff](https://github.com/akwawa/Seedcartographer/commit/aa147ff383210a3ffc3952e5fbb5a0cad0be97f9)), closes [#260](https://github.com/akwawa/Seedcartographer/issues/260)
-* **i18n:** translate remaining English labels (Presets, dimensions, version) ([#276](https://github.com/akwawa/Seedcartographer/issues/276)) ([347ae36](https://github.com/akwawa/Seedcartographer/commit/347ae366f3e06c95405e250cdd4c4fa648c50ca0)), closes [#270](https://github.com/akwawa/Seedcartographer/issues/270)
-* **security:** improve OpenSSF Scorecard (permissions, pins, audit, fuzzing) ([#281](https://github.com/akwawa/Seedcartographer/issues/281)) ([358154e](https://github.com/akwawa/Seedcartographer/commit/358154e1302bf226d574a111f97c3f9d414e5f81))
-* **ui:** make dialogs fit mobile viewports with a visible keyboard focus ([#273](https://github.com/akwawa/Seedcartographer/issues/273)) ([633bf10](https://github.com/akwawa/Seedcartographer/commit/633bf104e1bd48b26f43305ee9cc281705174b44)), closes [#267](https://github.com/akwawa/Seedcartographer/issues/267)
-* **ux:** scroll results into view after search, popup above map controls on mobile ([#274](https://github.com/akwawa/Seedcartographer/issues/274)) ([298e075](https://github.com/akwawa/Seedcartographer/commit/298e075e26d319779752d6db49b0d7574189cc48)), closes [#268](https://github.com/akwawa/Seedcartographer/issues/268)
-
-## [Non publié]
-
 ### Ajouté
 - Vérificateur d'accessibilité WCAG strict dans la CI : nouvelle spec e2e
   `e2e/a11y.spec.js` (axe-core via @axe-core/playwright) avec tous les tags
