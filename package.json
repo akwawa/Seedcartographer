@@ -33,7 +33,7 @@
     "fast-check": "4.9.0",
     "globals": "^17.7.0",
     "lockfile-lint": "^5.0.0",
-    "stylelint": "^17.14.0",
+    "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
     "typescript": "^7.0.2"
   }
