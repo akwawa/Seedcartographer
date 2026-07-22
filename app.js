@@ -1096,10 +1096,20 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (portalMode) { setPortalMode(false); } if (sel.on) { setSelOn(false); } if (zoneTool.on) { setZoneOn(false); } hidePopup(); }
+  else if (e.key === 'Escape') { dismissMapTools(); }
   else return;
   e.preventDefault();
 });
+
+// disarm every map tool and close the pin popup (Escape cascade)
+function dismissMapTools() {
+  if (ruler.on) setRulerOn(false);
+  if (markerMode) setMarkerMode(false);
+  if (portalMode) setPortalMode(false);
+  if (sel.on) setSelOn(false);
+  if (zoneTool.on) setZoneOn(false);
+  hidePopup();
+}
 
 // ---------- side-by-side seed compare (#250) ----------
 // A second map pane with its own seed and its own render worker (so a slow
@@ -2852,12 +2862,7 @@ function closeTopmost() {
   if (help.open) { help.close(); return; }
   if (gallery.open) { gallery.close(); return; }
   if (!$('#moreMenu').hidden) { setMoreMenu(false); return; }
-  if (ruler.on) setRulerOn(false);
-  if (markerMode) setMarkerMode(false);
-  if (portalMode) setPortalMode(false);
-  if (sel.on) setSelOn(false);
-  if (zoneTool.on) setZoneOn(false);
-  hidePopup();
+  dismissMapTools();
 }
 const KEY_ACTIONS = {
   'skip-tour': () => endTour(),
