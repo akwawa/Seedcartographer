@@ -19,6 +19,16 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Panneau de composition des biomes autour d'un point (#286) : nouvel outil ◔
+  dans la barre d'outils carte — un clic sur la carte ouvre un panneau listant
+  la répartition des biomes dans un rayon configurable (256, 512 ou 1024
+  blocs), triée par pourcentage décroissant avec pastille de couleur de la
+  palette courante et nom de biome traduit (pourcentages à une décimale,
+  somme exactement 100 %). L'échantillonnage réutilise le moteur de « part de
+  biome » (#142) dans le worker, avec annulation par jeton : un nouveau clic
+  ou un changement de rayon ignore la réponse précédente. Logique pure dans
+  `composition.js` (agrégation des comptes, arrondi au plus fort reste),
+  testée à 100 %.
 - Outil chemin/itinéraire avec distance cumulée (#285) : nouvel outil 〰 dans
   la barre d'outils carte — des clics successifs ajoutent les points d'une
   polyligne, un double-clic ou Échap termine le tracé. Un petit éditeur au

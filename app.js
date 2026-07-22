@@ -248,6 +248,7 @@ worker.onmessage = (e) => {
     draw();
     return;
   }
+  if (d.type === 'composition') { onComposition(d); return; }
   if (d.type === 'biome' && d.reqId === biomeProbeReq) {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     markLegend(d.id);
@@ -681,6 +682,7 @@ function zoneColorButton(z, c, box) {
 function showZoneEditor(z) {
   const pop = $('#popup');
   pop.textContent = '';
+  pop.classList.remove('comp');
   pop.setAttribute('aria-label', z.name);
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
@@ -765,6 +767,7 @@ function pathAt(mx, my) {
 function showPathEditor(p) {
   const pop = $('#popup');
   pop.textContent = '';
+  pop.classList.remove('comp');
   pop.setAttribute('aria-label', p.name);
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
@@ -853,6 +856,7 @@ function showPortalPopup() {
   const plan = portalPlan(portal.dim, portal.x, portal.z);
   const pop = $('#popup');
   pop.textContent = '';
+  pop.classList.remove('comp');
   pop.setAttribute('aria-label', t('portalTitle'));
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
@@ -865,6 +869,101 @@ function showPortalPopup() {
   del.onclick = () => { portal = null; hidePopup(); draw(); };
   pop.append(close, portalCoordRow(plan.src), portalCoordRow(plan.dest), rule, del);
   if (!pop.open) pop.show();   // non-modal: the map stays usable
+}
+
+// ---------- biome composition panel (#286) ----------
+// One armed click samples the biome shares around the point in the worker
+// (composition.js aggregation); re-clicking or changing the radius bumps the
+// request token, so the previous in-flight reply is dropped as stale.
+const COMP_RADII = [256, 512, 1024];
+let compMode = false;
+let comp = null;             // the probed point + radius {x, z, radius}
+let compReq = 0;             // cancellation token: stale replies are ignored
+function setCompMode(on) {
+  compMode = on;
+  $('#compBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+function requestComposition() {
+  compReq = reqSeq++;
+  const list = $('#compList');
+  if (list) list.textContent = '…';
+  send({
+    type: 'composition', reqId: compReq, seed: world.seed, mc: world.mc,
+    large: world.large, dim: world.dim, y: yLayer,
+    x: comp.x, z: comp.z, radius: comp.radius
+  });
+}
+function placeComposition(x, z) {
+  comp = { x, z, radius: comp?.radius || COMP_RADII[0] };
+  setCompMode(false);
+  showCompositionPopup();
+  requestComposition();
+}
+function compRadiusSelect() {
+  const sel = document.createElement('select');
+  sel.id = 'compRadius';
+  for (const r of COMP_RADII) {
+    const o = document.createElement('option');
+    o.value = String(r); o.textContent = String(r);
+    sel.appendChild(o);
+  }
+  sel.value = String(comp.radius);
+  sel.onchange = () => { comp.radius = +sel.value; requestComposition(); };
+  return sel;
+}
+function showCompositionPopup() {
+  const pop = $('#popup');
+  pop.textContent = '';
+  // the breakdown list can be tall: center this popup on the map instead of
+  // anchoring it above the midpoint like the small coordinate popups
+  pop.classList.add('comp');
+  pop.setAttribute('aria-label', t('compTitle'));
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const title = document.createElement('div');
+  title.className = 'pop-x';
+  title.textContent = `${t('compTitle')} · ${comp.x}, ${comp.z}`;
+  const lbl = document.createElement('label');
+  lbl.className = 'comp-radius';
+  const txt = document.createElement('span');
+  txt.textContent = t('compRadius');
+  lbl.append(txt, compRadiusSelect());
+  const list = document.createElement('div');
+  list.className = 'comp-list'; list.id = 'compList'; list.textContent = '…';
+  pop.append(close, title, lbl, list);
+  if (!pop.open) pop.show();   // non-modal: the map stays usable
+}
+// one "● name  12.3 %" line of the composition list
+function compRow(e) {
+  const row = document.createElement('div');
+  row.className = 'comp-row';
+  row.dataset.pct = String(e.pct);
+  const b = biomesSorted.find((x) => x.id === e.id);
+  const dot = document.createElement('span');
+  dot.className = 'comp-dot';
+  const [r, g, bb] = dispRgb(e.id, b?.rgb || [128, 128, 128]);
+  dot.style.background = `rgb(${r},${g},${bb})`;
+  const name = document.createElement('span');
+  name.className = 'comp-name';
+  name.textContent = b ? biomeLabel(b.name) : String(e.id);
+  const pct = document.createElement('span');
+  pct.className = 'comp-pct';
+  pct.textContent = `${e.pct.toFixed(1)} %`;
+  row.append(dot, name, pct);
+  return row;
+}
+function onComposition(d) {
+  if (d.reqId !== compReq) return;   // stale: a newer click/radius change won
+  const list = $('#compList');
+  if (!list) return;                 // the popup was replaced meanwhile
+  list.textContent = '';
+  if (d.error) {
+    list.textContent = t('tileFailed');
+    return;
+  }
+  for (const e of d.list) list.appendChild(compRow(e));
 }
 
 function setRulerOn(on) {
@@ -1213,6 +1312,7 @@ function dismissMapTools() {
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
   if (portalMode) setPortalMode(false);
+  if (compMode) setCompMode(false);
   if (sel.on) setSelOn(false);
   if (zoneTool.on) setZoneOn(false);
   hidePopup();
@@ -1403,6 +1503,7 @@ function toolClick(mx, my) {
   const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
   if (markerMode) { setUserMarkers(addMarker(userMarkers, { ...world, ...p })); return true; }
   if (portalMode) { placePortal(p.x, p.z); return true; }
+  if (compMode) { placeComposition(p.x, p.z); return true; }
   if (pathTool.on) {
     pathTool.pts = appendPathPoint(pathTool.pts, p.x, p.z);
     draw();
@@ -2062,6 +2163,7 @@ function wireCopyButton(btn, text, idleLabel) {
 function showPopup(p) {
   const pop = $('#popup');
   pop.textContent = '';
+  pop.classList.remove('comp');
   pop.setAttribute('aria-label', `${p.x}, ${p.z}`);
   const xEl = document.createElement('div');
   xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
@@ -2257,6 +2359,7 @@ function favRow(f) {
 }
 
 function hidePopup() {
+  $('#popup').classList.remove('comp');      // back to the default anchoring
   if (rarePin) { rarePin = null; draw(); }   // the rare pin lives with the popup
   if (selected !== -1) {
     selected = -1;
@@ -3126,6 +3229,7 @@ async function init() {
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
   $('#portalBtn').onclick = () => setPortalMode(!portalMode);
+  $('#compBtn').onclick = () => setCompMode(!compMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
   $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
   $('#pathBtn').onclick = () => setPathOn(!pathTool.on);

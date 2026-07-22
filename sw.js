@@ -32,6 +32,7 @@ const ASSETS = [
   './palette.js',
   './tilegrid.js',
   './compare.js',
+  './composition.js',
   './relief.js',
   './gallery.js',
   './errorreport.js',

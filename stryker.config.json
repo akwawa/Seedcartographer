@@ -6,7 +6,7 @@
     "coords.js", "export.js", "favorites.js", "gallery.js", "errorreport.js", "legend.js", "maptools.js",
     "markers.js", "palette.js", "presets.js", "profile.js", "relief.js", "rarebiomes.js", "search.js", "searchhistory.js",
     "keys.js", "portals.js", "seed.js", "seedsearch.js", "shapes.js", "sharestate.js", "slime.js", "theme.js", "tour.js",
-    "tilecache.js", "tilegrid.js", "compare.js", "usermarkers.js", "userpresets.js", "userzones.js", "userpaths.js"
+    "tilecache.js", "tilegrid.js", "compare.js", "composition.js", "usermarkers.js", "userpresets.js", "userzones.js", "userpaths.js"
   ],
   "ignoreStatic": true,
   "thresholds": { "high": 90, "low": 80, "break": 75 },

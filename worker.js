@@ -11,6 +11,7 @@ import { TILE_CELLS } from './tilegrid.js';
 import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
 import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_RING_BLOCKS } from './rarebiomes.js';
 import { hdCellSpan, hdCellIndex } from './export.js';
+import { discCounts, compositionShares } from './composition.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -644,6 +645,29 @@ function handleStructures(d) {
   postMessage({ type: 'structures', reqId: d.reqId, groups: out });
 }
 
+// biome composition around a point (#286): sample a 1:16 grid over the
+// requested disc and aggregate the shares (composition.js). The app drops
+// stale replies by reqId, so a re-click or radius change simply outraces
+// the previous request.
+const COMPOSITION_SC = 16;
+function handleCompositionMsg(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const SC = COMPOSITION_SC;
+  const ci0 = Math.floor((d.x - d.radius) / SC);
+  const cj0 = Math.floor((d.z - d.radius) / SC);
+  const cols = Math.floor((d.x + d.radius) / SC) - ci0 + 1;
+  const rows = Math.floor((d.z + d.radius) / SC) - cj0 + 1;
+  ensureArea(cols * rows);
+  if (!M._genBiomeArea(areaPtr, ci0, cj0, cols, rows, SC, scaledY(d.y))) {
+    postMessage({ type: 'composition', reqId: d.reqId, error: 'area-too-large', list: [] });
+    return;
+  }
+  const grid = M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
+  const counts = discCounts(grid, cols, rows,
+    Math.floor(d.x / SC) - ci0, Math.floor(d.z / SC) - cj0, SC, d.radius);
+  postMessage({ type: 'composition', reqId: d.reqId, list: compositionShares(counts) });
+}
+
 // message dispatch table: one handler per message type
 function handleBiomeMsg(d) {
   applyWorld(d.seed, d.mc, d.large, d.dim);
@@ -678,6 +702,7 @@ const HANDLERS = {
   render: handleRender,
   structures: handleStructures,
   biome: handleBiomeMsg,
+  composition: handleCompositionMsg,
   cancelSearch: (d) => { searchCancelId = d.reqId; },
   rareBiome: handleRareMsg,
   cancelRare: (d) => { rareCancelId = d.reqId; },
