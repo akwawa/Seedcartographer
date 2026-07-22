@@ -227,6 +227,10 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .popup .pop-fav{background:none;border:none;color:var(--amber);font-size:17px;cursor:pointer;
   margin-left:7px;padding:2px 4px;vertical-align:middle}
 .popup .pop-fav:hover{filter:brightness(1.25)}
+.popup .pop-portal-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0}
+.popup .pop-portal-row .pop-x{margin-bottom:0}
+.popup .pop-portal-rule{max-width:260px;margin:7px auto;text-align:left}
+.popup .portal-del{display:block;margin:0 auto}
 
 /* ---------- map navigation aids ---------- */
 .maptoggles{position:absolute;left:14px;top:14px;display:flex;gap:6px}
@@ -258,6 +262,8 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .selbtn.on{border-color:var(--lapis-hi);color:var(--lapis-hi);background:var(--raise)}
 .annotbtn{position:absolute;left:140px;top:128px}
 .annotbtn.on{border-color:#9ad06a;color:#9ad06a;background:var(--raise)}
+.portalbtn{position:absolute;left:182px;top:128px}
+.portalbtn.on{border-color:#a855f7;color:#a855f7;background:var(--raise)}
 .popup .zone-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
 .popup .zone-colors{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
 .popup .zone-color{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}

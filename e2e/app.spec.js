@@ -1,4 +1,4 @@
-/* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
+/* global ruler, portalState */ // top-level bindings of app.js, read via page.evaluate
 import { test, expect, openMoreMenu, closeMoreMenu, selectLang, openCritSection } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
@@ -987,6 +987,45 @@ test('custom markers: place on click, rename, persist, delete', async ({ page })
   await expect(page.locator('#markerList .fav')).toHaveCount(0);
 });
 
+// #284: place a portal in the Overworld, check the computed Nether pair
+// (÷8, floored like Minecraft Java), then switch dimensions and find the
+// linked pin drawn at the ideal destination
+test('the portal tool computes and pins the linked Nether destination', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // center the view on a known spot so a click at the canvas center lands
+  // exactly on (800, -1600)
+  await page.fill('#gotoInput', '800, -1600');
+  await page.press('#gotoInput', 'Enter');
+  await page.click('#portalBtn');
+  await expect(page.locator('#portalBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  // the popup lists both coordinate pairs and the 16-block Nether link radius
+  await expect(page.locator('#popup')).toBeVisible();
+  await expect(page.locator('#popup')).toContainText('800, -1600');
+  await expect(page.locator('#popup')).toContainText('100, -200');
+  await expect(page.locator('#popup')).toContainText('16');
+  await expect(page.locator('#portalBtn')).not.toHaveClass(/on/);
+  // switching to the Nether keeps the portal; the linked pin sits at 100, -200
+  await page.selectOption('#dimSel', '-1');
+  expect(await page.evaluate(() => portalState())).toEqual({ dim: 0, x: 800, z: -1600 });
+  await page.fill('#gotoInput', '100, -200');
+  await page.press('#gotoInput', 'Enter');
+  // the destination pin (purple frame) is painted at the view center;
+  // sample a pixel inside it, off the crosshair lines
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#map');
+    const dpr = window.devicePixelRatio || 1;
+    const d = c.getContext('2d').getImageData(
+      Math.round(c.width / 2 + 2 * dpr), Math.round(c.height / 2 + 3 * dpr), 1, 1).data;
+    return d[0] > 90 && d[1] < 110 && d[2] > 140;
+  });
+  // clicking the pin re-opens the portal popup
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator('#popup')).toContainText('100, -200');
+});
+
 test('zone annotations: drag to draw, rename, persist across reload, delete', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -1384,6 +1423,6 @@ test('discoverability: compare placeholder, shortcut tooltips, map-tools help (#
   await expect(page.locator('#rulerBtn')).toHaveAttribute('title', /\(R\)/);
   await page.click('#helpBtn');
   await expect(page.locator('#helpDlg')).toContainText('Outils carte');
-  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(4);
+  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(5);
   await page.click('#helpClose');
 });

@@ -5,6 +5,7 @@
 import { t, applyI18n, setLang, currentLang, I18N_LANGS } from './i18n.js';
 import { biomeLabel } from './biomes.js';
 import { convertCoords } from './coords.js';
+import { portalPlan } from './portals.js';
 import { PRESETS, presetCriteria } from './presets.js';
 import { parseFavorites, addFavorite, findFavorite, removeFavorite, updateFavoriteNote, favoritesFor } from './favorites.js';
 import { legendEntries } from './legend.js';
@@ -79,6 +80,10 @@ const ruler = { on: false, a: null, b: null, done: false };
 const sel = { on: false, a: null, b: null, done: false };
 // zone tool: a/b world corners dragged on the map, turned into a named zone
 const zoneTool = { on: false, a: null, b: null };
+// portal calculator (#284): the placed portal {dim,x,z}; survives dimension
+// switches so the linked pin shows up in the other dimension
+let portal = null;
+let portalMode = false;
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -349,6 +354,12 @@ function setDimension(dim) {
     lbl.hidden = dim === 1;
     if (dim === 1) { showNetherGrid = false; $('#netherChk').checked = false; }
   }
+  // the End has no linked dimension either: hide and disarm the portal tool
+  const pbtn = $('#portalBtn');
+  if (pbtn) {
+    pbtn.hidden = dim === 1;
+    if (dim === 1 && portalMode) setPortalMode(false);
+  }
   // surface relief only exists in the Overworld
   const rlbl = $('#reliefToggleLbl');
   if (rlbl) rlbl.hidden = dim !== 0;
@@ -426,6 +437,7 @@ function draw() {
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
+  drawPortal();
 
   // result pins
   pins.forEach((p, i) => {
@@ -678,6 +690,85 @@ function showZoneEditor(z) {
   pop.append(close, name, colors, del);
   if (!pop.open) pop.show();
 }
+// ---------- portal calculator (#284) ----------
+// source pin in its own dimension; ideal linked destination pin plus the
+// portal-search radius circle (128 Overworld / 16 Nether blocks) in the other
+function drawPortal() {
+  if (!portal) return;
+  const plan = portalPlan(portal.dim, portal.x, portal.z);
+  if (world.dim === plan.src.dim) drawPortalPin(plan.src, false);
+  if (world.dim === plan.dest.dim) {
+    const sx = w2sx(plan.dest.x), sy = w2sy(plan.dest.z);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(168,85,247,.85)'; ctx.fillStyle = 'rgba(168,85,247,.12)';
+    ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.arc(sx, sy, plan.radius / view.bpp, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    drawPortalPin(plan.dest, true);
+  }
+}
+// a portal renders as a small upright obsidian frame
+function drawPortalPin(p, dest) {
+  const sx = w2sx(p.x), sy = w2sy(p.z);
+  ctx.save();
+  ctx.fillStyle = dest ? '#7c3aed' : '#a855f7';
+  ctx.strokeStyle = 'rgba(24,10,40,.85)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(sx - 4, sy - 7, 8, 14);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function setPortalMode(on) {
+  portalMode = on;
+  $('#portalBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+function placePortal(x, z) {
+  // no portal pair exists for the End: leave the tool without placing
+  if (!portalPlan(world.dim, x, z)) { setPortalMode(false); return; }
+  portal = { dim: world.dim, x, z };
+  setPortalMode(false);
+  draw();
+  showPortalPopup();
+}
+// true when a portal pin (source or destination) of the current dimension
+// sits under the screen point
+function portalPinAt(mx, my) {
+  const plan = portalPlan(portal.dim, portal.x, portal.z);
+  return [plan.src, plan.dest].some((p) =>
+    p.dim === world.dim && Math.hypot(mx - w2sx(p.x), my - w2sy(p.z)) < 10);
+}
+// one "Dimension · x, z  [Copy /tp]" line of the portal popup
+function portalCoordRow(p) {
+  const row = document.createElement('div');
+  row.className = 'pop-portal-row';
+  const lbl = document.createElement('span');
+  lbl.className = 'pop-x';
+  lbl.textContent = `${t(p.dim === 0 ? 'dimOverworld' : 'dimNether')} · ${p.x}, ${p.z}`;
+  const btn = document.createElement('button');
+  btn.className = 'pop-tp'; btn.textContent = t('copyTp');
+  wireCopyButton(btn, `/tp @s ${p.x} ~ ${p.z}`, () => t('copyTp'));
+  row.append(lbl, btn);
+  return row;
+}
+function showPortalPopup() {
+  const plan = portalPlan(portal.dim, portal.x, portal.z);
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.setAttribute('aria-label', t('portalTitle'));
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const rule = document.createElement('p');
+  rule.className = 'muted small pop-portal-rule';
+  rule.textContent = t('portalRule', { r: plan.radius });
+  const del = document.createElement('button');
+  del.className = 'btn tiny portal-del'; del.textContent = t('portalRemove');
+  del.onclick = () => { portal = null; hidePopup(); draw(); };
+  pop.append(close, portalCoordRow(plan.src), portalCoordRow(plan.dest), rule, del);
+  if (!pop.open) pop.show();   // non-modal: the map stays usable
+}
+
 function setRulerOn(on) {
   ruler.on = on; ruler.a = null; ruler.b = null; ruler.done = false;
   $('#rulerBtn').classList.toggle('on', on);
@@ -1005,7 +1096,7 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } if (zoneTool.on) { setZoneOn(false); } hidePopup(); }
+  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (portalMode) { setPortalMode(false); } if (sel.on) { setSelOn(false); } if (zoneTool.on) { setZoneOn(false); } hidePopup(); }
   else return;
   e.preventDefault();
 });
@@ -1199,6 +1290,10 @@ function clickAt(e) {
     }));
     return;
   }
+  if (portalMode) {
+    placePortal(Math.round(s2wx(mx)), Math.round(s2wz(my)));
+    return;
+  }
   if (ruler.on) {
     const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
     if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
@@ -1209,6 +1304,8 @@ function clickAt(e) {
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
   }
+  // hit-test the portal pins: clicking one re-opens the portal popup
+  if (portal && portalPinAt(mx, my)) { showPortalPopup(); return; }
   // hit-test zones (under the pins: a pin inside a zone stays clickable)
   const zHit = zoneAt(mx, my);
   if (zHit) { showZoneEditor(zHit.zone); return; }
@@ -2757,6 +2854,7 @@ function closeTopmost() {
   if (!$('#moreMenu').hidden) { setMoreMenu(false); return; }
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
+  if (portalMode) setPortalMode(false);
   if (sel.on) setSelOn(false);
   if (zoneTool.on) setZoneOn(false);
   hidePopup();
@@ -2900,6 +2998,7 @@ async function init() {
   gotoInput.oninput = () => gotoInput.classList.remove('bad');
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
+  $('#portalBtn').onclick = () => setPortalMode(!portalMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
   $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
   $('#selPng').onclick = exportSelectionPNG;
@@ -2994,6 +3093,7 @@ function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg)
 // settling), so expose them explicitly. All are consts mutated in place.
 Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
+  portalState: () => portal,
   zonesOnMap: () => zonesFor(userZones, world),
   cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
