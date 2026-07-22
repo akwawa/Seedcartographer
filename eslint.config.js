@@ -39,7 +39,7 @@ export default [
   {
     // Pure-logic ES modules imported by app.js and by the Node tests
     files: [
-      'i18n.js', 'biomes.js', 'coords.js', 'presets.js', 'favorites.js',
+      'i18n.js', 'biomes.js', 'coords.js', 'portals.js', 'presets.js', 'favorites.js',
       'legend.js', 'maptools.js', 'tilecache.js', 'sharestate.js',
       'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'userzones.js',
       'profile.js', 'gallery.js', 'theme.js', 'export.js', 'version.js',

@@ -16,6 +16,20 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Calculateur de portails du Nether (#284) : nouvel outil 🌀 dans la barre
+  d'outils carte — un clic place un portail dans la dimension courante et
+  l'app calcule la destination idéale dans l'autre dimension (÷8 / ×8 avec
+  l'arrondi exact de Minecraft Java, module pur `portals.js` couvert à
+  100 %). Popup avec les deux paires de coordonnées et boutons « Copier
+  /tp », rappel de la règle de liaison (recherche d'un portail existant dans
+  un rayon de 128 blocs côté Overworld / 16 côté Nether), pin lié visible en
+  changeant de dimension avec le rayon de liaison dessiné autour de la
+  destination idéale. Libellés dans les 10 langues et test e2e du parcours
+  complet.
+
 ## [0.12.0](https://github.com/akwawa/Seedcartographer/compare/v0.11.0...v0.12.0) (2026-07-22)
 
 ### Ajouté
