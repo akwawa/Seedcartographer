@@ -16,7 +16,7 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [Non publié]
+## [0.12.0](https://github.com/akwawa/Seedcartographer/compare/v0.11.0...v0.12.0) (2026-07-22)
 
 ### Ajouté
 - Vérificateur d'accessibilité WCAG strict dans la CI : nouvelle spec e2e
