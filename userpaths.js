@@ -39,7 +39,7 @@ export function appendPathPoint(pts, x, z) {
   if (pts.length >= PATH_POINT_MAX) return pts;
   const p = { x: clampCoord(x), z: clampCoord(z) };
   const last = pts.at(-1);
-  if (last && last.x === p.x && last.z === p.z) return pts;
+  if (last?.x === p.x && last?.z === p.z) return pts;
   return [...pts, p];
 }
 

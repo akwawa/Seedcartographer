@@ -779,8 +779,9 @@ function showPathEditor(p) {
   dist.className = 'mono small path-dist';
   const total = pathDistance(p.pts);
   const linked = linkedDistance(p.dim, total);
+  const linkedDim = linked?.dim === -1 ? 'dimNether' : 'dimOverworld';
   dist.textContent = `${total} ${t('blocks')}`
-    + (linked ? ` · ${t(linked.dim === -1 ? 'dimNether' : 'dimOverworld')} ≈ ${linked.dist}` : '');
+    + (linked ? ` · ${t(linkedDim)} ≈ ${linked.dist}` : '');
   const del = document.createElement('button');
   del.className = 'btn tiny path-del'; del.textContent = t('pathDelete');
   del.onclick = () => { setUserPaths(removePath(userPaths, p.id)); hidePopup(); };

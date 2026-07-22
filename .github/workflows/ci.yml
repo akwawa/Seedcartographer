@@ -55,12 +55,6 @@ jobs:
       # static audit of the workflows themselves (injection, credential
       # persistence, excessive permissions...); offline mode avoids relying
       # on GitHub API availability/quota for the actions-tag-freshness checks
-      - name: TEMP debug 293
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sleep 100
-          curl -sS -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=akwawa_Seedcartographer&pullRequest=293&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true" | jq -r '.issues[] | "\(.rule) | \(.severity) | \(.component) L\(.line) | \(.message)"'
       - run: pipx install zizmor==1.26.1
       - run: zizmor --offline .github/workflows/
 
