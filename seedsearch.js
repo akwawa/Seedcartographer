@@ -92,6 +92,40 @@ export function insertCandidate(list, cand, cap = SEED_SEARCH_MAX_FOUND) {
   return [...list.filter((c) => c.seed !== cand.seed), cand].sort(compareCandidates).slice(0, cap);
 }
 
+// ---- "Surprise me" (#287) ----
+// Budget of a surprise run: enough random draws for common criteria while
+// keeping the worst case (nothing found) down to a few seconds.
+export const SURPRISE_MAX_SEEDS = 50;
+// Probe radius of the built-in "interesting spawn" preset (blocks).
+export const SURPRISE_RADIUS = 1500;
+
+// Criteria driving the surprise run: the panel's criteria when they can
+// anchor a search, otherwise a built-in "interesting spawn" preset (a
+// village near the world origin). `villageType` is the engine enum value
+// for villages, only known at runtime; the preset cannot be built (null)
+// until the engine reported it.
+/**
+ * @param {object|null} crit criteria collected from the panel, or null
+ * @param {number} [villageType] engine enum value of the village structure
+ * @returns {{crit: object, preset: boolean}|null}
+ */
+export function surpriseCriteria(crit, villageType) {
+  if (crit) return { crit, preset: false };
+  if (!Number.isInteger(villageType)) return null;
+  return {
+    preset: true,
+    crit: {
+      mainBiomes: [],
+      adjMode: 'and', adjClauses: [],
+      pctMode: 'and', pctClauses: [],
+      shapeMode: 'and', shapeClauses: [],
+      structMode: 'and',
+      structClauses: [{ type: villageType, min: 1, radius: 800, inMain: false }],
+      pairClauses: [], surface: null
+    }
+  };
+}
+
 // ---- resumable runs ----
 // Snapshot of an interrupted multi-seed search: enough to pick it up after a
 // cancel or a page reload. Batches not yet completed (queued or in flight
