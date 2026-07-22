@@ -231,6 +231,13 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .popup .pop-portal-row .pop-x{margin-bottom:0}
 .popup .pop-portal-rule{max-width:260px;margin:7px auto;text-align:left}
 .popup .portal-del{display:block;margin:0 auto}
+.popup.comp{transform:translate(-50%,-50%)}
+.popup .comp-radius{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 7px;font-size:12px;color:var(--muted)}
+.popup .comp-list{min-width:230px;max-height:40vh;overflow-y:auto;text-align:left;font-size:12.5px}
+.popup .comp-row{display:flex;align-items:center;gap:7px;margin:3px 0}
+.popup .comp-dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.45);flex:none}
+.popup .comp-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.popup .comp-pct{font-family:var(--mono)}
 
 /* ---------- map navigation aids ---------- */
 .maptoggles{position:absolute;left:14px;top:14px;display:flex;gap:6px}
@@ -266,6 +273,8 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .portalbtn.on{border-color:#a855f7;color:#a855f7;background:var(--raise)}
 .pathbtn{position:absolute;left:224px;top:128px}
 .pathbtn.on{border-color:#7ee0c0;color:#7ee0c0;background:var(--raise)}
+.compbtn{position:absolute;left:266px;top:128px}
+.compbtn.on{border-color:#f2a73b;color:#f2a73b;background:var(--raise)}
 .popup .zone-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
 .popup .zone-colors{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
 .popup .zone-color{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
