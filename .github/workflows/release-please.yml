@@ -8,12 +8,15 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      # creates/updates the release PR, tag and GitHub release
+      contents: write
+      pull-requests: write
     timeout-minutes: 10
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
