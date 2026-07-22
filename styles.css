@@ -3,7 +3,8 @@
   --line:#2a3543; --line-soft:#202a37;
   /* --faint and --lapis are tuned for a >=4.5:1 contrast ratio (WCAG AA) */
   --text:#e7edf3; --muted:#8694a5; --faint:#8090a2;
-  --lapis:#3465d6; --lapis-hi:#5b88f5; --amber:#f2a73b; --grass:#6fae4f;
+  /* --lapis-deep keeps white button text at >=4.5:1 on hover (#278) */
+  --lapis:#3465d6; --lapis-hi:#5b88f5; --lapis-deep:#2b54bd; --amber:#f2a73b; --grass:#6fae4f;
   --map-bg:#0c1016; --hover:#26323f; --hover-line:#3a485a;
   --top1:#131922; --top2:#10151d;
   --overlay:rgba(12,16,22,.85); --overlay-soft:rgba(12,16,22,.7); --popup-bg:rgba(20,26,34,.96);
@@ -37,7 +38,8 @@ button,input,select{font:inherit;color:inherit}
   background:linear-gradient(180deg,var(--top1),var(--top2));
   border-bottom:1px solid var(--line);flex:0 0 auto;
 }
-.brand{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+/* the brand is the page's <h1> (a11y landmark, #278): keep its compact look */
+.brand{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;margin:0}
 .brand .mark{width:16px;height:16px;border-radius:3px;background:
   conic-gradient(from 45deg,var(--grass) 0 25%,#3f72e6 0 50%,var(--amber) 0 75%,#7ee0c0 0 100%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
@@ -95,15 +97,21 @@ input[type="checkbox"]{accent-color:var(--lapis);width:15px;height:15px;padding:
 }
 .btn:hover{border-color:var(--hover-line);background:var(--hover)}
 .btn.primary{background:var(--lapis);border-color:var(--lapis);color:#fff;width:100%;padding:11px}
-.btn.primary:hover{background:var(--lapis-hi);border-color:var(--lapis-hi)}
+/* hover darkens instead of lightening: #5b88f5 under white text was 3.3:1 */
+.btn.primary:hover{background:var(--lapis-deep);border-color:var(--lapis-deep)}
 .btn.ghost{background:transparent}
 
 /* ---------- layout ---------- */
 main{flex:1 1 auto;display:flex;min-height:0}
 .panel{
-  width:340px;flex:0 0 340px;overflow-y:auto;padding:14px;
-  background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:14px;
+  width:340px;flex:0 0 340px;overflow:hidden;
+  background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;
 }
+/* the cards scroll inside this wrapper while the search action stays in a
+   separate, non-overlapping footer (#278: axe target-size, WCAG 2.5.8) */
+.panel-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.panel-actions{flex:0 0 auto;padding:10px 14px;background:var(--panel2);border-top:1px solid var(--line)}
+.panel-actions .info{margin-top:8px}
 .card{background:var(--panel2);border:1px solid var(--line-soft);border-radius:12px;padding:15px}
 .card h2{font-family:var(--disp);font-size:16px;margin:0 0 4px}
 .card h3{font-family:var(--disp);font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:600}
@@ -128,21 +136,17 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .crit .row .num{width:70px}
 .crit .row .num.sm{width:52px}
 .crit .row .sub-lbl{color:var(--muted);font-size:12px;white-space:nowrap}
-.crit .rm,.fav .rm{background:none;border:1px solid var(--line);border-radius:6px;color:var(--muted);cursor:pointer;padding:2px 8px;line-height:1.2}
+/* min 24x24 px touch targets (WCAG 2.5.8, #278) */
+.crit .rm,.fav .rm{background:none;border:1px solid var(--line);border-radius:6px;color:var(--muted);cursor:pointer;padding:2px 8px;line-height:1.2;min-width:24px;min-height:24px}
 .crit .rm:hover,.fav .rm:hover{color:var(--text);border-color:var(--text)}
 .btn.tiny{padding:3px 9px;font-size:12px;font-weight:500}
-.mode{margin-left:6px;font-size:11.5px;padding:2px 6px;text-transform:none;letter-spacing:0}
+.mode{margin-left:6px;font-size:11.5px;padding:2px 6px;text-transform:none;letter-spacing:0;min-height:24px}
 
 /* optional criteria sections: native <details>, collapsed while empty (#269) */
 .critsec>summary{cursor:pointer;font-size:12px;color:var(--muted);letter-spacing:.02em;user-select:none}
 .critsec>summary:hover{color:var(--text)}
 .critsec[open]>summary{margin-bottom:5px}
 .critsec>.mode{display:block;width:auto;max-width:100%;margin:0 0 6px}
-
-/* the search button stays reachable while the criteria card scrolls (#269):
-   sticky at the bottom of the panel, with an opaque card-colored halo so it
-   never sits transparently over the last fields */
-.search-btn{position:sticky;bottom:0;z-index:2;box-shadow:0 0 0 8px var(--panel2)}
 
 /* native <progress>, restyled to the 4px bar */
 .progress{appearance:none;display:block;width:100%;height:4px;border:none;
@@ -310,7 +314,7 @@ dialog :is(button,a):focus-visible{outline:2px solid var(--lapis-hi);outline-off
 .tour-row{display:flex;align-items:center;gap:8px}
 .tour-counter{font-size:11px;color:var(--muted);margin-right:auto}
 .tour-next{background:var(--lapis);border-color:var(--lapis);color:#fff}
-.tour-next:hover{background:var(--lapis-hi);border-color:var(--lapis-hi)}
+.tour-next:hover{background:var(--lapis-deep);border-color:var(--lapis-deep)}
 .help .tour-replay{margin-top:14px}
 
 /* ---------- favorites ---------- */

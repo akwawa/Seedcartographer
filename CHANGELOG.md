@@ -18,6 +18,22 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Ajouté
+- Vérificateur d'accessibilité WCAG strict dans la CI : nouvelle spec e2e
+  `e2e/a11y.spec.js` (axe-core via @axe-core/playwright) avec tous les tags
+  (`wcag2a`, `wcag2aa`, `wcag2aaa`, `wcag21a`, `wcag21aa`, `wcag22aa`,
+  `best-practice`) et zéro violation tolérée, sur chaque état significatif :
+  chargement en thèmes sombre et clair, menu « ⋯ », dialogue d'aide, galerie,
+  panneau critères ouvert, résultats + popup, mode compare, tour guidé et
+  viewport mobile 390×844. Corrections révélées par le mode strict : le titre
+  de la topbar devient le `<h1>` de la page, le bouton de recherche quitte le
+  flux sticky pour un pied de panneau opaque qui n'obscurcit plus les
+  critères (WCAG 2.5.8), cibles tactiles ≥ 24 px (sélecteurs de mode, boutons
+  ×), et le survol des boutons primaires fonce (`--lapis-deep`) au lieu
+  d'éclaircir pour garder un contraste ≥ 4,5:1. Seule exception documentée :
+  la règle AAA `color-contrast-enhanced` (7:1), désactivée avec justification
+  dans la spec. (#278)
+
 ### Modifié
 - Découvrabilité : le sélecteur de comparaison de versions `#cmpVer` affiche
   une première option explicite traduite (« Comparer avec… ») au lieu d'un

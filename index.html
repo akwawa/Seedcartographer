@@ -15,7 +15,7 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><span class="mark"></span>Seedcartographer</div>
+  <h1 class="brand"><span class="mark"></span>Seedcartographer</h1>
   <output id="offlineBadge" class="offline-badge" hidden data-i18n="offlineBadge">Offline</output>
   <div class="world">
     <label class="lbl"><span data-i18n="seed">Seed</span>
@@ -74,6 +74,7 @@
 
 <main>
   <aside id="panel" class="panel">
+    <div class="panel-scroll">
     <section id="criteriaCard" class="card">
       <h2 data-i18n="findPlace">Find a place</h2>
       <p class="lede" data-i18n="lede">Set the conditions, then search the area you're looking at. Results are spots in this seed.</p>
@@ -138,9 +139,6 @@
         <div><label for="surfMax"><span data-i18n="surfaceMax">Surface Y max</span> <span class="opt" data-i18n="optional">optional</span></label><input id="surfMax" class="num" type="number" step="1" min="-64" max="320"></div>
       </div>
 
-      <button id="searchBtn" class="btn primary search-btn" data-i18n="searchBtn" title="Search the visible area (Enter)" data-i18n-title="searchBtnTitle">Search this area</button>
-      <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
-      <output id="searchInfo" class="info"></output>
     </section>
 
     <section id="rareCard" class="card">
@@ -241,6 +239,14 @@
       <h3 data-i18n="showOnMap">Show on map</h3>
       <div id="structLayers" class="layers"></div>
     </section>
+    </div>
+    <!-- non-overlapping panel footer (#278): the search action stays always
+         visible without ever obscuring the scrollable criteria (WCAG 2.5.8) -->
+    <div class="panel-actions">
+      <button id="searchBtn" class="btn primary" data-i18n="searchBtn" title="Search the visible area (Enter)" data-i18n-title="searchBtnTitle">Search this area</button>
+      <progress id="searchProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
+      <output id="searchInfo" class="info"></output>
+    </div>
   </aside>
 
   <div class="mapwrap">
