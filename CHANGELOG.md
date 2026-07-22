@@ -105,6 +105,21 @@ et la release GitHub.
   version releasée comme GitHub Pages ; la CI injecte le commit via
   l'argument de build `GIT_COMMIT`. (#260)
 
+### Sécurité
+- Améliorations du score OpenSSF Scorecard : les workflows `docker.yml`,
+  `release-please.yml` et `release.yml` déclarent désormais un bloc
+  `permissions: contents: read` au niveau du workflow, les scopes d'écriture
+  (releases, pull requests) étant réduits aux seuls jobs qui en ont besoin ;
+  les images de base du Dockerfile (`node:24-alpine` et
+  `nginxinc/nginx-unprivileged:alpine`) sont épinglées par digest SHA-256
+  (mis à jour par Dependabot) ; un champ `overrides` npm force les versions
+  corrigées des dépendances transitives vulnérables de `@lhci/cli` et
+  `typed-rest-client` (`tmp` ≥ 0.2.6, `uuid` ≥ 11.1.1, `qs` ≥ 6.15.2 —
+  `npm audit` repasse à zéro vulnérabilité) ; et des tests par propriétés
+  (fast-check, seed fixée pour des runs CI déterministes) couvrent les
+  invariants des modules purs `seed.js`, `keys.js`, `compare.js` et
+  `userzones.js` dans `test/property.test.mjs`. (#280)
+
 ## [0.11.0](https://github.com/akwawa/Seedcartographer/compare/v0.10.0...v0.11.0) (2026-07-20)
 
 ### Ajouté
