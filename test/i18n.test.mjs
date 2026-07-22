@@ -79,11 +79,11 @@ test('shortcut-bearing tooltips mention their key in every locale', () => {
     assert.match(I18N[lang].searchBtnTitle, /[(（](Enter|Entrée|Invio)[)）]/, `${lang}.searchBtnTitle misses (Enter)`);
 });
 
-// #271: the help dialog documents the four map tools
+// #271: the help dialog documents the map tools (path added by #285)
 test('index.html help dialog lists the map tools with i18n keys', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const tools = html.match(/<ul class="help-keys help-tools">[\s\S]*?<\/ul>/);
   assert.ok(tools, 'missing .help-tools list in the help dialog');
-  for (const key of ['helpToolRuler', 'helpToolMarker', 'helpToolSel', 'helpToolZone'])
+  for (const key of ['helpToolRuler', 'helpToolMarker', 'helpToolSel', 'helpToolZone', 'helpToolPath'])
     assert.match(tools[0], new RegExp(`data-i18n="${key}"`), `missing ${key} entry`);
 });

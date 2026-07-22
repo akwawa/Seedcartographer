@@ -1065,6 +1065,54 @@ test('zone annotations: drag to draw, rename, persist across reload, delete', as
   expect(await page.evaluate(() => window.zonesOnMap().length)).toBe(0);
 });
 
+test('path tool: three clicked points, cumulative distance, persist, delete (#285)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#pathBtn');
+  await expect(page.locator('#pathBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  // three waypoints; the double-click on the last one ends the trace
+  await page.mouse.click(box.x + 200, box.y + 200);
+  await page.mouse.click(box.x + 360, box.y + 200);
+  await page.mouse.dblclick(box.x + 360, box.y + 320);
+  // the finished trace opened the path editor with the cumulative distance
+  await expect(page.locator('#popup .path-name')).toBeVisible();
+  await expect(page.locator('#pathBtn')).not.toHaveClass(/on/);
+  const paths = await page.evaluate(() => window.pathsOnMap());
+  expect(paths).toHaveLength(1);
+  const pts = paths[0].pts;
+  expect(pts).toHaveLength(3);
+  let dist = 0;
+  for (let i = 1; i < pts.length; i++) dist += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z);
+  await expect(page.locator('#popup .path-dist')).toContainText(String(Math.round(dist)));
+  // the Nether equivalent (÷8) is shown next to the block distance
+  await expect(page.locator('#popup .path-dist')).toContainText(`Nether ≈ ${Math.round(Math.round(dist) / 8)}`);
+  await page.fill('#popup .path-name', 'Route mine');
+  await page.press('#popup .path-name', 'Enter');
+  // paths survive a reload (localStorage) and redraw on the map
+  await page.reload();
+  await waitForApp(page);
+  const after = await page.evaluate(() => window.pathsOnMap());
+  expect(after).toHaveLength(1);
+  expect(after[0].path.name).toBe('Route mine');
+  // the path color is painted somewhere on the canvas
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#map');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      // #7ee0c0
+      if (Math.abs(d[i] - 126) < 12 && Math.abs(d[i + 1] - 224) < 12 && Math.abs(d[i + 2] - 192) < 12) return true;
+    }
+    return false;
+  });
+  // clicking a segment reopens the editor; delete removes it for good
+  await page.mouse.click(box.x + 280, box.y + 200);
+  await expect(page.locator('#popup .path-del')).toBeVisible();
+  await page.click('#popup .path-del');
+  await expect(page.locator('#popup .path-del')).toBeHidden();
+  expect(await page.evaluate(() => window.pathsOnMap().length)).toBe(0);
+});
+
 test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -1423,6 +1471,6 @@ test('discoverability: compare placeholder, shortcut tooltips, map-tools help (#
   await expect(page.locator('#rulerBtn')).toHaveAttribute('title', /\(R\)/);
   await page.click('#helpBtn');
   await expect(page.locator('#helpDlg')).toContainText('Outils carte');
-  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(5);
+  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(6);
   await page.click('#helpClose');
 });
