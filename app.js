@@ -13,7 +13,8 @@ import {
   scaleBarSpec, gridSpec, gridLines, minimapZoomOut, minimapClickToWorld,
   viewportRectOnMinimap, parseGotoInput, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
 } from './maptools.js';
-import { tileWorldKey, tileKey, createTileCache, tilesInView } from './tilecache.js';
+import { tileWorldKey, tileKey, createTileCache, tilesInView, persistTileKey } from './tilecache.js';
+import { openTileDB, loadTile, saveTile, trimTileDB, clearTiles } from './tiledb.js';
 import {
   encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
   sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
@@ -102,6 +103,13 @@ let showRelief = false;                         // hillshade terrain overlay (Ov
 // relief tiles are only requested (and keyed) in the Overworld
 function reliefOn() { return showRelief && world.dim === 0; }
 const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
+// Persistent tile cache (#289): tiles of previously explored areas restore
+// instantly from IndexedDB while the worker regenerates fresh pixels. The DB
+// opens asynchronously after startup so the first render never waits on it.
+let tileDb = null;                              // IDBDatabase once opened, else null
+const tileDbFetched = new Set();                // keys already looked up this session
+let tileDbTrimTimer = null;                     // debounced budget enforcement
+window.tileCacheHits = 0;                       // e2e-observable restore counter
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
 const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> {e, cv}
 const galleryStructReqs = new Map();            // in-flight thumbnail structures: reqId -> {e, cv, colors}
@@ -229,11 +237,43 @@ function onGridTile(d) {
   }
   const entry = { ...tileCanvasOf(d), worldKey: d.wk, key: d.key, present: d.present };
   tileCache.put(entry);
+  persistTile(d);
   // tiles of a previous world/altitude are cached but not drawn
   if (d.wk !== tileWorldKey(world, yLayer, reliefOn())) return;
   draw();
   refreshLegendFromView();
 }
+// ---------- persistent tile cache (#289) ----------
+// Store a freshly rendered grid tile in IndexedDB (best-effort, async), then
+// debounce a budget trim so the store stays under ~50 MB (LRU eviction).
+function persistTile(d) {
+  if (!tileDb) return;
+  saveTile(tileDb, {
+    key: persistTileKey(d.key, altPalette), wk: d.wk, rgba: d.rgba,
+    cols: d.cols, rows: d.rows, scale: d.scale,
+    originX: d.originX, originZ: d.originZ, present: d.present
+  });
+  clearTimeout(tileDbTrimTimer);
+  tileDbTrimTimer = setTimeout(() => trimTileDB(tileDb), 2000);
+}
+// Restore a missing tile from IndexedDB: it paints immediately (marked stale
+// so the worker still regenerates it; the fresh tile replaces it on arrival).
+function restoreTile(key) {
+  if (!tileDb || tileDbFetched.has(key)) return;
+  if (tileDbFetched.size > 5000) tileDbFetched.clear();   // bound the session set
+  tileDbFetched.add(key);
+  loadTile(tileDb, persistTileKey(key, altPalette)).then((rec) => {
+    if (!rec) return;
+    // a fresh render may have landed while the read was in flight
+    if (tileCache.entries().some((e) => e.key === key)) return;
+    tileCache.put({ ...tileCanvasOf(rec), worldKey: rec.wk, key, present: rec.present, stale: true });
+    window.tileCacheHits++;
+    if (rec.wk !== tileWorldKey(world, yLayer, reliefOn())) return;
+    draw();
+    refreshLegendFromView();
+  });
+}
+
 worker.onmessage = (e) => {
   const d = e.data;
   if (d.type === 'fatal') { showFatal(d.message); return; }
@@ -1084,7 +1124,9 @@ function requestGridTiles(bump = true) {
   const W = Math.ceil(canvas.width / dpr), H = Math.ceil(canvas.height / dpr);
   const scale = renderScaleFor(view.bpp);
   const wk = tileWorldKey(world, yLayer, reliefOn());
-  const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
+  // restored (stale) tiles paint but do not count as cached: the worker
+  // still regenerates them and the fresh pixels replace them on arrival
+  const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk && !e.stale).map((e) => e.key));
   const wanted = tilesForView(view, W, H, scale);
   // The engine scale caps at 256 blocks/cell, so a deep zoom-out needs many
   // more tiles than the default budget (~160 at max zoom on a 1920px canvas).
@@ -1099,6 +1141,7 @@ function requestGridTiles(bump = true) {
   for (const pos of wanted) {
     const key = tileKey(wk, scale, pos.originX, pos.originZ);
     if (cached.has(key)) { tileCache.touch(key); continue; }
+    restoreTile(key);                      // known area? paint it right away
     if (pendingTiles.has(key)) continue;   // already in flight
     tileQueue.push({
       type: 'renderTile', gen: renderGen, key, wk, scale, relief: reliefOn(),
@@ -3054,8 +3097,10 @@ function applyPalette(alt, persist) {
   $('#paletteBtn').setAttribute('aria-pressed', String(alt));
   if (persist) { try { localStorage.setItem('palette', alt ? 'alt' : 'default'); } catch { /* ignore */ } }
   send({ type: 'palette', alt });
-  // every cached or in-flight tile was painted with the old table
+  // every cached or in-flight tile was painted with the old table; stored
+  // tiles are keyed per palette, so lookups must re-run under the new key
   tileCache.clear(); pendingTiles.clear(); tileQueue = []; minimapTile = null;
+  tileDbFetched.clear();
   if (cmpWorker) {
     post(cmpWorker, { type: 'palette', alt });
     cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
@@ -3393,6 +3438,14 @@ async function init() {
       exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }),
       'application/json');
   };
+  // manual purge of the persistent tile cache (#289)
+  $('#tileCacheClear').onclick = async () => {
+    if (tileDb) await clearTiles(tileDb);
+    tileDbFetched.clear();
+    const info = $('#profileInfo');
+    info.textContent = t('tileCacheCleared');
+    info.className = 'muted small';
+  };
   const profileImportInput = $('#profileImportFile');
   $('#profileImport').onclick = () => profileImportInput.click();
   profileImportInput.onchange = () => {
@@ -3457,6 +3510,13 @@ async function init() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
+  // persistent tile cache (#289): the DB opens asynchronously so the first
+  // render never waits on IndexedDB; once ready, re-scan the current view so
+  // tiles of an already explored seed restore immediately
+  openTileDB(`${APP_VERSION.version}|${APP_VERSION.commit}`).then((db) => {
+    tileDb = db;
+    if (db) requestGridTiles(false);
+  });
 }
 function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); clearCompareDiff(); hidePopup(); buildFavList(); buildMarkerList(); }
 // As a module, app.js no longer leaks its bindings into the page scope; the

@@ -12,7 +12,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "seed.js", "search.js", "rarebiomes.js", "shapes.js", "version.js", "export.js", "coords.js", "portals.js", "slime.js", "maptools.js", "tilecache.js", "sharestate.js", "seedsearch.js", "searchhistory.js", "userpresets.js", "usermarkers.js", "userzones.js", "userpaths.js", "palette.js", "tilegrid.js", "relief.js", "compare.js", "composition.js", "profile.js", "gallery.js", "errorreport.js", "tour.js", "keys.js",
+    "seed.js", "search.js", "rarebiomes.js", "shapes.js", "version.js", "export.js", "coords.js", "portals.js", "slime.js", "maptools.js", "tilecache.js", "tiledb.js", "sharestate.js", "seedsearch.js", "searchhistory.js", "userpresets.js", "usermarkers.js", "userzones.js", "userpaths.js", "palette.js", "tilegrid.js", "relief.js", "compare.js", "composition.js", "profile.js", "gallery.js", "errorreport.js", "tour.js", "keys.js",
     "markers.js", "presets.js", "favorites.js", "legend.js", "theme.js",
     "scripts/*.js"
   ]

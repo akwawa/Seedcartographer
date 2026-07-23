@@ -43,6 +43,7 @@ const ASSETS = [
   './legend.js',
   './maptools.js',
   './tilecache.js',
+  './tiledb.js',
   './sharestate.js',
   './seedsearch.js',
   './theme.js',

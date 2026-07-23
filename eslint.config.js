@@ -52,6 +52,15 @@ export default [
     }
   },
   {
+    // tiledb.js is the browser-only IndexedDB wrapper for the persistent
+    // tile cache (#289): imported by app.js only, not by the Node tests
+    files: ['tiledb.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: { ...globals.browser }
+    }
+  },
+  {
     // sharestate.js runs in the browser (btoa/atob) and in Node tests (Buffer)
     files: ['sharestate.js'],
     languageOptions: { globals: { Buffer: 'readonly' } }
