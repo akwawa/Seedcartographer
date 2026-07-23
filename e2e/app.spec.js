@@ -1474,3 +1474,38 @@ test('discoverability: compare placeholder, shortcut tooltips, map-tools help (#
   await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(6);
   await page.click('#helpClose');
 });
+
+// #288: the compare "differences" toggle tints the cells where the two
+// seeds' biomes diverge; identical seeds highlight nothing
+test('compare mode: the differences overlay follows the two seeds (#288)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await openMoreMenu(page);
+  await page.click('#cmpBtn');
+  await closeMoreMenu(page);
+  await expect(page.locator('#cmpPane')).toBeVisible();
+  await page.fill('#cmpSeed', '4242');
+  await page.press('#cmpSeed', 'Enter');
+  await page.waitForFunction(() => cmpPendingTiles.size === 0 && cmpTileCache.size() > 0);
+  // two different seeds: the diff reply flags cells and the pane shows them
+  await page.check('#cmpDiff');
+  await page.waitForFunction(() => Number(document.querySelector('#cmpPane').dataset.diffCells) > 0);
+  // the compare canvas actually contains the magenta tint (255, 0, 180)
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#cmpMap');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 140 && d[i + 1] < 120 && d[i] > d[i + 1] + 60 && d[i + 2] > d[i + 1]) return true;
+    }
+    return false;
+  });
+  // identical seeds: the diff settles on zero highlighted cells
+  await page.fill('#cmpSeed', '141');
+  await page.press('#cmpSeed', 'Enter');
+  await page.waitForFunction(() => document.querySelector('#cmpPane').dataset.diffCells === '0');
+  // unchecking clears the overlay state entirely
+  await page.uncheck('#cmpDiff');
+  await page.waitForFunction(() => !('diffCells' in document.querySelector('#cmpPane').dataset));
+  await page.click('#cmpClose');
+  await expect(page.locator('#cmpPane')).toBeHidden();
+});

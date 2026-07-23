@@ -4,7 +4,8 @@ import {
   COMPARE_MIN_BPP, COMPARE_MAX_BPP, clampBpp, panViewport, zoomViewportAt,
   sameViewport, normalizeCompareSeed, compareWorldFor,
   createCompareState, enterCompare, exitCompare,
-  STRUCT_QUERY_MARGIN_PX, structQueryRect, structuresRequestFor
+  STRUCT_QUERY_MARGIN_PX, structQueryRect, structuresRequestFor,
+  DIFF_TINT_RGBA, diffGrids, diffRequestFor
 } from '../compare.js';
 
 test('clampBpp bounds the zoom to the supported range', () => {
@@ -106,4 +107,37 @@ test('structuresRequestFor builds the worker listing message for a pane', () => 
     type: 'structures', reqId: 7, seed: '4242', mc: 28, large: true, dim: -1,
     types: [3, 'slime'], x0: -10, z0: -20, x1: 30, z1: 40
   });
+});
+
+test('diffGrids lists the indices of the differing cells (#288)', () => {
+  assert.deepStrictEqual(diffGrids([1, 2, 3, 4], [1, 9, 3, 7]), [1, 3]);
+  // identical grids: no highlighted cell
+  assert.deepStrictEqual(diffGrids([5, 5, 5], [5, 5, 5]), []);
+  // typed arrays (the worker grids) compare cell by cell too
+  assert.deepStrictEqual(diffGrids(Int32Array.of(1, 2), Int32Array.of(2, 2)), [0]);
+  // empty grids diff to nothing
+  assert.deepStrictEqual(diffGrids([], []), []);
+});
+
+test('diffGrids yields an empty diff on mismatched or missing grids (#288)', () => {
+  assert.deepStrictEqual(diffGrids([1, 2, 3], [1, 2]), []);
+  assert.deepStrictEqual(diffGrids(null, [1, 2]), []);
+  assert.deepStrictEqual(diffGrids([1, 2], undefined), []);
+});
+
+test('diffRequestFor builds the worker diff message for the shared viewport (#288)', () => {
+  const world = { seed: '141', mc: 28, large: true, dim: -1 };
+  const view = { cx: 100, cz: -50, bpp: 2 };
+  assert.deepStrictEqual(diffRequestFor(9, world, '4242', view, 400, 300, 63), {
+    type: 'biomeDiff', reqId: 9, seedA: '141', seedB: '4242',
+    mc: 28, large: true, dim: -1, y: 63,
+    cx: 100, cz: -50, bpp: 2, w: 400, h: 300
+  });
+  // the inputs are never mutated
+  assert.deepStrictEqual(view, { cx: 100, cz: -50, bpp: 2 });
+});
+
+test('DIFF_TINT_RGBA is a semi-transparent tint (#288)', () => {
+  assert.strictEqual(DIFF_TINT_RGBA.length, 4);
+  assert.ok(DIFF_TINT_RGBA[3] > 0 && DIFF_TINT_RGBA[3] < 255);
 });

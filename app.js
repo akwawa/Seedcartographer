@@ -50,7 +50,7 @@ import { altRgb } from './palette.js';
 import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
 import {
   panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare,
-  structQueryRect, structuresRequestFor
+  structQueryRect, structuresRequestFor, diffRequestFor, DIFF_TINT_RGBA
 } from './compare.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
@@ -1069,7 +1069,7 @@ function requestRender(delay = 90) {
     }
     requestMinimap();
     requestStructures();
-    if (cmpState.on) requestCompareTiles();
+    if (cmpState.on) { requestCompareTiles(); requestCompareDiff(); }
   }, delay);
 }
 // progressive checkerboard: request every uncached tile of the view,
@@ -1333,6 +1333,9 @@ let cmpTileQueue = [];
 let cmpStructReq = 0;                // last structure listing sent to the compare worker
 const cmpStructPoints = new Map();   // seed-B structure points: type -> [[x, z], ...]
 const cmpCanvas = $('#cmpMap'), cmpCtx = cmpCanvas.getContext('2d');
+let cmpDiffOn = false;               // "differences" overlay toggle (#288)
+let cmpDiffReq = 0;                  // last diff request sent to the compare worker
+let cmpDiff = null;                  // last diff reply: {cells, cols, rows, scale, originX, originZ, canvas}
 
 function cmpWorld() { return compareWorldFor(world, cmpState.seed); }
 function ensureCmpWorker() {
@@ -1346,6 +1349,7 @@ function ensureCmpWorker() {
     if (d.type === 'fatal') { showFatal(d.message); return; }
     if (d.type === 'ready') { engineUp(cmpWorker); return; }
     if (d.type === 'gridTile') { onCmpGridTile(d); return; }
+    if (d.type === 'biomeDiff') { onCmpDiff(d); return; }
     if (d.type === 'structures') onCmpStructures(d);
   };
   if (altPalette) post(cmpWorker, { type: 'palette', alt: true });
@@ -1414,6 +1418,48 @@ function requestCompareTiles(bump = true) {
   }
   pumpCmpTileQueue();
 }
+// ---------- "differences" overlay of the compare pane (#288) ----------
+// magenta tint over the cells where the two seeds' biomes differ; the diff
+// is computed on the compare worker (both grids at the render scale) and
+// painted once into an offscreen canvas reused by every drawCompare
+function requestCompareDiff() {
+  if (!cmpState.on || !cmpDiffOn) return;
+  cmpDiffReq = reqSeq++;
+  const W = Math.ceil(cmpCanvas.width / dpr), H = Math.ceil(cmpCanvas.height / dpr);
+  post(cmpWorker, diffRequestFor(cmpDiffReq, world, cmpState.seed, view, W, H, yLayer));
+}
+function onCmpDiff(d) {
+  if (d.reqId !== cmpDiffReq || !cmpDiffOn) return;   // stale (older view or seed)
+  cmpDiff = { ...d, canvas: d.ok && d.cells.length ? diffOverlayCanvas(d) : null };
+  syncDiffCount();
+  drawCompare();
+}
+function diffOverlayCanvas(d) {
+  const c = document.createElement('canvas');
+  c.width = d.cols; c.height = d.rows;
+  const img = new ImageData(d.cols, d.rows);
+  const [r, g, b, a] = DIFF_TINT_RGBA;
+  for (const i of d.cells) {
+    img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = a;
+  }
+  c.getContext('2d').putImageData(img, 0, 0);
+  return c;
+}
+// the e2e suite reads the highlighted-cell count from the pane element
+function syncDiffCount() {
+  if (cmpDiffOn && cmpDiff) $('#cmpPane').dataset.diffCells = String(cmpDiff.cells.length);
+  else delete $('#cmpPane').dataset.diffCells;
+}
+function clearCompareDiff() {
+  cmpDiff = null;
+  syncDiffCount();
+}
+function setCompareDiff(on) {
+  cmpDiffOn = on;
+  clearCompareDiff();
+  if (on) requestCompareDiff();
+  drawCompare();
+}
 function drawCompare() {
   cmpCtx.save();
   cmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1429,6 +1475,12 @@ function drawCompare() {
     cmpTileCache.touch(e.key);
     const p = worldToScreen(view, W, H, e.originX, e.originZ);
     cmpCtx.drawImage(e.canvas, p.x, p.y, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
+  }
+  // "differences" tint (#288): drawn like a tile, anchored on its world origin
+  if (cmpDiffOn && cmpDiff?.canvas) {
+    const p = worldToScreen(view, W, H, cmpDiff.originX, cmpDiff.originZ);
+    cmpCtx.drawImage(cmpDiff.canvas, p.x, p.y,
+      cmpDiff.cols * cmpDiff.scale / view.bpp, cmpDiff.rows * cmpDiff.scale / view.bpp);
   }
   // active structure layers, computed for seed B (the shared toggles apply
   // to both panes); personal overlays (pins, favorites, markers, zones) are
@@ -1458,6 +1510,7 @@ function setCompareMode(on, seed) {
     cmpWorker = null;
     cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
     cmpStructPoints.clear();
+    clearCompareDiff();
     clearTimeout(cmpRefillTimer);
   }
   resize();   // the map halves changed size; redraws and re-requests both panes
@@ -1467,9 +1520,11 @@ function applyCompareSeed() {
   cmpState = enterCompare(cmpState, $('#cmpSeed').value, world.seed);
   $('#cmpSeed').value = cmpState.seed;
   cmpStructPoints.clear();   // points of the previous compare seed
+  clearCompareDiff();        // diff of the previous compare seed (#288)
   drawCompare();
   requestCompareTiles();
   requestCompareStructures();
+  requestCompareDiff();
 }
 // pan/zoom on the compare canvas drives the shared viewport, so the main
 // map follows (draw() repaints both panes; requestRender() refills both)
@@ -3229,6 +3284,7 @@ async function init() {
   $('#cmpBtn').onclick = () => setCompareMode(!cmpState.on);
   $('#cmpClose').onclick = () => setCompareMode(false);
   $('#cmpSeed').onchange = applyCompareSeed;
+  $('#cmpDiff').onchange = (e) => setCompareDiff(e.target.checked);
   $('#seedResumeBtn').onclick = resumeSeedSearch;
   updateSeedResumeBtn();
   $('#seedSearchBtn').onclick = () => {
@@ -3402,7 +3458,7 @@ async function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
 }
-function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); hidePopup(); buildFavList(); buildMarkerList(); }
+function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); clearCompareDiff(); hidePopup(); buildFavList(); buildMarkerList(); }
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
