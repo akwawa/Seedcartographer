@@ -58,9 +58,13 @@ test('resolveNavLang handles the Chinese region variants', () => {
   assert.strictEqual(resolveNavLang('zh-CN'), 'zh-CN');
   assert.strictEqual(resolveNavLang('zh'), 'zh-CN');
   assert.strictEqual(resolveNavLang('zh-Hans-CN'), 'zh-CN');
-  // no dedicated traditional-Chinese table yet: zh-TW/zh-HK fall back to zh-CN
-  assert.strictEqual(resolveNavLang('zh-TW'), 'zh-CN');
-  assert.strictEqual(resolveNavLang('zh-HK'), 'zh-CN');
+  assert.strictEqual(resolveNavLang('zh-SG'), 'zh-CN');
+  // #290: traditional-Chinese variants get the dedicated zh-TW table
+  assert.strictEqual(resolveNavLang('zh-TW'), 'zh-TW');
+  assert.strictEqual(resolveNavLang('zh-HK'), 'zh-TW');
+  assert.strictEqual(resolveNavLang('zh-Hant'), 'zh-TW');
+  assert.strictEqual(resolveNavLang('zh-Hant-TW'), 'zh-TW');
+  assert.strictEqual(resolveNavLang('ZH-tw'), 'zh-TW');
 });
 
 test('resolveNavLang falls back to English for unknown or missing values', () => {

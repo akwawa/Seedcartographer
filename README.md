@@ -116,11 +116,12 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
 - **Thème clair ou sombre.** La bascule ☀/☾ en haut à droite change de thème ;
   au premier chargement le thème suit la préférence du système
   (`prefers-color-scheme`) et le choix manuel est mémorisé.
-- **Interface multilingue.** L'interface est disponible en français, anglais,
-  espagnol, allemand, italien et portugais brésilien : la langue du navigateur
-  est détectée automatiquement et
+- **Interface multilingue.** L'interface est disponible en 11 langues :
+  français, anglais, espagnol, allemand, italien, portugais brésilien,
+  japonais, russe, polonais, chinois simplifié et chinois traditionnel. La
+  langue du navigateur est détectée automatiquement et
   le sélecteur en haut à droite permet d'en changer (choix mémorisé). Les noms
-  de biomes sont traduits dans les 6 langues (liste cubiomes complète,
+  de biomes sont traduits dans les 11 langues (liste cubiomes complète,
   vérifiée par un test de parité).
 
 - **Résolution de détection : 16 blocs.** Les biomes sont échantillonnés tous les
