@@ -223,6 +223,11 @@ sélectionner. Le bouton **?** en haut à droite ouvre l'aide intégrée
   couverture.
 - Une CI GitHub Actions lance lint, tests unitaires et e2e sur chaque push et
   pull request.
+- **Bonnes pratiques** : le badge OpenSSF Scorecard en tête de ce README
+  mesure la posture supply-chain du dépôt (workflow `scorecard.yml`) ;
+  [`docs/BEST_PRACTICES.md`](docs/BEST_PRACTICES.md) prépare l'inscription
+  au badge OpenSSF Best Practices (bestpractices.dev) et documente le PAT
+  `SCORECARD_TOKEN` nécessaire au check Branch-Protection.
 - **Dépendances** : Dependabot ouvre chaque semaine des MR groupées (actions,
   npm, submodule cubiomes) ; une mise à jour du submodule exige de recompiler
   le WASM sur la branche de mise à jour (le job CI `wasm` échoue sinon).

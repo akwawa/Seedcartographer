@@ -82,6 +82,15 @@ et la release GitHub.
   destination idéale. Libellés dans les 10 langues et test e2e du parcours
   complet.
 
+### Sécurité
+- Suivi Scorecard : dossier bestpractices.dev + PAT Branch-Protection (#291) —
+  nouveau `docs/BEST_PRACTICES.md` avec les réponses préparées, section par
+  section, du questionnaire « passing » d'OpenSSF Best Practices
+  (bestpractices.dev) et la ligne de badge à coller au README ; documentation
+  du fine-grained PAT « Administration: read-only » à stocker comme secret
+  `SCORECARD_TOKEN`, que le workflow `scorecard.yml` utilise désormais pour
+  le check Branch-Protection (fallback sur le `GITHUB_TOKEN` par défaut).
+
 ## [0.12.0](https://github.com/akwawa/Seedcartographer/compare/v0.11.0...v0.12.0) (2026-07-22)
 
 ### Ajouté
