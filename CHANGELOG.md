@@ -19,6 +19,12 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Langue : chinois traditionnel (zh-TW) (#290) — 11e langue de l'interface,
+  avec la terminologie officielle de l'édition taïwanaise de Minecraft Java
+  (生態域, 終界, 地獄, 惡地, 蒼鬱洞窟…) pour tous les libellés, l'aide, le
+  tour guidé et les noms de biomes. `resolveNavLang()` route désormais
+  zh-TW/zh-HK/zh-Hant vers zh-TW (dette du #228), et le sélecteur de langue
+  propose 繁體中文.
 - Cache de tuiles persistant entre sessions (#289) : les tuiles rendues sont
   conservées dans IndexedDB (même clé que le cache mémoire, palette comprise),
   si bien qu'une seed déjà explorée s'affiche immédiatement au chargement

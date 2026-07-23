@@ -174,12 +174,15 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await selectLang(page, 'zh-CN');
   await expect(page.locator('#searchBtn')).toHaveText('搜索此区域');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('樱花树林');
+  await selectLang(page, 'zh-TW');
+  await expect(page.locator('#searchBtn')).toHaveText('搜尋此區域');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('櫻花樹林');
   // no locale may create a horizontal page overflow anymore (#266)
   const overflowOf = async (lang) => {
     await selectLang(page, lang);
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   };
-  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt', 'ja', 'ru', 'pl', 'zh-CN']) {
+  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt', 'ja', 'ru', 'pl', 'zh-CN', 'zh-TW']) {
     expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(0);
   }
 });
