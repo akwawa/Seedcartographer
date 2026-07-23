@@ -20,7 +20,8 @@ import {
 } from './sharestate.js';
 import {
   SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND, sequentialSeeds, randomSeeds,
-  planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun
+  planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun,
+  SURPRISE_MAX_SEEDS, SURPRISE_RADIUS, surpriseCriteria
 } from './seedsearch.js';
 import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
@@ -2061,6 +2062,87 @@ function seedResultRow(cand) {
   row.append(li, cmp);
   return row;
 }
+// ---------- "Surprise me" (#287) ----------
+// First random seed matching the criteria (or, with an empty panel, the
+// built-in "village near spawn" preset). Reuses the multi-seed engine: one
+// 'seedSearch' batch on a dedicated worker, stopped at the first hit; the
+// found seed is loaded, the map centered on the spot and a pin dropped.
+let surpriseWorker = null;
+let surpriseReq = 0, surpriseBusy = false, surpriseScanned = 0;
+let surpriseHit = false, surpriseCancelled = false;
+function getSurpriseWorker() {
+  if (surpriseWorker) return surpriseWorker;
+  const w = new Worker('./worker.js', { type: 'module' });
+  w.engineReady = false; w.pending = [];
+  w.onerror = (e) => console.error('SURPRISE WORKER ERROR:', e.message);
+  w.onmessage = (e) => {
+    const d = e.data;
+    if (d.type === 'ready') engineUp(w);
+    else if (d.type === 'seedScanned') onSurpriseScanned(d);
+    else if (d.type === 'seedBatchDone') onSurpriseDone(d);
+  };
+  surpriseWorker = w;
+  return w;
+}
+function setSurpriseBusy(on) {
+  surpriseBusy = on;
+  const btn = $('#surpriseBtn');
+  btn.dataset.i18n = on ? 'cancelBtn' : 'surpriseBtn';
+  btn.textContent = t(btn.dataset.i18n);
+}
+function surpriseInfo(msg, cls) {
+  const el = $('#seedInfo');
+  el.textContent = msg;
+  el.className = 'info ' + cls;
+}
+function startSurprise() {
+  if (surpriseBusy) {
+    surpriseCancelled = true;
+    post(getSurpriseWorker(), { type: 'cancelSeedSearch', reqId: surpriseReq });
+    return;
+  }
+  const plan = surpriseCriteria(collectCriteria(), structToggles[0]?.type);
+  if (!plan) { surpriseInfo(t('pickCriteria'), 'err'); return; }
+  const radius = plan.preset
+    ? SURPRISE_RADIUS
+    : Math.min(5000, Math.max(500, Number.parseInt($('#seedRadius').value, 10) || 1500));
+  const step = Math.max(32, Number.parseInt($('#step').value, 10) || 32);
+  surpriseReq = reqSeq++;
+  surpriseScanned = 0; surpriseHit = false; surpriseCancelled = false;
+  post(getSurpriseWorker(), {
+    type: 'seedSearch', reqId: surpriseReq, mc: world.mc, large: world.large, dim: world.dim,
+    y: yLayer, range: radius, step, ...plan.crit,
+    seeds: randomSeeds(SURPRISE_MAX_SEEDS, Math.random)
+  });
+  setSurpriseBusy(true);
+  surpriseInfo(t('surpriseTesting', { i: 0, n: SURPRISE_MAX_SEEDS }), 'busy');
+}
+function onSurpriseScanned(d) {
+  if (d.reqId !== surpriseReq || surpriseHit) return;
+  surpriseScanned++;
+  if (!d.hit) {
+    surpriseInfo(t('surpriseTesting', { i: surpriseScanned, n: SURPRISE_MAX_SEEDS }), 'busy');
+    return;
+  }
+  surpriseHit = true;
+  post(getSurpriseWorker(), { type: 'cancelSeedSearch', reqId: surpriseReq });
+  setSurpriseBusy(false);
+  $('#seed').value = d.seed; world.seed = d.seed;
+  view.cx = d.hit.x; view.cz = d.hit.z;
+  if (view.bpp > 4) view.bpp = 3;
+  curReset();
+  rarePin = d.hit;   // temporary pin, lives with the popup like the rare-biome one
+  draw(); requestRender(0); syncHash();
+  showPopup(d.hit);
+  surpriseInfo(t('surpriseFound', { seed: d.seed, x: d.hit.x, z: d.hit.z }), 'ok');
+}
+function onSurpriseDone(d) {
+  if (d.reqId !== surpriseReq || surpriseHit) return;
+  setSurpriseBusy(false);
+  if (surpriseCancelled) { surpriseInfo(t('searchCancelled'), 'empty'); return; }
+  if (d.error) { surpriseInfo(t('searchFailedArea'), 'err'); return; }
+  surpriseInfo(t('surpriseNone', { n: surpriseScanned }), 'empty');
+}
 function onSearchResult(d) {
   if (d.reqId !== searchReq) return;   // stale
   setSearchBusy(false);
@@ -3153,6 +3235,7 @@ async function init() {
     if (seedBusy) cancelSeedSearch();
     else startSeedSearch();
   };
+  $('#surpriseBtn').onclick = startSurprise;
   $('#pngBtn').onclick = () => {
     if (exportBusy) { sendSearch({ type: 'cancelExport', reqId: exportReq }); return; }
     const size = $('#pngSizeSel').value;

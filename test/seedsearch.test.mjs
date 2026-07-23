@@ -3,8 +3,36 @@ import assert from 'node:assert';
 import { seedToBigInt } from '../seed.js';
 import {
   SEED_SEARCH_MAX_TOTAL, sequentialSeeds, randomSeeds, planBatches,
-  originDist, compareCandidates, insertCandidate, serializeSeedRun, parseSeedRun
+  originDist, compareCandidates, insertCandidate, serializeSeedRun, parseSeedRun,
+  SURPRISE_MAX_SEEDS, SURPRISE_RADIUS, surpriseCriteria
 } from '../seedsearch.js';
+
+// ---- "Surprise me" (#287) ----
+test('surpriseCriteria passes the panel criteria through untouched', () => {
+  const crit = { mainBiomes: [1], structClauses: [] };
+  assert.deepStrictEqual(surpriseCriteria(crit, 7), { crit, preset: false });
+  // the panel criteria win even when the village type is unknown
+  assert.deepStrictEqual(surpriseCriteria(crit, undefined), { crit, preset: false });
+});
+
+test('surpriseCriteria builds the village-near-spawn preset without panel criteria', () => {
+  const plan = surpriseCriteria(null, 7);
+  assert.strictEqual(plan.preset, true);
+  assert.deepStrictEqual(plan.crit.structClauses, [{ type: 7, min: 1, radius: 800, inMain: false }]);
+  assert.deepStrictEqual(plan.crit.mainBiomes, []);
+  assert.strictEqual(plan.crit.structMode, 'and');
+  assert.strictEqual(plan.crit.surface, null);
+});
+
+test('surpriseCriteria refuses the preset while the village type is unknown', () => {
+  assert.strictEqual(surpriseCriteria(null, undefined), null);
+  assert.strictEqual(surpriseCriteria(null, 1.5), null);
+});
+
+test('the surprise budget and radius are sane', () => {
+  assert.ok(SURPRISE_MAX_SEEDS >= 1 && SURPRISE_MAX_SEEDS <= 1000);
+  assert.ok(SURPRISE_RADIUS >= 500 && SURPRISE_RADIUS <= 5000);
+});
 
 test('sequentialSeeds counts from the start seed with 64-bit wraparound', () => {
   assert.deepStrictEqual(sequentialSeeds('141', 0, 3), ['141', '142', '143']);

@@ -19,6 +19,15 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Bouton « Surprends-moi » (🎲) dans le panneau « Chercher une seed » (#287) :
+  tire jusqu'à 50 seeds aléatoires et charge la première qui satisfait les
+  critères courants — ou, sans critère, un preset par défaut « spawn
+  intéressant » (village à moins de 800 blocs de l'origine). Réutilise le
+  moteur de recherche multi-seeds (#56/#143) sur un worker dédié, avec
+  progression (seed i/N) et annulation par re-clic ; à la trouvaille, la seed
+  est chargée dans le champ, la carte se centre sur le lieu avec un pin
+  temporaire et un message de statut ; sinon, message « aucune seed
+  trouvée ». Libellé et infobulle traduits dans les 10 langues.
 - Panneau de composition des biomes autour d'un point (#286) : nouvel outil ◔
   dans la barre d'outils carte — un clic sur la carte ouvre un panneau listant
   la répartition des biomes dans un rayon configurable (256, 512 ou 1024
