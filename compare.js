@@ -131,7 +131,7 @@ export const DIFF_TINT_RGBA = [255, 0, 180, 115];
  * @returns {number[]} indices of the differing cells
  */
 export function diffGrids(a, b) {
-  if (!a || !b || a.length !== b.length) return [];
+  if (!a || a.length !== b?.length) return [];
   const out = [];
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) out.push(i);
