@@ -19,6 +19,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Mode comparaison : vue « différences » entre les deux cartes (#288) — une
+  case à cocher « Différences » dans la barre du panneau de comparaison
+  surligne d'une teinte magenta semi-transparente les cellules où les biomes
+  des deux seeds divergent. Le diff est calculé sur le worker de comparaison
+  (les deux grilles générées à l'échelle de rendu courante, réponses
+  obsolètes ignorées par reqId), la logique pure (diff de deux grilles,
+  message worker) vit dans `compare.js` et le libellé est traduit dans les
+  10 langues.
 - Bouton « Surprends-moi » (🎲) dans le panneau « Chercher une seed » (#287) :
   tire jusqu'à 50 seeds aléatoires et charge la première qui satisfait les
   critères courants — ou, sans critère, un preset par défaut « spawn

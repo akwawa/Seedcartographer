@@ -12,6 +12,7 @@ import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
 import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_RING_BLOCKS } from './rarebiomes.js';
 import { hdCellSpan, hdCellIndex } from './export.js';
 import { discCounts, compositionShares } from './composition.js';
+import { diffGrids } from './compare.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -668,6 +669,31 @@ function handleCompositionMsg(d) {
   postMessage({ type: 'composition', reqId: d.reqId, list: compositionShares(counts) });
 }
 
+// biome differences of two seeds over the viewport (#288): generate the
+// grid of each seed at the render scale on the same area and list the
+// differing cells (compare.js). The app drops stale replies by reqId, so
+// a pan, zoom or seed change simply outraces the previous request.
+function handleDiffMsg(d) {
+  const scale = chooseScale(d.bpp);
+  const sx0 = Math.floor((d.cx - d.w * d.bpp / 2) / scale);
+  const sz0 = Math.floor((d.cz - d.h * d.bpp / 2) / scale);
+  const cols = Math.ceil((d.w * d.bpp) / scale) + 1;
+  const rows = Math.ceil((d.h * d.bpp) / scale) + 1;
+  const n = cols * rows;
+  ensureArea(n);
+  applyWorld(d.seedA, d.mc, d.large, d.dim);
+  const okA = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, scaledY(d.y));
+  // copy grid A out of the scratch buffer before grid B overwrites it
+  const gridA = okA ? M.HEAP32.slice(areaPtr >> 2, (areaPtr >> 2) + n) : null;
+  applyWorld(d.seedB, d.mc, d.large, d.dim);
+  const okB = M._genBiomeArea(areaPtr, sx0, sz0, cols, rows, scale, scaledY(d.y));
+  const gridB = okB ? M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + n) : null;
+  postMessage({
+    type: 'biomeDiff', reqId: d.reqId, ok: !!(okA && okB), cells: diffGrids(gridA, gridB),
+    cols, rows, scale, originX: sx0 * scale, originZ: sz0 * scale
+  });
+}
+
 // message dispatch table: one handler per message type
 function handleBiomeMsg(d) {
   applyWorld(d.seed, d.mc, d.large, d.dim);
@@ -703,6 +729,7 @@ const HANDLERS = {
   structures: handleStructures,
   biome: handleBiomeMsg,
   composition: handleCompositionMsg,
+  biomeDiff: handleDiffMsg,
   cancelSearch: (d) => { searchCancelId = d.reqId; },
   rareBiome: handleRareMsg,
   cancelRare: (d) => { rareCancelId = d.reqId; },

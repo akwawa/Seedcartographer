@@ -118,6 +118,48 @@ export function structuresRequestFor(reqId, world, types, rect) {
   };
 }
 
+// semi-transparent magenta tint of the "differences" overlay (#288), as
+// RGBA bytes painted on the diff cells of the compare pane
+export const DIFF_TINT_RGBA = [255, 0, 180, 115];
+
+/**
+ * Indices of the cells where two biome grids differ (#288). The grids must
+ * describe the same area at the same resolution: mismatched lengths (or a
+ * missing grid) cannot be compared cell by cell and yield an empty diff.
+ * @param {ArrayLike<number>|null|undefined} a biome ids of pane A
+ * @param {ArrayLike<number>|null|undefined} b biome ids of pane B
+ * @returns {number[]} indices of the differing cells
+ */
+export function diffGrids(a, b) {
+  if (!a || !b || a.length !== b.length) return [];
+  const out = [];
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) out.push(i);
+  }
+  return out;
+}
+
+/**
+ * Worker message computing the biome differences of two seeds over the
+ * current viewport (#288) — answered as a `biomeDiff` reply carrying the
+ * differing cell indices; the app drops stale answers by reqId.
+ * @param {number} reqId request id (stale replies are dropped)
+ * @param {{seed: string|number, mc: number, large: boolean, dim: number}} world main world (seed A)
+ * @param {string|number} seedB compare pane seed
+ * @param {{cx: number, cz: number, bpp: number}} view shared viewport
+ * @param {number} w viewport width in screen pixels
+ * @param {number} h viewport height in screen pixels
+ * @param {number} y sampled altitude (block y)
+ * @returns {{type: string, reqId: number, seedA: string|number, seedB: string|number, mc: number, large: boolean, dim: number, y: number, cx: number, cz: number, bpp: number, w: number, h: number}}
+ */
+export function diffRequestFor(reqId, world, seedB, view, w, h, y) {
+  return {
+    type: 'biomeDiff', reqId, seedA: world.seed, seedB,
+    mc: world.mc, large: world.large, dim: world.dim, y,
+    cx: view.cx, cz: view.cz, bpp: view.bpp, w, h
+  };
+}
+
 /**
  * Initial compare-mode state: off, no seed picked yet.
  * @returns {{on: boolean, seed: string}}
