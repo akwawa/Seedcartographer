@@ -936,6 +936,47 @@ test('the tile checkerboard reuses cached tiles when panning back', async ({ pag
   expect(sizeAfterBack).toBe(sizeAfterPan);
 });
 
+// #289: rendered tiles persist in IndexedDB across sessions
+async function storedTileCount(page) {
+  return page.evaluate(async () => {
+    const db = await new Promise((res) => {
+      const r = indexedDB.open('seedcartographer-tiles');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => res(null);
+    });
+    if (!db) return 0;
+    const n = await new Promise((res) => {
+      const rq = db.transaction('tiles').objectStore('tiles').count();
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => res(0);
+    });
+    db.close();
+    return n;
+  });
+}
+test('the persistent tile cache restores known tiles after a reload, and purges', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // first visit: the view fills with fresh tiles, persisted to IndexedDB
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  await expect.poll(() => storedTileCount(page)).toBeGreaterThan(0);
+  // second visit: known tiles restore from IndexedDB (observable counter)
+  await page.reload();
+  await waitForApp(page);
+  await page.waitForFunction(() => window.tileCacheHits > 0);
+  // let the fresh re-renders settle so no late save races the purge below
+  await page.waitForFunction(() => pendingTiles.size === 0);
+  // manual purge from the profile panel empties the store and confirms
+  await page.click('#tileCacheClear');
+  await expect(page.locator('#profileInfo')).toContainText('cleared');
+  await expect.poll(() => storedTileCount(page)).toBe(0);
+  // after the purge nothing restores: every tile is computed fresh
+  await page.reload();
+  await waitForApp(page);
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  expect(await page.evaluate(() => window.tileCacheHits)).toBe(0);
+});
+
 test('the A/B version compare swaps the generation and keeps the view', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

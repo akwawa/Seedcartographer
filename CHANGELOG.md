@@ -19,6 +19,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Cache de tuiles persistant entre sessions (#289) : les tuiles rendues sont
+  conservées dans IndexedDB (même clé que le cache mémoire, palette comprise),
+  si bien qu'une seed déjà explorée s'affiche immédiatement au chargement
+  pendant que le worker régénère des tuiles fraîches. Budget de stockage
+  borné à ~50 Mo avec éviction LRU persistante (politique pure dans
+  `tilecache.js`, accès IndexedDB isolés dans `tiledb.js`), invalidation
+  automatique quand la version de l'application change, et bouton de purge
+  manuelle dans le panneau profil (libellé traduit dans les 10 langues).
 - Mode comparaison : vue « différences » entre les deux cartes (#288) — une
   case à cocher « Différences » dans la barre du panneau de comparaison
   surligne d'une teinte magenta semi-transparente les cellules où les biomes

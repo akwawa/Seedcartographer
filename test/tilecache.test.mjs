@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { tileWorldKey, tileKey, createTileCache, tilesInView } from '../tilecache.js';
+import { tileWorldKey, tileKey, createTileCache, tilesInView, persistTileKey, evictionPlan, TILE_DB_BUDGET } from '../tilecache.js';
 
 const W = { seed: '141', mc: 28, large: false, dim: 0 };
 
@@ -89,4 +89,28 @@ test('tilesInView keeps current-scale tiles under the cap and paints them last',
   assert.deepStrictEqual(
     tilesInView(entries, wk, rect, 2, 16).map((e) => e.key),
     ['cur1', 'cur2']);
+});
+
+test('persistTileKey adds the palette to the stored-tile identity', () => {
+  const key = tileKey(tileWorldKey(W, 60), 16, 0, 256);
+  assert.strictEqual(persistTileKey(key, false), `${key}|p0`);
+  assert.strictEqual(persistTileKey(key, true), `${key}|p1`);
+  assert.notStrictEqual(persistTileKey(key, true), persistTileKey(key, false));
+});
+
+test('evictionPlan drops the least recently used entries until the budget fits', () => {
+  const e = (key, size, lastUsed) => ({ key, size, lastUsed });
+  // under budget: nothing evicted, input untouched
+  const entries = [e('b', 30, 2), e('a', 30, 1), e('c', 30, 3)];
+  assert.deepStrictEqual(evictionPlan(entries, 100), []);
+  assert.deepStrictEqual(entries.map((x) => x.key), ['b', 'a', 'c']);
+  // over budget: oldest first, stopping as soon as the rest fits
+  assert.deepStrictEqual(evictionPlan(entries, 60), ['a']);
+  assert.deepStrictEqual(evictionPlan(entries, 30), ['a', 'b']);
+  assert.deepStrictEqual(evictionPlan(entries, 0), ['a', 'b', 'c']);
+  assert.deepStrictEqual(evictionPlan([], 0), []);
+});
+
+test('the persistent budget is about 50 MB', () => {
+  assert.strictEqual(TILE_DB_BUDGET, 50 * 1024 * 1024);
 });
