@@ -16,6 +16,13 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Corrigé
+- CI mutation : le run complet dépassait le timeout de 60 minutes (#314) —
+  le périmètre muté a grossi à 32 modules purs ; `timeout-minutes` porté à
+  120 dans le workflow.
+
 ## [0.13.3](https://github.com/akwawa/Seedcartographer/compare/v0.13.2...v0.13.3) (2026-07-24)
 
 
