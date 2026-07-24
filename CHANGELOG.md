@@ -16,7 +16,8 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [Non publié]
+## [0.13.4](https://github.com/akwawa/Seedcartographer/compare/v0.13.3...v0.13.4) (2026-07-24)
+
 
 ### Corrigé
 - CI mutation : le run complet dépassait le timeout de 60 minutes (#314) —
