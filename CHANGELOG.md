@@ -20,13 +20,6 @@ et la release GitHub.
 
 
 ### Corrigé
-
-* keep tsconfig.json in the Stryker sandbox and skip its preprocessor ([#307](https://github.com/akwawa/Seedcartographer/issues/307)) ([cf100ab](https://github.com/akwawa/Seedcartographer/commit/cf100ab94423e7f431cac0bd5cdf502af8730512)), closes [#306](https://github.com/akwawa/Seedcartographer/issues/306)
-* release 0.13.2 ([293ac5b](https://github.com/akwawa/Seedcartographer/commit/293ac5bdb979a30ad105c36c277478a64494f6a2))
-
-## [Non publié]
-
-### Corrigé
 - CI mutation : le dry run échouait depuis l'exclusion de `tsconfig.json` du
   sandbox (#306) — le test deployfiles lit ce fichier ; il reste désormais
   dans le sandbox et l'option `tsconfigFile` de Stryker pointe vers un nom
