@@ -16,6 +16,14 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Corrigé
+- CI mutation : le dry run échouait depuis l'exclusion de `tsconfig.json` du
+  sandbox (#306) — le test deployfiles lit ce fichier ; il reste désormais
+  dans le sandbox et l'option `tsconfigFile` de Stryker pointe vers un nom
+  inexistant pour court-circuiter le préprocesseur incompatible TS7.
+
 ## [0.13.1](https://github.com/akwawa/Seedcartographer/compare/v0.13.0...v0.13.1) (2026-07-24)
 
 
