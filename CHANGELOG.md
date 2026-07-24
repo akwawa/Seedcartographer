@@ -16,6 +16,14 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.13.3](https://github.com/akwawa/Seedcartographer/compare/v0.13.2...v0.13.3) (2026-07-24)
+
+
+### Corrigé
+
+* check out submodules in the mutation workflow ([#311](https://github.com/akwawa/Seedcartographer/issues/311)) ([3234fad](https://github.com/akwawa/Seedcartographer/commit/3234fadf1de31e54c32f813dad55cb176e2a44c6)), closes [#310](https://github.com/akwawa/Seedcartographer/issues/310)
+* release 0.13.3 ([a73a308](https://github.com/akwawa/Seedcartographer/commit/a73a30892577fadf23c68b107bfc6d8f5e499cd8))
+
 ## [Non publié]
 
 ### Corrigé
