@@ -16,7 +16,8 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [Non publié]
+## [0.13.2](https://github.com/akwawa/Seedcartographer/compare/v0.13.1...v0.13.2) (2026-07-24)
+
 
 ### Corrigé
 - CI mutation : le dry run échouait depuis l'exclusion de `tsconfig.json` du
