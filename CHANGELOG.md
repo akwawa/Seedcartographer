@@ -16,6 +16,15 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Corrigé
+- CI mutation : le checkout du workflow ne récupérait pas les submodules
+  (#310), faisant échouer le test de parité des noms de biomes
+  (`cubiomes/util.c` absent) dans le dry run de Stryker — `submodules: true`
+  ajouté, comme dans les jobs test/sonar de la CI. Ce défaut, antérieur aux
+  correctifs #302/#306, laissait le workflow mutation rouge de longue date.
+
 ## [0.13.2](https://github.com/akwawa/Seedcartographer/compare/v0.13.1...v0.13.2) (2026-07-24)
 
 
