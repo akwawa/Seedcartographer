@@ -16,6 +16,14 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.13.1](https://github.com/akwawa/Seedcartographer/compare/v0.13.0...v0.13.1) (2026-07-24)
+
+
+### Corrigé
+
+* exclude tsconfig.json from the Stryker sandbox ([#303](https://github.com/akwawa/Seedcartographer/issues/303)) ([2f3199e](https://github.com/akwawa/Seedcartographer/commit/2f3199eeffd98afe5a1a3903d8537e0b081141b4)), closes [#302](https://github.com/akwawa/Seedcartographer/issues/302)
+* release 0.13.1 ([92c8fce](https://github.com/akwawa/Seedcartographer/commit/92c8fce932d670d865fd38deba08bc3bfbdf92ab))
+
 ## [Non publié]
 
 ### Corrigé
