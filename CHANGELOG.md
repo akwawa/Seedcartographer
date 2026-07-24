@@ -16,7 +16,8 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
-## [Non publié]
+## [0.13.0](https://github.com/akwawa/Seedcartographer/compare/v0.12.0...v0.13.0) (2026-07-24)
+
 
 ### Ajouté
 - Langue : chinois traditionnel (zh-TW) (#290) — 11e langue de l'interface,
