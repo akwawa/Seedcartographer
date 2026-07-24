@@ -20,13 +20,6 @@ et la release GitHub.
 
 
 ### Corrigé
-
-* exclude tsconfig.json from the Stryker sandbox ([#303](https://github.com/akwawa/Seedcartographer/issues/303)) ([2f3199e](https://github.com/akwawa/Seedcartographer/commit/2f3199eeffd98afe5a1a3903d8537e0b081141b4)), closes [#302](https://github.com/akwawa/Seedcartographer/issues/302)
-* release 0.13.1 ([92c8fce](https://github.com/akwawa/Seedcartographer/commit/92c8fce932d670d865fd38deba08bc3bfbdf92ab))
-
-## [Non publié]
-
-### Corrigé
 - CI mutation : Stryker échouait avec « ts.parseConfigFileTextToJson is not a
   function » (#302) — le préprocesseur tsconfig de Stryker utilise une API
   supprimée de TypeScript 7 ; `tsconfig.json` est désormais exclu du sandbox
