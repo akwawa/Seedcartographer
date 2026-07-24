@@ -16,6 +16,20 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.13.0](https://github.com/akwawa/Seedcartographer/compare/v0.12.0...v0.13.0) (2026-07-24)
+
+
+### Ajouté
+
+* add a biome composition panel around a clicked point ([#294](https://github.com/akwawa/Seedcartographer/issues/294)) ([de630d2](https://github.com/akwawa/Seedcartographer/commit/de630d2738d7812822a788156e81adfea77b993d)), closes [#286](https://github.com/akwawa/Seedcartographer/issues/286)
+* add a differences overlay to the compare mode ([#296](https://github.com/akwawa/Seedcartographer/issues/296)) ([7ffbc27](https://github.com/akwawa/Seedcartographer/commit/7ffbc2753d5a447baa3ea536a370e661aa3e8fa0)), closes [#288](https://github.com/akwawa/Seedcartographer/issues/288)
+* add a surprise-me button that finds a random matching seed ([#295](https://github.com/akwawa/Seedcartographer/issues/295)) ([a1c3ad8](https://github.com/akwawa/Seedcartographer/commit/a1c3ad8fc64430733123f73e7ed1d1f9108ed3f4)), closes [#287](https://github.com/akwawa/Seedcartographer/issues/287)
+* add the Nether portal calculator map tool ([#292](https://github.com/akwawa/Seedcartographer/issues/292)) ([0d86f41](https://github.com/akwawa/Seedcartographer/commit/0d86f4126a51d56485dc988c17eca7d2df6b487b))
+* add the path/route map tool with cumulative distance ([#293](https://github.com/akwawa/Seedcartographer/issues/293)) ([a5d22a4](https://github.com/akwawa/Seedcartographer/commit/a5d22a47175ab0c563e17d3f733e6f9fcb989c43)), closes [#285](https://github.com/akwawa/Seedcartographer/issues/285)
+* add Traditional Chinese (zh-TW) as the eleventh language ([#298](https://github.com/akwawa/Seedcartographer/issues/298)) ([8f4850c](https://github.com/akwawa/Seedcartographer/commit/8f4850cf26b9f8b8df87d944423db7e0124cee03)), closes [#290](https://github.com/akwawa/Seedcartographer/issues/290)
+* milestone 0.13.0 ([4fd0c56](https://github.com/akwawa/Seedcartographer/commit/4fd0c5624f7864d017aa2e60f9e521adddbe68e1))
+* persist rendered tiles in IndexedDB across sessions ([#297](https://github.com/akwawa/Seedcartographer/issues/297)) ([152bf50](https://github.com/akwawa/Seedcartographer/commit/152bf50c8cc93042c249116e4fa2cd99cb79dc42)), closes [#289](https://github.com/akwawa/Seedcartographer/issues/289)
+
 ## [Non publié]
 
 ### Ajouté
