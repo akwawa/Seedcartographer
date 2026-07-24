@@ -20,13 +20,6 @@ et la release GitHub.
 
 
 ### Corrigé
-
-* give the mutation workflow a 120-minute budget ([#315](https://github.com/akwawa/Seedcartographer/issues/315)) ([b779fa9](https://github.com/akwawa/Seedcartographer/commit/b779fa985120a7bf407dae965449afd40b3e9a7c)), closes [#314](https://github.com/akwawa/Seedcartographer/issues/314)
-* release 0.13.4 ([3fabc6b](https://github.com/akwawa/Seedcartographer/commit/3fabc6b441b68ed73f7702867f8ec28963ce94d5))
-
-## [Non publié]
-
-### Corrigé
 - CI mutation : le run complet dépassait le timeout de 60 minutes (#314) —
   le périmètre muté a grossi à 32 modules purs ; `timeout-minutes` porté à
   120 dans le workflow.
