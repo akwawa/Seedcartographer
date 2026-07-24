@@ -16,6 +16,14 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Corrigé
+- CI mutation : Stryker échouait avec « ts.parseConfigFileTextToJson is not a
+  function » (#302) — le préprocesseur tsconfig de Stryker utilise une API
+  supprimée de TypeScript 7 ; `tsconfig.json` est désormais exclu du sandbox
+  (`ignorePatterns`), le runner `node --test` n'en ayant pas besoin.
+
 ## [0.13.0](https://github.com/akwawa/Seedcartographer/compare/v0.12.0...v0.13.0) (2026-07-24)
 
 
