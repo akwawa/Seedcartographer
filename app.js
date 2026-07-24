@@ -5,6 +5,7 @@
 import { t, applyI18n, setLang, currentLang, I18N_LANGS } from './i18n.js';
 import { biomeLabel } from './biomes.js';
 import { convertCoords } from './coords.js';
+import { portalPlan } from './portals.js';
 import { PRESETS, presetCriteria } from './presets.js';
 import { parseFavorites, addFavorite, findFavorite, removeFavorite, updateFavoriteNote, favoritesFor } from './favorites.js';
 import { legendEntries } from './legend.js';
@@ -12,19 +13,25 @@ import {
   scaleBarSpec, gridSpec, gridLines, minimapZoomOut, minimapClickToWorld,
   viewportRectOnMinimap, parseGotoInput, rulerMeasure, linkedGridSpec, normalizeRect, formatRect
 } from './maptools.js';
-import { tileWorldKey, tileKey, createTileCache, tilesInView } from './tilecache.js';
+import { tileWorldKey, tileKey, createTileCache, tilesInView, persistTileKey } from './tilecache.js';
+import { openTileDB, loadTile, saveTile, trimTileDB, clearTiles } from './tiledb.js';
 import {
   encodeShareHash, decodeShareHash, normalizeLegacyCriteria,
   sanitizeCriteria, sanitizeWorldView, worldToScreen, screenToWorld
 } from './sharestate.js';
 import {
   SEED_SEARCH_MAX_TOTAL, SEED_SEARCH_MAX_FOUND, sequentialSeeds, randomSeeds,
-  planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun
+  planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun,
+  SURPRISE_MAX_SEEDS, SURPRISE_RADIUS, surpriseCriteria
 } from './seedsearch.js';
 import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
 import { ZONE_COLORS, ZONE_NAME_MAX, addZone, removeZone, renameZone, recolorZone, zonesFor, parseZones } from './userzones.js';
+import {
+  PATH_NAME_MAX, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
+  addPath, removePath, renamePath, pathsFor, parsePaths
+} from './userpaths.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
@@ -44,7 +51,7 @@ import { altRgb } from './palette.js';
 import { TILE_GRID_CACHE_MAX, TILE_PAINT_MAX, renderScaleFor, tilesForView, unionPresent } from './tilegrid.js';
 import {
   panViewport, zoomViewportAt, compareWorldFor, createCompareState, enterCompare, exitCompare,
-  structQueryRect, structuresRequestFor
+  structQueryRect, structuresRequestFor, diffRequestFor, DIFF_TINT_RGBA
 } from './compare.js';
 
 // Two instances of the same engine worker: tiles/probes/structures on one,
@@ -79,6 +86,14 @@ const ruler = { on: false, a: null, b: null, done: false };
 const sel = { on: false, a: null, b: null, done: false };
 // zone tool: a/b world corners dragged on the map, turned into a named zone
 const zoneTool = { on: false, a: null, b: null };
+// path tool (#285): waypoints clicked so far, plus the live point under the
+// pointer; double-click or Escape turns them into a named persisted path
+const pathTool = { on: false, pts: [], hover: null };
+const PATH_COLOR = '#7ee0c0';
+// portal calculator (#284): the placed portal {dim,x,z}; survives dimension
+// switches so the linked pin shows up in the other dimension
+let portal = null;
+let portalMode = false;
 const structColors = ['#f2a73b','#7ee0c0','#c89bf0','#e07a7a','#7aa8e0','#d8d05a','#9ad06a','#e0a0c8'];
 let structToggles = [];                         // [{type,label,on,color,points}]
 let renderReq = 0, biomeProbeReq = 0;
@@ -88,6 +103,13 @@ let showRelief = false;                         // hillshade terrain overlay (Ov
 // relief tiles are only requested (and keyed) in the Overworld
 function reliefOn() { return showRelief && world.dim === 0; }
 const tileCache = createTileCache(TILE_GRID_CACHE_MAX); // LRU of small grid tiles (pan/zoom reuse)
+// Persistent tile cache (#289): tiles of previously explored areas restore
+// instantly from IndexedDB while the worker regenerates fresh pixels. The DB
+// opens asynchronously after startup so the first render never waits on it.
+let tileDb = null;                              // IDBDatabase once opened, else null
+const tileDbFetched = new Set();                // keys already looked up this session
+let tileDbTrimTimer = null;                     // debounced budget enforcement
+window.tileCacheHits = 0;                       // e2e-observable restore counter
 let minimapReq = 0, minimapTile = null;         // overview minimap tile
 const galleryThumbReqs = new Map();             // in-flight gallery thumbnails: reqId -> {e, cv}
 const galleryStructReqs = new Map();            // in-flight thumbnail structures: reqId -> {e, cv, colors}
@@ -215,11 +237,43 @@ function onGridTile(d) {
   }
   const entry = { ...tileCanvasOf(d), worldKey: d.wk, key: d.key, present: d.present };
   tileCache.put(entry);
+  persistTile(d);
   // tiles of a previous world/altitude are cached but not drawn
   if (d.wk !== tileWorldKey(world, yLayer, reliefOn())) return;
   draw();
   refreshLegendFromView();
 }
+// ---------- persistent tile cache (#289) ----------
+// Store a freshly rendered grid tile in IndexedDB (best-effort, async), then
+// debounce a budget trim so the store stays under ~50 MB (LRU eviction).
+function persistTile(d) {
+  if (!tileDb) return;
+  saveTile(tileDb, {
+    key: persistTileKey(d.key, altPalette), wk: d.wk, rgba: d.rgba,
+    cols: d.cols, rows: d.rows, scale: d.scale,
+    originX: d.originX, originZ: d.originZ, present: d.present
+  });
+  clearTimeout(tileDbTrimTimer);
+  tileDbTrimTimer = setTimeout(() => trimTileDB(tileDb), 2000);
+}
+// Restore a missing tile from IndexedDB: it paints immediately (marked stale
+// so the worker still regenerates it; the fresh tile replaces it on arrival).
+function restoreTile(key) {
+  if (!tileDb || tileDbFetched.has(key)) return;
+  if (tileDbFetched.size > 5000) tileDbFetched.clear();   // bound the session set
+  tileDbFetched.add(key);
+  loadTile(tileDb, persistTileKey(key, altPalette)).then((rec) => {
+    if (!rec) return;
+    // a fresh render may have landed while the read was in flight
+    if (tileCache.entries().some((e) => e.key === key)) return;
+    tileCache.put({ ...tileCanvasOf(rec), worldKey: rec.wk, key, present: rec.present, stale: true });
+    window.tileCacheHits++;
+    if (rec.wk !== tileWorldKey(world, yLayer, reliefOn())) return;
+    draw();
+    refreshLegendFromView();
+  });
+}
+
 worker.onmessage = (e) => {
   const d = e.data;
   if (d.type === 'fatal') { showFatal(d.message); return; }
@@ -235,6 +289,7 @@ worker.onmessage = (e) => {
     draw();
     return;
   }
+  if (d.type === 'composition') { onComposition(d); return; }
   if (d.type === 'biome' && d.reqId === biomeProbeReq) {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     markLegend(d.id);
@@ -349,6 +404,12 @@ function setDimension(dim) {
     lbl.hidden = dim === 1;
     if (dim === 1) { showNetherGrid = false; $('#netherChk').checked = false; }
   }
+  // the End has no linked dimension either: hide and disarm the portal tool
+  const pbtn = $('#portalBtn');
+  if (pbtn) {
+    pbtn.hidden = dim === 1;
+    if (dim === 1 && portalMode) setPortalMode(false);
+  }
   // surface relief only exists in the Overworld
   const rlbl = $('#reliefToggleLbl');
   if (rlbl) rlbl.hidden = dim !== 0;
@@ -421,11 +482,14 @@ function draw() {
 
   // named zone annotations sit right above the tiles, under every marker
   drawZones(W, H);
+  // path polylines render above the zones, under the markers and pins
+  drawPaths();
 
   drawStructLayers(ctx, W, H, (tg) => tg.points);
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
+  drawPortal();
 
   // result pins
   pins.forEach((p, i) => {
@@ -659,6 +723,7 @@ function zoneColorButton(z, c, box) {
 function showZoneEditor(z) {
   const pop = $('#popup');
   pop.textContent = '';
+  pop.classList.remove('comp');
   pop.setAttribute('aria-label', z.name);
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
@@ -678,6 +743,270 @@ function showZoneEditor(z) {
   pop.append(close, name, colors, del);
   if (!pop.open) pop.show();
 }
+// ---------- path tool (#285) ----------
+// a polyline with a dot on every waypoint; converted (linked-dimension)
+// paths render dashed, like zones
+function strokePolyline(pts, dashed) {
+  ctx.strokeStyle = PATH_COLOR; ctx.fillStyle = PATH_COLOR; ctx.lineWidth = 2;
+  ctx.setLineDash(dashed ? [5, 4] : []);
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(w2sx(p.x), w2sy(p.z)) : ctx.moveTo(w2sx(p.x), w2sy(p.z))));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  for (const p of pts) {
+    ctx.beginPath(); ctx.arc(w2sx(p.x), w2sy(p.z), 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+// saved paths with a "name · distance" label at the start; while tracing,
+// the pending polyline follows the pointer with its live cumulative distance
+function drawPaths() {
+  ctx.save();
+  ctx.font = '12px monospace';
+  for (const d of pathsFor(userPaths, world)) {
+    strokePolyline(d.pts, d.converted);
+    ctx.fillText(`${d.path.name} · ${pathDistance(d.pts)} ${t('blocks')}`,
+      w2sx(d.pts[0].x) + 6, w2sy(d.pts[0].z) - 6);
+  }
+  if (pathTool.on && pathTool.pts.length) {
+    const pts = pathTool.hover ? appendPathPoint(pathTool.pts, pathTool.hover.x, pathTool.hover.z) : pathTool.pts;
+    strokePolyline(pts, true);
+    const last = pts.at(-1);
+    ctx.fillText(`${pathDistance(pts)} ${t('blocks')}`, w2sx(last.x) + 8, w2sy(last.z) - 8);
+  }
+  ctx.restore();
+}
+function setPathOn(on) {
+  pathTool.on = on; pathTool.pts = []; pathTool.hover = null;
+  $('#pathBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+  draw();
+}
+// trace finished (double-click or Escape): persist the path, leave the tool
+// and open its editor — degenerate traces (fewer than 2 points) are dropped
+function finishPathDraw() {
+  const next = addPath(userPaths, { ...world, pts: pathTool.pts });
+  const created = next.length > userPaths.length ? next.at(-1) : null;
+  setUserPaths(next);
+  setPathOn(false);
+  if (created) showPathEditor(created);
+}
+// topmost path whose polyline passes within 6 screen pixels of the point
+function pathAt(mx, my) {
+  const ds = pathsFor(userPaths, world);
+  for (let i = ds.length - 1; i >= 0; i--) {
+    const pts = ds[i].pts;
+    for (let j = 1; j < pts.length; j++) {
+      const near = pointSegmentDist(mx, my,
+        w2sx(pts[j - 1].x), w2sy(pts[j - 1].z), w2sx(pts[j].x), w2sy(pts[j].z)) < 6;
+      if (near) return ds[i];
+    }
+  }
+  return null;
+}
+// small editor in the map popup: rename, read the cumulative distance and
+// its linked-dimension equivalent (÷8 / ×8), delete — like the zone editor
+function showPathEditor(p) {
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.classList.remove('comp');
+  pop.setAttribute('aria-label', p.name);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const name = document.createElement('input');
+  name.className = 'path-name mono'; name.value = p.name;
+  name.maxLength = PATH_NAME_MAX;
+  name.placeholder = t('pathNamePh');
+  name.setAttribute('aria-label', t('pathNamePh'));
+  name.onchange = () => setUserPaths(renamePath(userPaths, p.id, name.value));
+  const dist = document.createElement('p');
+  dist.className = 'mono small path-dist';
+  const total = pathDistance(p.pts);
+  const linked = linkedDistance(p.dim, total);
+  const linkedDim = linked?.dim === -1 ? 'dimNether' : 'dimOverworld';
+  dist.textContent = `${total} ${t('blocks')}`
+    + (linked ? ` · ${t(linkedDim)} ≈ ${linked.dist}` : '');
+  const del = document.createElement('button');
+  del.className = 'btn tiny path-del'; del.textContent = t('pathDelete');
+  del.onclick = () => { setUserPaths(removePath(userPaths, p.id)); hidePopup(); };
+  pop.append(close, name, dist, del);
+  if (!pop.open) pop.show();
+}
+// ---------- portal calculator (#284) ----------
+// source pin in its own dimension; ideal linked destination pin plus the
+// portal-search radius circle (128 Overworld / 16 Nether blocks) in the other
+function drawPortal() {
+  if (!portal) return;
+  const plan = portalPlan(portal.dim, portal.x, portal.z);
+  if (world.dim === plan.src.dim) drawPortalPin(plan.src, false);
+  if (world.dim === plan.dest.dim) {
+    const sx = w2sx(plan.dest.x), sy = w2sy(plan.dest.z);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(168,85,247,.85)'; ctx.fillStyle = 'rgba(168,85,247,.12)';
+    ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.arc(sx, sy, plan.radius / view.bpp, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    drawPortalPin(plan.dest, true);
+  }
+}
+// a portal renders as a small upright obsidian frame
+function drawPortalPin(p, dest) {
+  const sx = w2sx(p.x), sy = w2sy(p.z);
+  ctx.save();
+  ctx.fillStyle = dest ? '#7c3aed' : '#a855f7';
+  ctx.strokeStyle = 'rgba(24,10,40,.85)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(sx - 4, sy - 7, 8, 14);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function setPortalMode(on) {
+  portalMode = on;
+  $('#portalBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+function placePortal(x, z) {
+  // no portal pair exists for the End: leave the tool without placing
+  if (!portalPlan(world.dim, x, z)) { setPortalMode(false); return; }
+  portal = { dim: world.dim, x, z };
+  setPortalMode(false);
+  draw();
+  showPortalPopup();
+}
+// true when a portal pin (source or destination) of the current dimension
+// sits under the screen point
+function portalPinAt(mx, my) {
+  const plan = portalPlan(portal.dim, portal.x, portal.z);
+  return [plan.src, plan.dest].some((p) =>
+    p.dim === world.dim && Math.hypot(mx - w2sx(p.x), my - w2sy(p.z)) < 10);
+}
+// one "Dimension · x, z  [Copy /tp]" line of the portal popup
+function portalCoordRow(p) {
+  const row = document.createElement('div');
+  row.className = 'pop-portal-row';
+  const lbl = document.createElement('span');
+  lbl.className = 'pop-x';
+  lbl.textContent = `${t(p.dim === 0 ? 'dimOverworld' : 'dimNether')} · ${p.x}, ${p.z}`;
+  const btn = document.createElement('button');
+  btn.className = 'pop-tp'; btn.textContent = t('copyTp');
+  wireCopyButton(btn, `/tp @s ${p.x} ~ ${p.z}`, () => t('copyTp'));
+  row.append(lbl, btn);
+  return row;
+}
+function showPortalPopup() {
+  const plan = portalPlan(portal.dim, portal.x, portal.z);
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.classList.remove('comp');
+  pop.setAttribute('aria-label', t('portalTitle'));
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const rule = document.createElement('p');
+  rule.className = 'muted small pop-portal-rule';
+  rule.textContent = t('portalRule', { r: plan.radius });
+  const del = document.createElement('button');
+  del.className = 'btn tiny portal-del'; del.textContent = t('portalRemove');
+  del.onclick = () => { portal = null; hidePopup(); draw(); };
+  pop.append(close, portalCoordRow(plan.src), portalCoordRow(plan.dest), rule, del);
+  if (!pop.open) pop.show();   // non-modal: the map stays usable
+}
+
+// ---------- biome composition panel (#286) ----------
+// One armed click samples the biome shares around the point in the worker
+// (composition.js aggregation); re-clicking or changing the radius bumps the
+// request token, so the previous in-flight reply is dropped as stale.
+const COMP_RADII = [256, 512, 1024];
+let compMode = false;
+let comp = null;             // the probed point + radius {x, z, radius}
+let compReq = 0;             // cancellation token: stale replies are ignored
+function setCompMode(on) {
+  compMode = on;
+  $('#compBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+function requestComposition() {
+  compReq = reqSeq++;
+  const list = $('#compList');
+  if (list) list.textContent = '…';
+  send({
+    type: 'composition', reqId: compReq, seed: world.seed, mc: world.mc,
+    large: world.large, dim: world.dim, y: yLayer,
+    x: comp.x, z: comp.z, radius: comp.radius
+  });
+}
+function placeComposition(x, z) {
+  comp = { x, z, radius: comp?.radius || COMP_RADII[0] };
+  setCompMode(false);
+  showCompositionPopup();
+  requestComposition();
+}
+function compRadiusSelect() {
+  const sel = document.createElement('select');
+  sel.id = 'compRadius';
+  for (const r of COMP_RADII) {
+    const o = document.createElement('option');
+    o.value = String(r); o.textContent = String(r);
+    sel.appendChild(o);
+  }
+  sel.value = String(comp.radius);
+  sel.onchange = () => { comp.radius = +sel.value; requestComposition(); };
+  return sel;
+}
+function showCompositionPopup() {
+  const pop = $('#popup');
+  pop.textContent = '';
+  // the breakdown list can be tall: center this popup on the map instead of
+  // anchoring it above the midpoint like the small coordinate popups
+  pop.classList.add('comp');
+  pop.setAttribute('aria-label', t('compTitle'));
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const title = document.createElement('div');
+  title.className = 'pop-x';
+  title.textContent = `${t('compTitle')} · ${comp.x}, ${comp.z}`;
+  const lbl = document.createElement('label');
+  lbl.className = 'comp-radius';
+  const txt = document.createElement('span');
+  txt.textContent = t('compRadius');
+  lbl.append(txt, compRadiusSelect());
+  const list = document.createElement('div');
+  list.className = 'comp-list'; list.id = 'compList'; list.textContent = '…';
+  pop.append(close, title, lbl, list);
+  if (!pop.open) pop.show();   // non-modal: the map stays usable
+}
+// one "● name  12.3 %" line of the composition list
+function compRow(e) {
+  const row = document.createElement('div');
+  row.className = 'comp-row';
+  row.dataset.pct = String(e.pct);
+  const b = biomesSorted.find((x) => x.id === e.id);
+  const dot = document.createElement('span');
+  dot.className = 'comp-dot';
+  const [r, g, bb] = dispRgb(e.id, b?.rgb || [128, 128, 128]);
+  dot.style.background = `rgb(${r},${g},${bb})`;
+  const name = document.createElement('span');
+  name.className = 'comp-name';
+  name.textContent = b ? biomeLabel(b.name) : String(e.id);
+  const pct = document.createElement('span');
+  pct.className = 'comp-pct';
+  pct.textContent = `${e.pct.toFixed(1)} %`;
+  row.append(dot, name, pct);
+  return row;
+}
+function onComposition(d) {
+  if (d.reqId !== compReq) return;   // stale: a newer click/radius change won
+  const list = $('#compList');
+  if (!list) return;                 // the popup was replaced meanwhile
+  list.textContent = '';
+  if (d.error) {
+    list.textContent = t('tileFailed');
+    return;
+  }
+  for (const e of d.list) list.appendChild(compRow(e));
+}
+
 function setRulerOn(on) {
   ruler.on = on; ruler.a = null; ruler.b = null; ruler.done = false;
   $('#rulerBtn').classList.toggle('on', on);
@@ -780,7 +1109,7 @@ function requestRender(delay = 90) {
     }
     requestMinimap();
     requestStructures();
-    if (cmpState.on) requestCompareTiles();
+    if (cmpState.on) { requestCompareTiles(); requestCompareDiff(); }
   }, delay);
 }
 // progressive checkerboard: request every uncached tile of the view,
@@ -795,7 +1124,9 @@ function requestGridTiles(bump = true) {
   const W = Math.ceil(canvas.width / dpr), H = Math.ceil(canvas.height / dpr);
   const scale = renderScaleFor(view.bpp);
   const wk = tileWorldKey(world, yLayer, reliefOn());
-  const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk).map((e) => e.key));
+  // restored (stale) tiles paint but do not count as cached: the worker
+  // still regenerates them and the fresh pixels replace them on arrival
+  const cached = new Set(tileCache.entries().filter((e) => e.worldKey === wk && !e.stale).map((e) => e.key));
   const wanted = tilesForView(view, W, H, scale);
   // The engine scale caps at 256 blocks/cell, so a deep zoom-out needs many
   // more tiles than the default budget (~160 at max zoom on a 1920px canvas).
@@ -810,6 +1141,7 @@ function requestGridTiles(bump = true) {
   for (const pos of wanted) {
     const key = tileKey(wk, scale, pos.originX, pos.originZ);
     if (cached.has(key)) { tileCache.touch(key); continue; }
+    restoreTile(key);                      // known area? paint it right away
     if (pendingTiles.has(key)) continue;   // already in flight
     tileQueue.push({
       type: 'renderTile', gen: renderGen, key, wk, scale, relief: reliefOn(),
@@ -947,13 +1279,17 @@ canvas.addEventListener('pointermove', (e) => {
     view.cx -= dx * view.bpp; view.cz -= dy * view.bpp;
     lastX = e.clientX; lastY = e.clientY; draw();
   } else {
-    if (ruler.on && ruler.a && !ruler.done) {
-      ruler.b = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
-      draw();
-    }
+    trackHoverPoint(mx, my);
     clearTimeout(probeTimer); probeTimer = setTimeout(() => probeBiome(mx, my), 120);
   }
 });
+// live endpoint tracking for the click-shaped tools (ruler, path): the last
+// segment follows the pointer until the next click ends it
+function trackHoverPoint(mx, my) {
+  const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+  if (ruler.on && ruler.a && !ruler.done) { ruler.b = p; draw(); }
+  else if (pathTool.on && pathTool.pts.length) { pathTool.hover = p; draw(); }
+}
 function endPointer(e) {
   pointers.delete(e.pointerId);
   if (sel.on && sel.a && sel.b && !sel.done && e.type === 'pointerup') {
@@ -972,6 +1308,9 @@ function endPointer(e) {
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
+// double-click ends the path being traced (the two clicks landed on the
+// same spot, which appendPathPoint already deduplicated)
+canvas.addEventListener('dblclick', () => { if (pathTool.on) finishPathDraw(); });
 let probeTimer = null;
 function probeBiome(mx, my) {
   biomeProbeReq = reqSeq++;
@@ -1005,10 +1344,23 @@ canvas.addEventListener('keydown', (e) => {
   } else if (e.key === '+' || e.key === '=') { zoomBy(1 / 1.3); }
   else if (e.key === '-' || e.key === '_') { zoomBy(1.3); }
   else if (e.key === 'v' || e.key === 'V') { swapCompareVersion(); }
-  else if (e.key === 'Escape') { if (ruler.on) { setRulerOn(false); } if (markerMode) { setMarkerMode(false); } if (sel.on) { setSelOn(false); } if (zoneTool.on) { setZoneOn(false); } hidePopup(); }
+  else if (e.key === 'Escape') { dismissMapTools(); }
   else return;
   e.preventDefault();
 });
+
+// disarm every map tool and close the pin popup (Escape cascade); a path
+// being traced is finished (and persisted) first, per the tool's contract
+function dismissMapTools() {
+  if (pathTool.on) { finishPathDraw(); return; }
+  if (ruler.on) setRulerOn(false);
+  if (markerMode) setMarkerMode(false);
+  if (portalMode) setPortalMode(false);
+  if (compMode) setCompMode(false);
+  if (sel.on) setSelOn(false);
+  if (zoneTool.on) setZoneOn(false);
+  hidePopup();
+}
 
 // ---------- side-by-side seed compare (#250) ----------
 // A second map pane with its own seed and its own render worker (so a slow
@@ -1024,6 +1376,9 @@ let cmpTileQueue = [];
 let cmpStructReq = 0;                // last structure listing sent to the compare worker
 const cmpStructPoints = new Map();   // seed-B structure points: type -> [[x, z], ...]
 const cmpCanvas = $('#cmpMap'), cmpCtx = cmpCanvas.getContext('2d');
+let cmpDiffOn = false;               // "differences" overlay toggle (#288)
+let cmpDiffReq = 0;                  // last diff request sent to the compare worker
+let cmpDiff = null;                  // last diff reply: {cells, cols, rows, scale, originX, originZ, canvas}
 
 function cmpWorld() { return compareWorldFor(world, cmpState.seed); }
 function ensureCmpWorker() {
@@ -1037,6 +1392,7 @@ function ensureCmpWorker() {
     if (d.type === 'fatal') { showFatal(d.message); return; }
     if (d.type === 'ready') { engineUp(cmpWorker); return; }
     if (d.type === 'gridTile') { onCmpGridTile(d); return; }
+    if (d.type === 'biomeDiff') { onCmpDiff(d); return; }
     if (d.type === 'structures') onCmpStructures(d);
   };
   if (altPalette) post(cmpWorker, { type: 'palette', alt: true });
@@ -1105,6 +1461,48 @@ function requestCompareTiles(bump = true) {
   }
   pumpCmpTileQueue();
 }
+// ---------- "differences" overlay of the compare pane (#288) ----------
+// magenta tint over the cells where the two seeds' biomes differ; the diff
+// is computed on the compare worker (both grids at the render scale) and
+// painted once into an offscreen canvas reused by every drawCompare
+function requestCompareDiff() {
+  if (!cmpState.on || !cmpDiffOn) return;
+  cmpDiffReq = reqSeq++;
+  const W = Math.ceil(cmpCanvas.width / dpr), H = Math.ceil(cmpCanvas.height / dpr);
+  post(cmpWorker, diffRequestFor(cmpDiffReq, world, cmpState.seed, view, W, H, yLayer));
+}
+function onCmpDiff(d) {
+  if (d.reqId !== cmpDiffReq || !cmpDiffOn) return;   // stale (older view or seed)
+  cmpDiff = { ...d, canvas: d.ok && d.cells.length ? diffOverlayCanvas(d) : null };
+  syncDiffCount();
+  drawCompare();
+}
+function diffOverlayCanvas(d) {
+  const c = document.createElement('canvas');
+  c.width = d.cols; c.height = d.rows;
+  const img = new ImageData(d.cols, d.rows);
+  const [r, g, b, a] = DIFF_TINT_RGBA;
+  for (const i of d.cells) {
+    img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = a;
+  }
+  c.getContext('2d').putImageData(img, 0, 0);
+  return c;
+}
+// the e2e suite reads the highlighted-cell count from the pane element
+function syncDiffCount() {
+  if (cmpDiffOn && cmpDiff) $('#cmpPane').dataset.diffCells = String(cmpDiff.cells.length);
+  else delete $('#cmpPane').dataset.diffCells;
+}
+function clearCompareDiff() {
+  cmpDiff = null;
+  syncDiffCount();
+}
+function setCompareDiff(on) {
+  cmpDiffOn = on;
+  clearCompareDiff();
+  if (on) requestCompareDiff();
+  drawCompare();
+}
 function drawCompare() {
   cmpCtx.save();
   cmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1120,6 +1518,12 @@ function drawCompare() {
     cmpTileCache.touch(e.key);
     const p = worldToScreen(view, W, H, e.originX, e.originZ);
     cmpCtx.drawImage(e.canvas, p.x, p.y, e.cols * e.scale / view.bpp, e.rows * e.scale / view.bpp);
+  }
+  // "differences" tint (#288): drawn like a tile, anchored on its world origin
+  if (cmpDiffOn && cmpDiff?.canvas) {
+    const p = worldToScreen(view, W, H, cmpDiff.originX, cmpDiff.originZ);
+    cmpCtx.drawImage(cmpDiff.canvas, p.x, p.y,
+      cmpDiff.cols * cmpDiff.scale / view.bpp, cmpDiff.rows * cmpDiff.scale / view.bpp);
   }
   // active structure layers, computed for seed B (the shared toggles apply
   // to both panes); personal overlays (pins, favorites, markers, zones) are
@@ -1149,6 +1553,7 @@ function setCompareMode(on, seed) {
     cmpWorker = null;
     cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
     cmpStructPoints.clear();
+    clearCompareDiff();
     clearTimeout(cmpRefillTimer);
   }
   resize();   // the map halves changed size; redraws and re-requests both panes
@@ -1158,9 +1563,11 @@ function applyCompareSeed() {
   cmpState = enterCompare(cmpState, $('#cmpSeed').value, world.seed);
   $('#cmpSeed').value = cmpState.seed;
   cmpStructPoints.clear();   // points of the previous compare seed
+  clearCompareDiff();        // diff of the previous compare seed (#288)
   drawCompare();
   requestCompareTiles();
   requestCompareStructures();
+  requestCompareDiff();
 }
 // pan/zoom on the compare canvas drives the shared viewport, so the main
 // map follows (draw() repaints both panes; requestRender() refills both)
@@ -1190,25 +1597,37 @@ cmpCanvas.addEventListener('wheel', (e) => {
   draw(); requestRender(); syncHash();
 }, { passive: false });
 
+// clicks consumed by an armed point-based tool (marker, portal, path, ruler)
+function toolClick(mx, my) {
+  const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
+  if (markerMode) { setUserMarkers(addMarker(userMarkers, { ...world, ...p })); return true; }
+  if (portalMode) { placePortal(p.x, p.z); return true; }
+  if (compMode) { placeComposition(p.x, p.z); return true; }
+  if (pathTool.on) {
+    pathTool.pts = appendPathPoint(pathTool.pts, p.x, p.z);
+    draw();
+    return true;
+  }
+  if (ruler.on) {
+    if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
+    else { ruler.b = p; ruler.done = true; }
+    draw(); return true;
+  }
+  return false;
+}
 function clickAt(e) {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
-  if (markerMode) {
-    setUserMarkers(addMarker(userMarkers, {
-      ...world, x: Math.round(s2wx(mx)), z: Math.round(s2wz(my))
-    }));
-    return;
-  }
-  if (ruler.on) {
-    const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
-    if (!ruler.a || ruler.done) { ruler.a = p; ruler.b = null; ruler.done = false; }
-    else { ruler.b = p; ruler.done = true; }
-    draw(); return;
-  }
+  if (toolClick(mx, my)) return;
   // hit-test pins
   for (let i = 0; i < pins.length; i++) {
     if (Math.hypot(mx - w2sx(pins[i].x), my - w2sy(pins[i].z) + 11) < 14) { selectPin(i); return; }
   }
+  // hit-test the portal pins: clicking one re-opens the portal popup
+  if (portal && portalPinAt(mx, my)) { showPortalPopup(); return; }
+  // hit-test paths (above the zones: a path crossing a zone stays clickable)
+  const pHit = pathAt(mx, my);
+  if (pHit) { showPathEditor(pHit.path); return; }
   // hit-test zones (under the pins: a pin inside a zone stays clickable)
   const zHit = zoneAt(mx, my);
   if (zHit) { showZoneEditor(zHit.zone); return; }
@@ -1741,6 +2160,87 @@ function seedResultRow(cand) {
   row.append(li, cmp);
   return row;
 }
+// ---------- "Surprise me" (#287) ----------
+// First random seed matching the criteria (or, with an empty panel, the
+// built-in "village near spawn" preset). Reuses the multi-seed engine: one
+// 'seedSearch' batch on a dedicated worker, stopped at the first hit; the
+// found seed is loaded, the map centered on the spot and a pin dropped.
+let surpriseWorker = null;
+let surpriseReq = 0, surpriseBusy = false, surpriseScanned = 0;
+let surpriseHit = false, surpriseCancelled = false;
+function getSurpriseWorker() {
+  if (surpriseWorker) return surpriseWorker;
+  const w = new Worker('./worker.js', { type: 'module' });
+  w.engineReady = false; w.pending = [];
+  w.onerror = (e) => console.error('SURPRISE WORKER ERROR:', e.message);
+  w.onmessage = (e) => {
+    const d = e.data;
+    if (d.type === 'ready') engineUp(w);
+    else if (d.type === 'seedScanned') onSurpriseScanned(d);
+    else if (d.type === 'seedBatchDone') onSurpriseDone(d);
+  };
+  surpriseWorker = w;
+  return w;
+}
+function setSurpriseBusy(on) {
+  surpriseBusy = on;
+  const btn = $('#surpriseBtn');
+  btn.dataset.i18n = on ? 'cancelBtn' : 'surpriseBtn';
+  btn.textContent = t(btn.dataset.i18n);
+}
+function surpriseInfo(msg, cls) {
+  const el = $('#seedInfo');
+  el.textContent = msg;
+  el.className = 'info ' + cls;
+}
+function startSurprise() {
+  if (surpriseBusy) {
+    surpriseCancelled = true;
+    post(getSurpriseWorker(), { type: 'cancelSeedSearch', reqId: surpriseReq });
+    return;
+  }
+  const plan = surpriseCriteria(collectCriteria(), structToggles[0]?.type);
+  if (!plan) { surpriseInfo(t('pickCriteria'), 'err'); return; }
+  const radius = plan.preset
+    ? SURPRISE_RADIUS
+    : Math.min(5000, Math.max(500, Number.parseInt($('#seedRadius').value, 10) || 1500));
+  const step = Math.max(32, Number.parseInt($('#step').value, 10) || 32);
+  surpriseReq = reqSeq++;
+  surpriseScanned = 0; surpriseHit = false; surpriseCancelled = false;
+  post(getSurpriseWorker(), {
+    type: 'seedSearch', reqId: surpriseReq, mc: world.mc, large: world.large, dim: world.dim,
+    y: yLayer, range: radius, step, ...plan.crit,
+    seeds: randomSeeds(SURPRISE_MAX_SEEDS, Math.random)
+  });
+  setSurpriseBusy(true);
+  surpriseInfo(t('surpriseTesting', { i: 0, n: SURPRISE_MAX_SEEDS }), 'busy');
+}
+function onSurpriseScanned(d) {
+  if (d.reqId !== surpriseReq || surpriseHit) return;
+  surpriseScanned++;
+  if (!d.hit) {
+    surpriseInfo(t('surpriseTesting', { i: surpriseScanned, n: SURPRISE_MAX_SEEDS }), 'busy');
+    return;
+  }
+  surpriseHit = true;
+  post(getSurpriseWorker(), { type: 'cancelSeedSearch', reqId: surpriseReq });
+  setSurpriseBusy(false);
+  $('#seed').value = d.seed; world.seed = d.seed;
+  view.cx = d.hit.x; view.cz = d.hit.z;
+  if (view.bpp > 4) view.bpp = 3;
+  curReset();
+  rarePin = d.hit;   // temporary pin, lives with the popup like the rare-biome one
+  draw(); requestRender(0); syncHash();
+  showPopup(d.hit);
+  surpriseInfo(t('surpriseFound', { seed: d.seed, x: d.hit.x, z: d.hit.z }), 'ok');
+}
+function onSurpriseDone(d) {
+  if (d.reqId !== surpriseReq || surpriseHit) return;
+  setSurpriseBusy(false);
+  if (surpriseCancelled) { surpriseInfo(t('searchCancelled'), 'empty'); return; }
+  if (d.error) { surpriseInfo(t('searchFailedArea'), 'err'); return; }
+  surpriseInfo(t('surpriseNone', { n: surpriseScanned }), 'empty');
+}
 function onSearchResult(d) {
   if (d.reqId !== searchReq) return;   // stale
   setSearchBusy(false);
@@ -1843,6 +2343,7 @@ function wireCopyButton(btn, text, idleLabel) {
 function showPopup(p) {
   const pop = $('#popup');
   pop.textContent = '';
+  pop.classList.remove('comp');
   pop.setAttribute('aria-label', `${p.x}, ${p.z}`);
   const xEl = document.createElement('div');
   xEl.className = 'pop-x'; xEl.textContent = `${p.x}, ${p.z}`;
@@ -1929,6 +2430,14 @@ let userZones = parseZones((() => {
 function setUserZones(list) {
   userZones = list;
   try { localStorage.setItem('zones', JSON.stringify(userZones)); } catch { /* ignore */ }
+  draw();
+}
+let userPaths = parsePaths((() => {
+  try { return localStorage.getItem('paths'); } catch { return null; }
+})());
+function setUserPaths(list) {
+  userPaths = list;
+  try { localStorage.setItem('paths', JSON.stringify(userPaths)); } catch { /* ignore */ }
   draw();
 }
 let markerMode = false;
@@ -2030,6 +2539,7 @@ function favRow(f) {
 }
 
 function hidePopup() {
+  $('#popup').classList.remove('comp');      // back to the default anchoring
   if (rarePin) { rarePin = null; draw(); }   // the rare pin lives with the popup
   if (selected !== -1) {
     selected = -1;
@@ -2212,7 +2722,7 @@ function importProfileText(txt) {
     return;
   }
   const merged = mergeProfile(
-    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }, imported);
+    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }, imported);
   setFavorites(merged.favorites);
   userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
   searchHistory = merged.history;
@@ -2220,9 +2730,11 @@ function importProfileText(txt) {
   buildHistList();
   setUserMarkers(merged.markers);
   setUserZones(merged.zones);
+  setUserPaths(merged.paths);
   info.textContent = t('profileImported', {
     f: imported.favorites.length, p: imported.userPresets.length,
-    h: imported.history.length, m: imported.markers.length, z: imported.zones.length
+    h: imported.history.length, m: imported.markers.length, z: imported.zones.length,
+    c: imported.paths.length
   });
 }
 function downloadFile(name, text, mime) {
@@ -2585,8 +3097,10 @@ function applyPalette(alt, persist) {
   $('#paletteBtn').setAttribute('aria-pressed', String(alt));
   if (persist) { try { localStorage.setItem('palette', alt ? 'alt' : 'default'); } catch { /* ignore */ } }
   send({ type: 'palette', alt });
-  // every cached or in-flight tile was painted with the old table
+  // every cached or in-flight tile was painted with the old table; stored
+  // tiles are keyed per palette, so lookups must re-run under the new key
   tileCache.clear(); pendingTiles.clear(); tileQueue = []; minimapTile = null;
+  tileDbFetched.clear();
   if (cmpWorker) {
     post(cmpWorker, { type: 'palette', alt });
     cmpTileCache.clear(); cmpPendingTiles.clear(); cmpTileQueue = [];
@@ -2755,11 +3269,7 @@ function closeTopmost() {
   if (help.open) { help.close(); return; }
   if (gallery.open) { gallery.close(); return; }
   if (!$('#moreMenu').hidden) { setMoreMenu(false); return; }
-  if (ruler.on) setRulerOn(false);
-  if (markerMode) setMarkerMode(false);
-  if (sel.on) setSelOn(false);
-  if (zoneTool.on) setZoneOn(false);
-  hidePopup();
+  dismissMapTools();
 }
 const KEY_ACTIONS = {
   'skip-tour': () => endTour(),
@@ -2819,12 +3329,14 @@ async function init() {
   $('#cmpBtn').onclick = () => setCompareMode(!cmpState.on);
   $('#cmpClose').onclick = () => setCompareMode(false);
   $('#cmpSeed').onchange = applyCompareSeed;
+  $('#cmpDiff').onchange = (e) => setCompareDiff(e.target.checked);
   $('#seedResumeBtn').onclick = resumeSeedSearch;
   updateSeedResumeBtn();
   $('#seedSearchBtn').onclick = () => {
     if (seedBusy) cancelSeedSearch();
     else startSeedSearch();
   };
+  $('#surpriseBtn').onclick = startSurprise;
   $('#pngBtn').onclick = () => {
     if (exportBusy) { sendSearch({ type: 'cancelExport', reqId: exportReq }); return; }
     const size = $('#pngSizeSel').value;
@@ -2900,8 +3412,11 @@ async function init() {
   gotoInput.oninput = () => gotoInput.classList.remove('bad');
   $('#rulerBtn').onclick = () => setRulerOn(!ruler.on);
   $('#markerBtn').onclick = () => setMarkerMode(!markerMode);
+  $('#portalBtn').onclick = () => setPortalMode(!portalMode);
+  $('#compBtn').onclick = () => setCompMode(!compMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
   $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
+  $('#pathBtn').onclick = () => setPathOn(!pathTool.on);
   $('#selPng').onclick = exportSelectionPNG;
   $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
   $('#selClose').onclick = () => setSelOn(false);
@@ -2920,8 +3435,16 @@ async function init() {
   // profile: one-file backup/restore of every local store
   $('#profileExport').onclick = () => {
     downloadFile('seedcartographer-profile.json',
-      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones }),
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }),
       'application/json');
+  };
+  // manual purge of the persistent tile cache (#289)
+  $('#tileCacheClear').onclick = async () => {
+    if (tileDb) await clearTiles(tileDb);
+    tileDbFetched.clear();
+    const info = $('#profileInfo');
+    info.textContent = t('tileCacheCleared');
+    info.className = 'muted small';
   };
   const profileImportInput = $('#profileImportFile');
   $('#profileImport').onclick = () => profileImportInput.click();
@@ -2935,7 +3458,7 @@ async function init() {
   // handy between devices with no easy file transfer.
   const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
   $('#syncCodeShow').onclick = () => {
-    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones })))
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths })))
       .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
   };
   $('#syncCodePaste').onclick = () => {
@@ -2987,14 +3510,23 @@ async function init() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline mode unavailable */ });
   }
+  // persistent tile cache (#289): the DB opens asynchronously so the first
+  // render never waits on IndexedDB; once ready, re-scan the current view so
+  // tiles of an already explored seed restore immediately
+  openTileDB(`${APP_VERSION.version}|${APP_VERSION.commit}`).then((db) => {
+    tileDb = db;
+    if (db) requestGridTiles(false);
+  });
 }
-function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); hidePopup(); buildFavList(); buildMarkerList(); }
+function curReset() { tile = null; tileCache.clear(); structToggles.forEach((tg) => tg.points = null); cmpStructPoints.clear(); clearCompareDiff(); hidePopup(); buildFavList(); buildMarkerList(); }
 // As a module, app.js no longer leaks its bindings into the page scope; the
 // e2e suite reads these few (share-link round-trips, ruler state, tile-cache
 // settling), so expose them explicitly. All are consts mutated in place.
 Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
+  portalState: () => portal,
   zonesOnMap: () => zonesFor(userZones, world),
+  pathsOnMap: () => pathsFor(userPaths, world),
   cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })
 });

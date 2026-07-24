@@ -10,7 +10,7 @@
 FROM node@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS stamp
 WORKDIR /app
 COPY index.html styles.css app.js worker.js seed.js search.js rarebiomes.js shapes.js i18n.js version.js \
-     biomes.js coords.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js userzones.js palette.js tilegrid.js relief.js compare.js profile.js gallery.js gallery.json errorreport.js tour.js keys.js \
+     biomes.js coords.js portals.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js tiledb.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js userzones.js userpaths.js palette.js tilegrid.js relief.js compare.js composition.js profile.js gallery.js gallery.json errorreport.js tour.js keys.js \
      theme.js export.js mcfinder.js mcfinder.wasm \
      manifest.webmanifest icon.svg sw.js ./
 COPY fonts/ fonts/

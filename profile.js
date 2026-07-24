@@ -9,6 +9,7 @@ import { parseUserPresets, addUserPreset } from './userpresets.js';
 import { parseHistory, addHistoryEntry } from './searchhistory.js';
 import { parseMarkers, mergeMarkers } from './usermarkers.js';
 import { parseZones, mergeZones } from './userzones.js';
+import { parsePaths, mergePaths } from './userpaths.js';
 
 export const PROFILE_KIND = 'seedcartographer-profile';
 export const PROFILE_VERSION = 1;
@@ -18,7 +19,8 @@ export const PROFILE_VERSION = 1;
  *            userPresets: Array<{id: number, name: string, dim: number, c: object}>,
  *            history: import('./searchhistory.js').HistoryEntry[],
  *            markers: import('./usermarkers.js').UserMarker[],
- *            zones: import('./userzones.js').UserZone[]}} ProfileState
+ *            zones: import('./userzones.js').UserZone[],
+ *            paths: import('./userpaths.js').UserPath[]}} ProfileState
  */
 
 // The export payload, ready to stringify: a kind marker guards against
@@ -31,7 +33,8 @@ export function exportProfile(state) {
   return JSON.stringify({
     kind: PROFILE_KIND, version: PROFILE_VERSION,
     favorites: state.favorites, userPresets: state.userPresets,
-    history: state.history, markers: state.markers, zones: state.zones
+    history: state.history, markers: state.markers, zones: state.zones,
+    paths: state.paths
   }, null, 2);
 }
 
@@ -52,7 +55,8 @@ export function parseProfile(json) {
     userPresets: parseUserPresets(list(raw.userPresets)),
     history: parseHistory(list(raw.history)),
     markers: parseMarkers(list(raw.markers)),
-    zones: parseZones(list(raw.zones))
+    zones: parseZones(list(raw.zones)),
+    paths: parsePaths(list(raw.paths))
   };
 }
 
@@ -78,6 +82,7 @@ export function mergeProfile(current, imported) {
   return {
     favorites, userPresets, history,
     markers: mergeMarkers(current.markers, imported.markers),
-    zones: mergeZones(current.zones, imported.zones)
+    zones: mergeZones(current.zones, imported.zones),
+    paths: mergePaths(current.paths, imported.paths)
   };
 }

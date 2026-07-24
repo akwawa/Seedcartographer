@@ -1,4 +1,4 @@
-/* global ruler */ // top-level lexical binding of app.js, read via page.evaluate
+/* global ruler, portalState */ // top-level bindings of app.js, read via page.evaluate
 import { test, expect, openMoreMenu, closeMoreMenu, selectLang, openCritSection } from './fixtures.js';
 
 // surface page errors in the CI log — a boot failure is invisible otherwise
@@ -174,12 +174,15 @@ test('language switch translates UI and biome names live', async ({ page }) => {
   await selectLang(page, 'zh-CN');
   await expect(page.locator('#searchBtn')).toHaveText('搜索此区域');
   await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('樱花树林');
+  await selectLang(page, 'zh-TW');
+  await expect(page.locator('#searchBtn')).toHaveText('搜尋此區域');
+  await expect(page.locator('#mainBiomes .row select option:checked')).toHaveText('櫻花樹林');
   // no locale may create a horizontal page overflow anymore (#266)
   const overflowOf = async (lang) => {
     await selectLang(page, lang);
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   };
-  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt', 'ja', 'ru', 'pl', 'zh-CN']) {
+  for (const lang of ['en', 'fr', 'es', 'de', 'it', 'pt', 'ja', 'ru', 'pl', 'zh-CN', 'zh-TW']) {
     expect(await overflowOf(lang), `layout overflow in ${lang}`).toBeLessThanOrEqual(0);
   }
 });
@@ -936,6 +939,47 @@ test('the tile checkerboard reuses cached tiles when panning back', async ({ pag
   expect(sizeAfterBack).toBe(sizeAfterPan);
 });
 
+// #289: rendered tiles persist in IndexedDB across sessions
+async function storedTileCount(page) {
+  return page.evaluate(async () => {
+    const db = await new Promise((res) => {
+      const r = indexedDB.open('seedcartographer-tiles');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => res(null);
+    });
+    if (!db) return 0;
+    const n = await new Promise((res) => {
+      const rq = db.transaction('tiles').objectStore('tiles').count();
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => res(0);
+    });
+    db.close();
+    return n;
+  });
+}
+test('the persistent tile cache restores known tiles after a reload, and purges', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // first visit: the view fills with fresh tiles, persisted to IndexedDB
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  await expect.poll(() => storedTileCount(page)).toBeGreaterThan(0);
+  // second visit: known tiles restore from IndexedDB (observable counter)
+  await page.reload();
+  await waitForApp(page);
+  await page.waitForFunction(() => window.tileCacheHits > 0);
+  // let the fresh re-renders settle so no late save races the purge below
+  await page.waitForFunction(() => pendingTiles.size === 0);
+  // manual purge from the profile panel empties the store and confirms
+  await page.click('#tileCacheClear');
+  await expect(page.locator('#profileInfo')).toContainText('cleared');
+  await expect.poll(() => storedTileCount(page)).toBe(0);
+  // after the purge nothing restores: every tile is computed fresh
+  await page.reload();
+  await waitForApp(page);
+  await page.waitForFunction(() => pendingTiles.size === 0 && tileCache.size() > 0);
+  expect(await page.evaluate(() => window.tileCacheHits)).toBe(0);
+});
+
 test('the A/B version compare swaps the generation and keeps the view', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -987,6 +1031,45 @@ test('custom markers: place on click, rename, persist, delete', async ({ page })
   await expect(page.locator('#markerList .fav')).toHaveCount(0);
 });
 
+// #284: place a portal in the Overworld, check the computed Nether pair
+// (÷8, floored like Minecraft Java), then switch dimensions and find the
+// linked pin drawn at the ideal destination
+test('the portal tool computes and pins the linked Nether destination', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  // center the view on a known spot so a click at the canvas center lands
+  // exactly on (800, -1600)
+  await page.fill('#gotoInput', '800, -1600');
+  await page.press('#gotoInput', 'Enter');
+  await page.click('#portalBtn');
+  await expect(page.locator('#portalBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  // the popup lists both coordinate pairs and the 16-block Nether link radius
+  await expect(page.locator('#popup')).toBeVisible();
+  await expect(page.locator('#popup')).toContainText('800, -1600');
+  await expect(page.locator('#popup')).toContainText('100, -200');
+  await expect(page.locator('#popup')).toContainText('16');
+  await expect(page.locator('#portalBtn')).not.toHaveClass(/on/);
+  // switching to the Nether keeps the portal; the linked pin sits at 100, -200
+  await page.selectOption('#dimSel', '-1');
+  expect(await page.evaluate(() => portalState())).toEqual({ dim: 0, x: 800, z: -1600 });
+  await page.fill('#gotoInput', '100, -200');
+  await page.press('#gotoInput', 'Enter');
+  // the destination pin (purple frame) is painted at the view center;
+  // sample a pixel inside it, off the crosshair lines
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#map');
+    const dpr = window.devicePixelRatio || 1;
+    const d = c.getContext('2d').getImageData(
+      Math.round(c.width / 2 + 2 * dpr), Math.round(c.height / 2 + 3 * dpr), 1, 1).data;
+    return d[0] > 90 && d[1] < 110 && d[2] > 140;
+  });
+  // clicking the pin re-opens the portal popup
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator('#popup')).toContainText('100, -200');
+});
+
 test('zone annotations: drag to draw, rename, persist across reload, delete', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -1024,6 +1107,54 @@ test('zone annotations: drag to draw, rename, persist across reload, delete', as
   await page.click('#popup .zone-del');
   await expect(page.locator('#popup .zone-del')).toBeHidden();
   expect(await page.evaluate(() => window.zonesOnMap().length)).toBe(0);
+});
+
+test('path tool: three clicked points, cumulative distance, persist, delete (#285)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#pathBtn');
+  await expect(page.locator('#pathBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  // three waypoints; the double-click on the last one ends the trace
+  await page.mouse.click(box.x + 200, box.y + 200);
+  await page.mouse.click(box.x + 360, box.y + 200);
+  await page.mouse.dblclick(box.x + 360, box.y + 320);
+  // the finished trace opened the path editor with the cumulative distance
+  await expect(page.locator('#popup .path-name')).toBeVisible();
+  await expect(page.locator('#pathBtn')).not.toHaveClass(/on/);
+  const paths = await page.evaluate(() => window.pathsOnMap());
+  expect(paths).toHaveLength(1);
+  const pts = paths[0].pts;
+  expect(pts).toHaveLength(3);
+  let dist = 0;
+  for (let i = 1; i < pts.length; i++) dist += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z);
+  await expect(page.locator('#popup .path-dist')).toContainText(String(Math.round(dist)));
+  // the Nether equivalent (÷8) is shown next to the block distance
+  await expect(page.locator('#popup .path-dist')).toContainText(`Nether ≈ ${Math.round(Math.round(dist) / 8)}`);
+  await page.fill('#popup .path-name', 'Route mine');
+  await page.press('#popup .path-name', 'Enter');
+  // paths survive a reload (localStorage) and redraw on the map
+  await page.reload();
+  await waitForApp(page);
+  const after = await page.evaluate(() => window.pathsOnMap());
+  expect(after).toHaveLength(1);
+  expect(after[0].path.name).toBe('Route mine');
+  // the path color is painted somewhere on the canvas
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#map');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      // #7ee0c0
+      if (Math.abs(d[i] - 126) < 12 && Math.abs(d[i + 1] - 224) < 12 && Math.abs(d[i + 2] - 192) < 12) return true;
+    }
+    return false;
+  });
+  // clicking a segment reopens the editor; delete removes it for good
+  await page.mouse.click(box.x + 280, box.y + 200);
+  await expect(page.locator('#popup .path-del')).toBeVisible();
+  await page.click('#popup .path-del');
+  await expect(page.locator('#popup .path-del')).toBeHidden();
+  expect(await page.evaluate(() => window.pathsOnMap().length)).toBe(0);
 });
 
 test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
@@ -1384,6 +1515,41 @@ test('discoverability: compare placeholder, shortcut tooltips, map-tools help (#
   await expect(page.locator('#rulerBtn')).toHaveAttribute('title', /\(R\)/);
   await page.click('#helpBtn');
   await expect(page.locator('#helpDlg')).toContainText('Outils carte');
-  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(4);
+  await expect(page.locator('#helpDlg .help-tools li')).toHaveCount(6);
   await page.click('#helpClose');
+});
+
+// #288: the compare "differences" toggle tints the cells where the two
+// seeds' biomes diverge; identical seeds highlight nothing
+test('compare mode: the differences overlay follows the two seeds (#288)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await openMoreMenu(page);
+  await page.click('#cmpBtn');
+  await closeMoreMenu(page);
+  await expect(page.locator('#cmpPane')).toBeVisible();
+  await page.fill('#cmpSeed', '4242');
+  await page.press('#cmpSeed', 'Enter');
+  await page.waitForFunction(() => cmpPendingTiles.size === 0 && cmpTileCache.size() > 0);
+  // two different seeds: the diff reply flags cells and the pane shows them
+  await page.check('#cmpDiff');
+  await page.waitForFunction(() => Number(document.querySelector('#cmpPane').dataset.diffCells) > 0);
+  // the compare canvas actually contains the magenta tint (255, 0, 180)
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#cmpMap');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 140 && d[i + 1] < 120 && d[i] > d[i + 1] + 60 && d[i + 2] > d[i + 1]) return true;
+    }
+    return false;
+  });
+  // identical seeds: the diff settles on zero highlighted cells
+  await page.fill('#cmpSeed', '141');
+  await page.press('#cmpSeed', 'Enter');
+  await page.waitForFunction(() => document.querySelector('#cmpPane').dataset.diffCells === '0');
+  // unchecking clears the overlay state entirely
+  await page.uncheck('#cmpDiff');
+  await page.waitForFunction(() => !('diffCells' in document.querySelector('#cmpPane').dataset));
+  await page.click('#cmpClose');
+  await expect(page.locator('#cmpPane')).toBeHidden();
 });

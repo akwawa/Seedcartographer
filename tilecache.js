@@ -61,6 +61,44 @@ export function createTileCache(max = TILE_CACHE_MAX) {
   };
 }
 
+// ---------- persistent cache policy (#289) ----------
+// Pure key/eviction logic for the IndexedDB tile store (tiledb.js): the
+// stored pixels also depend on the active palette, and the bounded budget is
+// enforced by a plain LRU plan over (size, lastUsed) metadata.
+
+export const TILE_DB_BUDGET = 50 * 1024 * 1024;   // ~50 MB of stored pixels
+
+/**
+ * Key of a tile in the persistent store: the in-memory tile key (already
+ * seed|version|large|dim|y[|relief]|scale|x|z) plus the palette the pixels
+ * were painted with.
+ * @param {string} key from tileKey
+ * @param {boolean} altPalette high-visibility palette active
+ * @returns {string}
+ */
+export function persistTileKey(key, altPalette) {
+  return `${key}|p${altPalette ? 1 : 0}`;
+}
+
+/**
+ * LRU eviction plan for the persistent store: which entries to delete so the
+ * total size fits the budget, oldest lastUsed first.
+ * @param {Array<{key: string, size: number, lastUsed: number}>} entries
+ * @param {number} budget bytes allowed to remain
+ * @returns {string[]} keys to delete, oldest first
+ */
+export function evictionPlan(entries, budget) {
+  const sorted = [...entries].sort((a, b) => a.lastUsed - b.lastUsed);
+  let total = sorted.reduce((sum, e) => sum + e.size, 0);
+  const doomed = [];
+  for (const e of sorted) {
+    if (total <= budget) break;
+    doomed.push(e.key);
+    total -= e.size;
+  }
+  return doomed;
+}
+
 // Cached tiles of `worldKey` intersecting the world-block rect, ordered for
 // painting: coarse scales first (fine tiles overpaint them), and within a
 // scale least-recently-used first (fresher pixels overpaint staler ones).

@@ -39,13 +39,22 @@ export default [
   {
     // Pure-logic ES modules imported by app.js and by the Node tests
     files: [
-      'i18n.js', 'biomes.js', 'coords.js', 'presets.js', 'favorites.js',
+      'i18n.js', 'biomes.js', 'coords.js', 'portals.js', 'presets.js', 'favorites.js',
       'legend.js', 'maptools.js', 'tilecache.js', 'sharestate.js',
-      'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'userzones.js',
+      'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'userzones.js', 'userpaths.js',
       'profile.js', 'gallery.js', 'theme.js', 'export.js', 'version.js',
       'errorreport.js', 'seed.js', 'search.js', 'rarebiomes.js', 'shapes.js', 'slime.js', 'tour.js', 'keys.js',
-      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'compare.js'
+      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'compare.js', 'composition.js'
     ],
+    languageOptions: {
+      sourceType: 'module',
+      globals: { ...globals.browser }
+    }
+  },
+  {
+    // tiledb.js is the browser-only IndexedDB wrapper for the persistent
+    // tile cache (#289): imported by app.js only, not by the Node tests
+    files: ['tiledb.js'],
     languageOptions: {
       sourceType: 'module',
       globals: { ...globals.browser }

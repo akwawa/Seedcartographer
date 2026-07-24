@@ -166,6 +166,7 @@
         <input id="seedRadius" class="num" type="number" min="500" max="5000" step="500" value="1500">
       </div>
       <button id="seedSearchBtn" class="btn primary" data-i18n="seedSearchBtn">Find a seed</button>
+      <button id="surpriseBtn" class="btn" data-i18n="surpriseBtn" title="Load a random seed matching the criteria (or a village near spawn)" data-i18n-title="surpriseTitle">🎲 Surprise me</button>
       <button id="seedResumeBtn" class="btn" hidden></button>
       <progress id="seedProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="seedInfo" class="info"></output>
@@ -221,6 +222,7 @@
         <button id="profileImport" class="btn tiny" data-i18n="profileImport">Import profile</button>
         <label for="profileImportFile" hidden data-i18n="profileImport">Import profile</label>
         <input id="profileImportFile" type="file" accept=".json,application/json" title="Import profile" data-i18n-title="profileImport" hidden>
+        <button id="tileCacheClear" class="btn tiny" data-i18n="tileCacheClear">Clear map cache</button>
       </div>
       <output id="profileInfo" class="muted small"></output>
       <p class="muted small" data-i18n="syncLede">Or move it to another device without a file: a sync code to copy on one device and paste on the other.</p>
@@ -257,6 +259,7 @@
         <label class="lbl"><span data-i18n="compareSeedLbl">Seed B</span>
           <input id="cmpSeed" class="mono" spellcheck="false" autocomplete="off">
         </label>
+        <label class="chk"><input type="checkbox" id="cmpDiff"> <span data-i18n="compareDiffLbl">Differences</span></label>
         <button id="cmpClose" class="btn tiny" title="Exit compare mode" data-i18n-title="compareClose" aria-label="Exit compare mode" data-i18n-aria="compareClose">×</button>
       </div>
     </div>
@@ -279,6 +282,9 @@
     <button id="markerBtn" class="btn tiny markerbtn" title="Place a marker (click the map)" aria-label="Place a marker" data-i18n-title="markerTitle" data-i18n-aria="markerTitle">📍</button>
     <button id="selBtn" class="btn tiny selbtn" title="Select an area (drag on the map)" aria-label="Select an area" data-i18n-title="selTitle" data-i18n-aria="selTitle">⬚</button>
     <button id="zoneBtn" class="btn tiny annotbtn" title="Draw a zone (drag on the map)" aria-label="Draw a zone" data-i18n-title="zoneTitle" data-i18n-aria="zoneTitle">▧</button>
+    <button id="pathBtn" class="btn tiny pathbtn" title="Trace a path (click points, double-click or Esc to finish)" aria-label="Trace a path" data-i18n-title="pathTitle" data-i18n-aria="pathTitle">〰</button>
+    <button id="portalBtn" class="btn tiny portalbtn" title="Plan a Nether portal (click the map)" aria-label="Plan a Nether portal" data-i18n-title="portalTitle" data-i18n-aria="portalTitle">🌀</button>
+    <button id="compBtn" class="btn tiny compbtn" title="Biome composition around a point (click the map)" aria-label="Biome composition around a point" data-i18n-title="compBtnTitle" data-i18n-aria="compBtnTitle">◔</button>
     <div id="selBar" class="selbar" hidden>
       <span id="selInfo" class="mono"></span>
       <button id="selPng" class="btn tiny" data-i18n="selPng">PNG</button>
@@ -321,6 +327,8 @@
     <li><span class="help-tool-icon" aria-hidden="true">📍</span> <span data-i18n="helpToolMarker">marker — pin a named point on the map</span></li>
     <li><span class="help-tool-icon" aria-hidden="true">⬚</span> <span data-i18n="helpToolSel">selection — select an area to export a PNG or copy its coordinates</span></li>
     <li><span class="help-tool-icon" aria-hidden="true">▧</span> <span data-i18n="helpToolZone">zone — draw a named colored zone, kept in your browser</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">〰</span> <span data-i18n="helpToolPath">path — click waypoints to trace a route with its cumulative distance (double-click or Esc to finish)</span></li>
+    <li><span class="help-tool-icon" aria-hidden="true">🌀</span> <span data-i18n="helpToolPortal">portal — plan a linked Nether portal (÷8 / ×8 with the game's rounding)</span></li>
   </ul>
   <h3 data-i18n="helpLimitsTitle">Known limits</h3>
   <p data-i18n="helpLimits"></p>

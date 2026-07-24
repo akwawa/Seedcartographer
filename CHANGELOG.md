@@ -16,6 +16,81 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Langue : chinois traditionnel (zh-TW) (#290) — 11e langue de l'interface,
+  avec la terminologie officielle de l'édition taïwanaise de Minecraft Java
+  (生態域, 終界, 地獄, 惡地, 蒼鬱洞窟…) pour tous les libellés, l'aide, le
+  tour guidé et les noms de biomes. `resolveNavLang()` route désormais
+  zh-TW/zh-HK/zh-Hant vers zh-TW (dette du #228), et le sélecteur de langue
+  propose 繁體中文.
+- Cache de tuiles persistant entre sessions (#289) : les tuiles rendues sont
+  conservées dans IndexedDB (même clé que le cache mémoire, palette comprise),
+  si bien qu'une seed déjà explorée s'affiche immédiatement au chargement
+  pendant que le worker régénère des tuiles fraîches. Budget de stockage
+  borné à ~50 Mo avec éviction LRU persistante (politique pure dans
+  `tilecache.js`, accès IndexedDB isolés dans `tiledb.js`), invalidation
+  automatique quand la version de l'application change, et bouton de purge
+  manuelle dans le panneau profil (libellé traduit dans les 10 langues).
+- Mode comparaison : vue « différences » entre les deux cartes (#288) — une
+  case à cocher « Différences » dans la barre du panneau de comparaison
+  surligne d'une teinte magenta semi-transparente les cellules où les biomes
+  des deux seeds divergent. Le diff est calculé sur le worker de comparaison
+  (les deux grilles générées à l'échelle de rendu courante, réponses
+  obsolètes ignorées par reqId), la logique pure (diff de deux grilles,
+  message worker) vit dans `compare.js` et le libellé est traduit dans les
+  10 langues.
+- Bouton « Surprends-moi » (🎲) dans le panneau « Chercher une seed » (#287) :
+  tire jusqu'à 50 seeds aléatoires et charge la première qui satisfait les
+  critères courants — ou, sans critère, un preset par défaut « spawn
+  intéressant » (village à moins de 800 blocs de l'origine). Réutilise le
+  moteur de recherche multi-seeds (#56/#143) sur un worker dédié, avec
+  progression (seed i/N) et annulation par re-clic ; à la trouvaille, la seed
+  est chargée dans le champ, la carte se centre sur le lieu avec un pin
+  temporaire et un message de statut ; sinon, message « aucune seed
+  trouvée ». Libellé et infobulle traduits dans les 10 langues.
+- Panneau de composition des biomes autour d'un point (#286) : nouvel outil ◔
+  dans la barre d'outils carte — un clic sur la carte ouvre un panneau listant
+  la répartition des biomes dans un rayon configurable (256, 512 ou 1024
+  blocs), triée par pourcentage décroissant avec pastille de couleur de la
+  palette courante et nom de biome traduit (pourcentages à une décimale,
+  somme exactement 100 %). L'échantillonnage réutilise le moteur de « part de
+  biome » (#142) dans le worker, avec annulation par jeton : un nouveau clic
+  ou un changement de rayon ignore la réponse précédente. Logique pure dans
+  `composition.js` (agrégation des comptes, arrondi au plus fort reste),
+  testée à 100 %.
+- Outil chemin/itinéraire avec distance cumulée (#285) : nouvel outil 〰 dans
+  la barre d'outils carte — des clics successifs ajoutent les points d'une
+  polyligne, un double-clic ou Échap termine le tracé. Un petit éditeur au
+  clic sur le chemin affiche la distance cumulée (somme des segments, en
+  blocs) et son équivalent Nether (÷8), et permet de renommer ou supprimer le
+  chemin. Les chemins sont persistés dans le profil (localStorage), inclus
+  dans l'export/import de profil et le code de synchronisation (mêmes règles
+  de fusion que les marqueurs/zones) et convertis Nether⇄Overworld à
+  l'affichage (1:8, tracé pointillé) comme les zones. Modèle pur
+  `userpaths.js` couvert à 100 %, libellés dans les 10 langues, entrée dans
+  l'aide « Outils carte » et test e2e du parcours complet.
+- Calculateur de portails du Nether (#284) : nouvel outil 🌀 dans la barre
+  d'outils carte — un clic place un portail dans la dimension courante et
+  l'app calcule la destination idéale dans l'autre dimension (÷8 / ×8 avec
+  l'arrondi exact de Minecraft Java, module pur `portals.js` couvert à
+  100 %). Popup avec les deux paires de coordonnées et boutons « Copier
+  /tp », rappel de la règle de liaison (recherche d'un portail existant dans
+  un rayon de 128 blocs côté Overworld / 16 côté Nether), pin lié visible en
+  changeant de dimension avec le rayon de liaison dessiné autour de la
+  destination idéale. Libellés dans les 10 langues et test e2e du parcours
+  complet.
+
+### Sécurité
+- Suivi Scorecard : dossier bestpractices.dev + PAT Branch-Protection (#291) —
+  nouveau `docs/BEST_PRACTICES.md` avec les réponses préparées, section par
+  section, du questionnaire « passing » d'OpenSSF Best Practices
+  (bestpractices.dev) et la ligne de badge à coller au README ; documentation
+  du fine-grained PAT « Administration: read-only » à stocker comme secret
+  `SCORECARD_TOKEN`, que le workflow `scorecard.yml` utilise désormais pour
+  le check Branch-Protection (fallback sur le `GITHUB_TOKEN` par défaut).
+
 ## [0.12.0](https://github.com/akwawa/Seedcartographer/compare/v0.11.0...v0.12.0) (2026-07-22)
 
 ### Ajouté
