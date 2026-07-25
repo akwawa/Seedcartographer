@@ -16,6 +16,26 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [0.14.0](https://github.com/akwawa/Seedcartographer/compare/v0.13.4...v0.14.0) (2026-07-25)
+
+
+### Ajouté
+
+* add a lightweight isometric 3D terrain view ([#334](https://github.com/akwawa/Seedcartographer/issues/334)) ([79da751](https://github.com/akwawa/Seedcartographer/commit/79da751801f20233b9fdaee0a81eb33220deb81e)), closes [#325](https://github.com/akwawa/Seedcartographer/issues/325)
+* add free-text annotations on the map ([#332](https://github.com/akwawa/Seedcartographer/issues/332)) ([79189a3](https://github.com/akwawa/Seedcartographer/commit/79189a35b8bf11bea1c64b82ffc10b7088eb6f2f)), closes [#323](https://github.com/akwawa/Seedcartographer/issues/323)
+* list nearby structures along a traced path ([#330](https://github.com/akwawa/Seedcartographer/issues/330)) ([d9306b9](https://github.com/akwawa/Seedcartographer/commit/d9306b933407db22fc22d25123a4bb43d97793a2)), closes [#321](https://github.com/akwawa/Seedcartographer/issues/321)
+* load a Java world save (level.dat) to fill seed, version and spawn ([#329](https://github.com/akwawa/Seedcartographer/issues/329)) ([7f3f14c](https://github.com/akwawa/Seedcartographer/commit/7f3f14cb6dd1a1fd4195109ef4d833c3156616ae)), closes [#320](https://github.com/akwawa/Seedcartographer/issues/320)
+* milestone 0.14.0 ([229967a](https://github.com/akwawa/Seedcartographer/commit/229967aac1d7638ddcb02822b1d4f4a179c951ce))
+* queue multi-seed searches and compare results in a table ([#333](https://github.com/akwawa/Seedcartographer/issues/333)) ([15e619b](https://github.com/akwawa/Seedcartographer/commit/15e619bab4a1bb0dffcd72bd68732ae5c85abbbb)), closes [#324](https://github.com/akwawa/Seedcartographer/issues/324)
+* report real-user Web Vitals to Umami as anonymous events ([#331](https://github.com/akwawa/Seedcartographer/issues/331)) ([82e63b1](https://github.com/akwawa/Seedcartographer/commit/82e63b1da339d0cf36a03d043495191b7f07f28a)), closes [#322](https://github.com/akwawa/Seedcartographer/issues/322)
+* search by sketching a geographic pattern on a 5x5 grid ([#335](https://github.com/akwawa/Seedcartographer/issues/335)) ([12dad0c](https://github.com/akwawa/Seedcartographer/commit/12dad0c3720ff281f99e768b47257e72debf848d)), closes [#326](https://github.com/akwawa/Seedcartographer/issues/326)
+* show surface and biome composition for the map selection ([#328](https://github.com/akwawa/Seedcartographer/issues/328)) ([707faf5](https://github.com/akwawa/Seedcartographer/commit/707faf5500d4c57c52634bca8e6bc7a83324e356)), closes [#319](https://github.com/akwawa/Seedcartographer/issues/319)
+
+
+### Corrigé
+
+* stage the Pages site from a script versioned in each checkout ([#337](https://github.com/akwawa/Seedcartographer/issues/337)) ([1441240](https://github.com/akwawa/Seedcartographer/commit/14412408c4297b03e0a9c93ff44e5d7f31e9cd94)), closes [#336](https://github.com/akwawa/Seedcartographer/issues/336)
+
 ## [Non publié]
 
 ### Ajouté
