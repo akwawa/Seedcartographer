@@ -48,6 +48,7 @@ const ASSETS = [
   './tiledb.js',
   './sharestate.js',
   './seedsearch.js',
+  './searchqueue.js',
   './levelload.js',
   './theme.js',
   './export.js',

@@ -24,6 +24,10 @@ import {
   planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun,
   SURPRISE_MAX_SEEDS, SURPRISE_RADIUS, surpriseCriteria
 } from './seedsearch.js';
+import {
+  createQueue, addEntry, removeEntry, nextPending, isRunning as queueIsRunning,
+  startNext, completeCurrent, cancelQueue, aggregateResults, sortRows, summarizeCriteria
+} from './searchqueue.js';
 import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
@@ -2338,6 +2342,8 @@ function finishSeedSearchIfIdle() {
     seedInfo.textContent = t('seedNone', { n: seedScannedCount });
     seedInfo.className = 'info empty';
   }
+  // a queue entry was running: bank its findings, chain to the next one
+  if (queueIsRunning(searchQueue)) onQueueSearchDone();
 }
 function cancelSeedSearch() {
   // in-flight batches are lost mid-scan: put them back before the snapshot
@@ -2401,12 +2407,7 @@ function seedResultRow(cand) {
   rc.textContent = `${cand.count} ⚑ · ${cand.dist} ${t('blocks')}`;
   rc.title = `${cand.hit.x}, ${cand.hit.z}`;
   li.append(rx, rc);
-  li.onclick = () => {
-    $('#seed').value = cand.seed;
-    world.seed = cand.seed;
-    view.cx = cand.hit.x; view.cz = cand.hit.z;
-    curReset(); draw(); requestRender(0); syncHash();
-  };
+  li.onclick = () => loadFoundSeed(cand.seed, cand.hit);
   // side-by-side shortcut: open the compare pane on this candidate (#250)
   const cmp = document.createElement('button');
   cmp.className = 'btn tiny seedcmp';
@@ -2418,6 +2419,155 @@ function seedResultRow(cand) {
   row.className = 'seedrow';
   row.append(li, cmp);
   return row;
+}
+// existing candidate-click behavior, shared with the queue table (#324)
+function loadFoundSeed(seed, hit) {
+  $('#seed').value = seed;
+  world.seed = seed;
+  view.cx = hit.x; view.cz = hit.z;
+  curReset(); draw(); requestRender(0); syncHash();
+}
+// ---------- multi-seed search queue (#324) ----------
+// Chain several searches with different criteria sets: each entry snapshots
+// the panel (criteria + seed-search parameters); "run" executes them
+// sequentially on the existing multi-seed engine and the findings accumulate
+// in a sortable comparative table. Pure state lives in searchqueue.js.
+let searchQueue = createQueue();
+let queueSortKey = 'score';
+let queueStopped = false;   // "stop the queue" clicked while an entry ran
+const QUEUE_STATUS_KEY = {
+  pending: 'queueStatusPending', running: 'queueStatusRunning',
+  done: 'queueStatusDone', cancelled: 'queueStatusCancelled'
+};
+const QUEUE_SORT_DIR = { entry: 'ascending', seed: 'ascending', score: 'descending', dist: 'ascending' };
+function queueBiomeName(id) {
+  const b = biomesSorted.find((x) => x.id === id);
+  return b ? biomeLabel(b.name) : '';
+}
+function addToQueue() {
+  const crit = collectCriteria();
+  const seedInfo = $('#seedInfo');
+  if (!crit) {
+    seedInfo.textContent = t('pickCriteria');
+    seedInfo.className = 'info err';
+    return;
+  }
+  const raw = readCriteria();
+  const label = summarizeCriteria(raw, queueBiomeName)
+    || t('queueEntry', { n: searchQueue.entries.length + 1 });
+  searchQueue = addEntry(searchQueue, {
+    label, crit: raw,
+    mode: $('#seedMode').value,
+    count: Math.min(SEED_SEARCH_MAX_TOTAL, Math.max(1, Number.parseInt($('#seedCount').value, 10) || 500)),
+    radius: Math.min(5000, Math.max(500, Number.parseInt($('#seedRadius').value, 10) || 1500))
+  });
+  renderQueueList();
+}
+function queueRunClick() {
+  if (queueIsRunning(searchQueue)) {
+    queueStopped = true;
+    cancelSeedSearch();
+    return;
+  }
+  if (seedBusy || nextPending(searchQueue) < 0) return;
+  runNextQueueEntry();
+}
+// Start the next pending entry: restore its criteria/parameters in the panel
+// (like a resume does) and launch a regular multi-seed search on them.
+function runNextQueueEntry() {
+  const started = startNext(searchQueue);
+  if (!started) { renderQueueList(); return; }
+  searchQueue = started;
+  const e = searchQueue.entries[searchQueue.current];
+  applyCriteria(e.crit);
+  $('#seedMode').value = e.mode;
+  $('#seedCount').value = String(e.count);
+  $('#seedRadius').value = String(e.radius);
+  renderQueueList();
+  startSeedSearch();
+  if (!seedBusy) {   // snapshot no longer valid: skip the entry
+    searchQueue = completeCurrent(searchQueue, []);
+    runNextQueueEntry();
+  }
+}
+// Called when the engine went idle while a queue entry was running: bank the
+// findings (or stop everything) and chain to the next pending entry.
+function onQueueSearchDone() {
+  if (queueStopped) {
+    queueStopped = false;
+    searchQueue = cancelQueue(searchQueue);
+    renderQueueList(); renderQueueTable();
+    return;
+  }
+  searchQueue = completeCurrent(searchQueue, seedCandidates);
+  renderQueueTable();
+  runNextQueueEntry();
+}
+function renderQueueList() {
+  const box = $('#queueList');
+  box.textContent = '';
+  searchQueue.entries.forEach((e, i) => box.appendChild(queueItem(e, i)));
+  box.hidden = !searchQueue.entries.length;
+  const run = $('#queueRunBtn');
+  run.hidden = !searchQueue.entries.length;
+  run.dataset.i18n = queueIsRunning(searchQueue) ? 'cancelBtn' : 'queueRun';
+  run.textContent = t(run.dataset.i18n);
+}
+function queueItem(e, i) {
+  const li = document.createElement('li');
+  li.className = 'queueitem';
+  const lab = document.createElement('span');
+  lab.className = 'qlabel';
+  lab.textContent = `${i + 1}. ${e.label}`;
+  const st = document.createElement('span');
+  st.className = 'qstatus ' + e.status;
+  st.dataset.i18n = QUEUE_STATUS_KEY[e.status];
+  st.textContent = t(st.dataset.i18n);
+  li.append(lab, st);
+  if (e.status === 'pending') {
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'btn tiny qrm';
+    rm.textContent = '✕';
+    rm.setAttribute('aria-label', t('queueRemove')); rm.dataset.i18nAria = 'queueRemove';
+    rm.onclick = () => {
+      searchQueue = removeEntry(searchQueue, i);
+      renderQueueList();
+    };
+    li.appendChild(rm);
+  }
+  return li;
+}
+function renderQueueTable() {
+  const rows = sortRows(aggregateResults(searchQueue.entries), queueSortKey);
+  const tbody = $('#queueRows');
+  tbody.textContent = '';
+  for (const r of rows) tbody.appendChild(queueRow(r));
+  $('#queueTableWrap').hidden = !rows.length;
+  for (const th of document.querySelectorAll('#queueTable th')) {
+    const key = th.querySelector('button').dataset.key;
+    th.setAttribute('aria-sort', key === queueSortKey ? QUEUE_SORT_DIR[key] : 'none');
+  }
+}
+function queueRow(r) {
+  const tr = document.createElement('tr');
+  const tdE = document.createElement('td');
+  tdE.textContent = `${r.entry + 1} · ${r.label}`;
+  const tdS = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'qseed';
+  btn.textContent = r.seed;
+  tdS.appendChild(btn);
+  const tdC = document.createElement('td');
+  tdC.textContent = `${r.count} ⚑`;
+  const tdD = document.createElement('td');
+  tdD.textContent = `${r.dist} ${t('blocks')}`;
+  tdD.title = `${r.hit.x}, ${r.hit.z}`;
+  tr.append(tdE, tdS, tdC, tdD);
+  // the whole row loads the seed; the button click bubbles up to it
+  tr.onclick = () => loadFoundSeed(r.seed, r.hit);
+  return tr;
 }
 // ---------- "Surprise me" (#287) ----------
 // First random seed matching the criteria (or, with an empty panel, the
@@ -3652,6 +3802,11 @@ async function init() {
     else startSeedSearch();
   };
   $('#surpriseBtn').onclick = startSurprise;
+  $('#queueAddBtn').onclick = addToQueue;
+  $('#queueRunBtn').onclick = queueRunClick;
+  for (const b of document.querySelectorAll('#queueTable thead button')) {
+    b.onclick = () => { queueSortKey = b.dataset.key; renderQueueTable(); };
+  }
   $('#pngBtn').onclick = () => {
     if (exportBusy) { sendSearch({ type: 'cancelExport', reqId: exportReq }); return; }
     const size = $('#pngSizeSel').value;

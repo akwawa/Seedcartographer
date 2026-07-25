@@ -19,6 +19,15 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- File d'attente de recherches multi-seeds avec tableau comparatif : un
+  bouton « Ajouter à la file » capture le jeu de critères courant (avec un
+  libellé résumé), la file affiche l'état de chaque entrée (en attente, en
+  cours, terminée, annulée) et « Lancer la file » exécute les recherches
+  séquentiellement sur le moteur multi-seeds existant. Les trouvailles de
+  toutes les entrées s'accumulent dans un tableau comparatif (seed, jeu de
+  critères, score, distance au spawn) triable par colonne ; un clic sur une
+  ligne charge la seed. La file entière peut être stoppée et une entrée en
+  attente retirée. (#324)
 - Annotations texte libres sur la carte : un nouvel outil « ✎ » dans la
   rangée d'outils permet d'écrire un court texte (60 caractères max) à
   n'importe quel point de la carte ; le texte est dessiné directement sur le
