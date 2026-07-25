@@ -1,6 +1,8 @@
-# Mutation testing (Stryker) on the pure shared modules. The full run takes
-# ~25 minutes (command runner, one `node --test` per mutant), far too slow to
-# gate every pull request, so it runs on pushes to main, weekly and on demand.
+# Mutation testing (Stryker) on the pure shared modules. A single full run
+# (command runner, one `node --test` per mutant) now takes ~106 minutes, so
+# the scope is partitioned into three cost-balanced shards that run in
+# parallel, each well under the job timeout. Too slow to gate every pull
+# request, it runs on pushes to main, weekly and on demand.
 name: mutation
 
 on:
@@ -16,9 +18,25 @@ permissions:
 jobs:
   mutation:
     runs-on: ubuntu-latest
-    # the mutated scope has grown to 32 pure modules, one full `node --test`
-    # per surviving mutant: a complete run no longer fits in 60 minutes
-    timeout-minutes: 120
+    timeout-minutes: 60
+    strategy:
+      # let every shard report its score even if another one breaks
+      fail-fast: false
+      # The three shards are balanced by estimated mutant count (~800 each).
+      # Together they must cover exactly the `mutate` array of
+      # stryker.config.json — test/mutationshards.test.mjs enforces the exact
+      # partition (no gap, no duplicate). Note: the `thresholds.break: 75`
+      # gate now applies per shard instead of globally, which is slightly
+      # stricter on a weak shard and slightly laxer globally — acceptable.
+      matrix:
+        include:
+          - shard: core
+            mutate: search.js,userzones.js,shapes.js,tour.js,tilegrid.js,coords.js,seed.js
+          - shard: world
+            mutate: sharestate.js,userpaths.js,rarebiomes.js,tilecache.js,searchhistory.js,slime.js,keys.js,compare.js
+          - shard: user
+            mutate: seedsearch.js,usermarkers.js,relief.js,userpresets.js,export.js,favorites.js,gallery.js,errorreport.js,legend.js,maptools.js,markers.js,palette.js,presets.js,profile.js,portals.js,theme.js,composition.js
+    name: mutation (${{ matrix.shard }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,4 +47,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm run mutation
+      # --mutate on the CLI replaces the `mutate` array of the config file,
+      # restricting this job to its shard.
+      - run: npx stryker run --mutate "$MUTATE"
+        env:
+          MUTATE: ${{ matrix.mutate }}
