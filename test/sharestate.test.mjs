@@ -45,6 +45,7 @@ test('sanitizeCriteria coerces integers, drops junk and caps row counts', () => 
     qm: 'and', qc: [],
     hm: 'and', hc: [],
     sm: 'or', sc: [{ t: 7, mn: 2, r: 800, im: false }], pc: [],
+    sk: null,
     rg: null, sp: 16, s0: 60, s1: null
   });
   // structure pairs: junk dropped, flags coerced
@@ -84,6 +85,17 @@ test('world and screen transforms are exact inverses around the view center', ()
   const s = worldToScreen(view, 800, 600, 1234, -321);
   const w = screenToWorld(view, 800, 600, s.x, s.y);
   assert.deepStrictEqual(w, { x: 1234, z: -321 });
+});
+
+// #326: the sketch payload rides along in the criteria and is sanitized
+test('sanitizeCriteria carries a sanitized sketch payload', () => {
+  const c = sanitizeCriteria({ mb: [1], sk: { g: ['ocean', 'junk'], r: 1, m: 0, p: 80 } }, 8);
+  assert.strictEqual(c.sk.g.length, 25);
+  assert.strictEqual(c.sk.g[0], 'ocean');
+  assert.strictEqual(c.sk.g[1], '');
+  assert.deepStrictEqual([c.sk.r, c.sk.m, c.sk.p], [1, 0, 80]);
+  // junk or empty sketches sanitize to null
+  assert.strictEqual(sanitizeCriteria({ mb: [1], sk: 'evil' }, 8).sk, null);
 });
 
 test('sanitizeCriteria keeps the explicit or-modes', () => {

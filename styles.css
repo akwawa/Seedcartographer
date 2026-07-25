@@ -180,6 +180,24 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .result .rc{font-size:11px;color:var(--muted)}
 .muted{color:var(--muted)} .small{font-size:12px}
 
+/* ---------- multi-seed search queue (#324) ---------- */
+.queuelist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.queueitem{display:flex;align-items:center;gap:8px;font-size:12px;
+  background:var(--raise);border:1px solid var(--line-soft);border-radius:7px;padding:6px 9px}
+.queueitem .qlabel{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.queueitem .qstatus{flex:0 0 auto;color:var(--muted);font-size:11px}
+.queueitem .qstatus.running{color:var(--amber)}
+.queueitem .qstatus.done{color:var(--grass)}
+.tablewrap{overflow-x:auto;margin-top:10px}
+.qtable{border-collapse:collapse;width:100%;font-size:12px}
+.qtable th,.qtable td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.qtable th button{background:none;border:0;padding:0;cursor:pointer;font-weight:600;color:var(--muted)}
+.qtable th[aria-sort="ascending"] button,.qtable th[aria-sort="descending"] button{color:var(--text)}
+.qtable tbody tr{cursor:pointer}
+.qtable tbody tr:hover{background:var(--hover)}
+.qtable .qseed{background:none;border:0;padding:0;cursor:pointer;
+  font-family:var(--mono);font-size:12px;text-decoration:underline}
+
 /* ---------- layers ---------- */
 .layers{display:flex;flex-direction:column;gap:3px}
 .layer{display:flex;align-items:center;gap:9px;font-size:13px;padding:5px 6px;border-radius:6px;cursor:pointer}
@@ -233,11 +251,15 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .popup .portal-del{display:block;margin:0 auto}
 .popup.comp{transform:translate(-50%,-50%)}
 .popup .comp-radius{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 7px;font-size:12px;color:var(--muted)}
-.popup .comp-list{min-width:230px;max-height:40vh;overflow-y:auto;text-align:left;font-size:12.5px}
-.popup .comp-row{display:flex;align-items:center;gap:7px;margin:3px 0}
-.popup .comp-dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.45);flex:none}
-.popup .comp-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.popup .comp-pct{font-family:var(--mono)}
+.popup .comp-list,.selbar .comp-list{min-width:230px;max-height:40vh;overflow-y:auto;text-align:left;font-size:12.5px}
+.popup .comp-row,.selbar .comp-row{display:flex;align-items:center;gap:7px;margin:3px 0}
+.popup .comp-dot,.selbar .comp-dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.45);flex:none}
+.popup .comp-name,.selbar .comp-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.popup .comp-pct,.selbar .comp-pct{font-family:var(--mono)}
+.popup .path-alerts{margin:7px 0}
+.popup .path-alerts .small{margin:0 0 5px;font-size:12px;color:var(--muted)}
+.popup button.path-alert{width:100%;padding:1px 2px;border:0;border-radius:4px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.popup button.path-alert:hover,.popup button.path-alert:focus-visible{background:rgba(128,128,128,.18)}
 
 /* ---------- map navigation aids ---------- */
 .maptoggles{position:absolute;left:14px;top:14px;display:flex;gap:6px}
@@ -275,18 +297,27 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .pathbtn.on{border-color:#7ee0c0;color:#7ee0c0;background:var(--raise)}
 .compbtn{position:absolute;left:266px;top:128px}
 .compbtn.on{border-color:#f2a73b;color:#f2a73b;background:var(--raise)}
-.popup .zone-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
+.notebtn{position:absolute;left:308px;top:128px}
+.notebtn.on{border-color:#ffd24a;color:#ffd24a;background:var(--raise)}
+.popup .zone-name,.popup .annot-text{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
+/* the editor opens on the input alone: keep it clear of the × close button
+   (WCAG 2.5.8 target spacing, enforced by the strict axe audit) */
+.popup .annot-text{margin-top:16px}
 .popup .zone-colors{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
 .popup .zone-color{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .popup .zone-color[aria-pressed="true"]{border-color:var(--text)}
-.popup .zone-del{display:block;margin:0 auto}
+.popup .zone-del,.popup .annot-del{display:block;margin:0 auto}
 .popup .path-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
 .popup .path-dist{margin:0 0 8px;text-align:center}
 .popup .path-del{display:block;margin:0 auto}
-.selbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+.selbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;flex-direction:column;gap:5px;
   background:var(--overlay);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;
   padding:6px 10px;font-size:12px}
 .selbar[hidden]{display:none}
+.selbar .selbar-row{display:flex;align-items:center;gap:8px}
+.selbar .selbar-surface{color:var(--muted)}
+.selbar .selbar-surface:empty,.selbar .comp-list:empty{display:none}
+.selbar .comp-list{max-height:28vh}
 .markerbtn.on{border-color:#b17ee0;background:var(--hover)}
 .palettebtn.on{border-color:var(--lapis);background:var(--hover)}
 
@@ -396,3 +427,19 @@ dialog :is(button,a):focus-visible{outline:2px solid var(--lapis-hi);outline-off
 .gallerydlg .gallerycard{cursor:pointer;font:inherit;text-align:left;width:100%}
 .gallerydlg .gallerycard h3{font-family:inherit;font-size:15px;text-transform:none;letter-spacing:normal;margin:0 0 6px;color:inherit}
 .gallerythumb{display:block;width:100%;height:auto;border-radius:6px;border:1px solid var(--line);margin-bottom:10px;background:#000}
+
+/* ---- isometric 3D terrain view (#325) ---- */
+.view3ddlg{max-width:min(720px,calc(100vw - 2rem));width:min(720px,calc(100vw - 2rem))}
+.view3d-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.view3d-canvas{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px}
+
+/* ---- sketch search (#326) ---- */
+.sketchgrid{display:grid;grid-template-columns:repeat(5,34px);gap:3px;margin:8px 0}
+.sketchcell{width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel2);cursor:pointer}
+.sketchcell:hover{border-color:var(--hover-line)}
+.sketchcell.set{border-color:rgba(0,0,0,.45);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.sketchlegend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 10px;font-size:12px;color:var(--muted)}
+.sketchfam{display:flex;align-items:center;gap:5px}
+.sketchfam .dot{width:11px;height:11px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+.sketchopt{display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer}

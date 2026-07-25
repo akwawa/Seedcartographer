@@ -11,8 +11,11 @@ import { TILE_CELLS } from './tilegrid.js';
 import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
 import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_RING_BLOCKS } from './rarebiomes.js';
 import { hdCellSpan, hdCellIndex } from './export.js';
-import { discCounts, compositionShares } from './composition.js';
+import { discCounts, rectCounts, rectSampleStep, compositionShares } from './composition.js';
+import { VIEW3D_MAX_CELLS } from './view3d.js';
 import { diffGrids } from './compare.js';
+import { pathBoundingBox, pathStructureAlerts } from './userpaths.js';
+import { SKETCH_PAD_BLOCKS } from './sketch.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -190,7 +193,8 @@ function needsBiomeGrid(d) {
   return (d.mainBiomes || []).length > 0
     || (d.adjClauses || []).length > 0
     || (d.pctClauses || []).length > 0
-    || (d.shapeClauses || []).length > 0;
+    || (d.shapeClauses || []).length > 0
+    || !!d.sketch;
 }
 
 // shape clauses cross the message boundary as plain arrays: rebuild the sets
@@ -267,6 +271,14 @@ let searchBusy = false;
 let searchCancelId = 0;
 const yieldToQueue = () => new Promise((r) => setTimeout(r, 0));
 
+// grid padding around the search box: the widest adjacency/percentage
+// distance, and a sketch samples 25 zones up to SKETCH_PAD_BLOCKS away
+function searchPad(d) {
+  const base = d.sketch ? SKETCH_PAD_BLOCKS : 0;
+  return [...(d.adjClauses || []), ...(d.pctClauses || [])]
+    .reduce((m, c) => Math.max(m, c.dist), base);
+}
+
 async function runSearchJob(d) {
   searchBusy = true;
   const t0 = performance.now();
@@ -281,7 +293,7 @@ async function runSearchJob(d) {
     const SC = 16;
     const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
     const pctClauses = (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct }));
-    const pad = [...adjClauses, ...pctClauses].reduce((m, c) => Math.max(m, c.dist), 0);
+    const pad = searchPad(d);
     const gx0 = Math.floor((d.cx - d.range - pad) / SC);
     const gz0 = Math.floor((d.cz - d.range - pad) / SC);
     const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
@@ -307,6 +319,7 @@ async function runSearchJob(d) {
       adjMode: d.adjMode, adjClauses,
       pctMode: d.pctMode, pctClauses,
       shapeMode: d.shapeMode, shapeClauses: workerShapeClauses(d),
+      sketch: d.sketch || null,
       structMode: d.structMode, structClauses,
       // surface height is Overworld-only; heightAt calls into the engine
       surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -424,6 +437,7 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
     pctClauses: (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct })),
     shapeMode: d.shapeMode,
     shapeClauses: workerShapeClauses(d),
+    sketch: d.sketch || null,
     structMode: d.structMode,
     structClauses: buildStructClauses({ ...d, cx: 0, cz: 0 }),
     surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -436,7 +450,7 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
 async function runSeedSearchJob(d) {
   const cancelled = () => seedCancelId === d.reqId;
   const SC = 16;
-  const pad = [...(d.adjClauses || []), ...(d.pctClauses || [])].reduce((m, c) => Math.max(m, c.dist), 0);
+  const pad = searchPad(d);
   const gx0 = Math.floor((-d.range - pad) / SC);
   const gz0 = gx0;
   const cols = Math.ceil((d.range + pad) / SC) - gx0 + 2;
@@ -646,27 +660,105 @@ function handleStructures(d) {
   postMessage({ type: 'structures', reqId: d.reqId, groups: out });
 }
 
+// proximity alerts along a traced path (#321): enumerate the requested
+// structure types inside the path's grown bounding box, then keep the ones
+// within the alert radius of the polyline, sorted by increasing distance
+// (userpaths.js). The app drops stale replies by reqId, so editing the
+// radius or re-opening the editor simply outraces the previous request.
+const PATH_ALERT_TYPE_CAP = 2000;
+function handlePathAlertsMsg(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const box = pathBoundingBox(d.pts, d.radius);
+  const structures = [];
+  for (const st of d.types) {
+    for (const [x, z] of pointsOfType(st, d.dim, box.x0, box.z0, box.x1, box.z1, PATH_ALERT_TYPE_CAP)) {
+      structures.push({ type: st, x, z });
+    }
+  }
+  postMessage({ type: 'pathAlerts', reqId: d.reqId, alerts: pathStructureAlerts(d.pts, d.radius, structures) });
+}
+
 // biome composition around a point (#286): sample a 1:16 grid over the
 // requested disc and aggregate the shares (composition.js). The app drops
 // stale replies by reqId, so a re-click or radius change simply outraces
 // the previous request.
 const COMPOSITION_SC = 16;
-function handleCompositionMsg(d) {
-  applyWorld(d.seed, d.mc, d.large, d.dim);
+// sample the biome grid over [x0..x1]×[z0..z1] cells at scale sc; null on failure
+function compositionGrid(ci0, cj0, cols, rows, sc, y) {
+  ensureArea(cols * rows);
+  if (!M._genBiomeArea(areaPtr, ci0, cj0, cols, rows, sc, scaledY(y))) return null;
+  return M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
+}
+// biome counts over the selection rectangle (#319): the sampling step adapts
+// to the rectangle size so tiny selections stay precise and huge ones cheap
+function rectCompositionCounts(r, y) {
+  const sc = rectSampleStep(r.w, r.h);
+  const ci0 = Math.floor(r.x0 / sc), cj0 = Math.floor(r.z0 / sc);
+  const cols = Math.floor(r.x1 / sc) - ci0 + 1;
+  const rows = Math.floor(r.z1 / sc) - cj0 + 1;
+  const grid = compositionGrid(ci0, cj0, cols, rows, sc, y);
+  return grid && rectCounts(grid, cols, rows);
+}
+// biome counts over the disc around the probed point (#286)
+function discCompositionCounts(d) {
   const SC = COMPOSITION_SC;
   const ci0 = Math.floor((d.x - d.radius) / SC);
   const cj0 = Math.floor((d.z - d.radius) / SC);
   const cols = Math.floor((d.x + d.radius) / SC) - ci0 + 1;
   const rows = Math.floor((d.z + d.radius) / SC) - cj0 + 1;
-  ensureArea(cols * rows);
-  if (!M._genBiomeArea(areaPtr, ci0, cj0, cols, rows, SC, scaledY(d.y))) {
+  const grid = compositionGrid(ci0, cj0, cols, rows, SC, d.y);
+  return grid && discCounts(grid, cols, rows,
+    Math.floor(d.x / SC) - ci0, Math.floor(d.z / SC) - cj0, SC, d.radius);
+}
+function handleCompositionMsg(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const counts = d.rect ? rectCompositionCounts(d.rect, d.y) : discCompositionCounts(d);
+  if (!counts) {
     postMessage({ type: 'composition', reqId: d.reqId, error: 'area-too-large', list: [] });
     return;
   }
-  const grid = M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
-  const counts = discCounts(grid, cols, rows,
-    Math.floor(d.x / SC) - ci0, Math.floor(d.z / SC) - cj0, SC, d.radius);
   postMessage({ type: 'composition', reqId: d.reqId, list: compositionShares(counts) });
+}
+
+// isometric 3D terrain view (#325): one bounded grid of columns over the
+// visible map area — biome color from the active palette + approximate
+// surface height (Overworld; other dimensions are rendered flat). The app
+// drops stale replies by reqId, so re-opening the panel simply outraces
+// the previous request.
+function fillTerrain3dColumns(d, rgb, heights) {
+  const base = areaPtr >> 2;
+  const flat = (d.dim || 0) !== 0;
+  for (let j = 0; j < d.rows; j++) {
+    for (let i = 0; i < d.cols; i++) {
+      const n = j * d.cols + i;
+      let id = M.HEAP32[base + n];
+      if (id < 0 || id > 255) id = 0;
+      const c = id * 3;
+      rgb[n * 3] = colors[c]; rgb[n * 3 + 1] = colors[c + 1]; rgb[n * 3 + 2] = colors[c + 2];
+      heights[n] = flat ? 0 : M._approxSurfaceY((d.ci0 + i) * d.sc + d.sc / 2, (d.cj0 + j) * d.sc + d.sc / 2);
+    }
+  }
+}
+function handleTerrain3dMsg(d) {
+  const cells = d.cols * d.rows;
+  if (cells <= 0 || cells > VIEW3D_MAX_CELLS) {
+    postMessage({ type: 'terrain3d', reqId: d.reqId, ok: false });
+    return;
+  }
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  ensureArea(cells);
+  const ok = M._genBiomeArea(areaPtr, d.ci0, d.cj0, d.cols, d.rows, d.sc, scaledY(d.y));
+  if (!ok) {
+    postMessage({ type: 'terrain3d', reqId: d.reqId, ok: false });
+    return;
+  }
+  const rgb = new Uint8ClampedArray(cells * 3);
+  const heights = new Float32Array(cells);
+  fillTerrain3dColumns(d, rgb, heights);
+  postMessage({
+    type: 'terrain3d', reqId: d.reqId, ok: true, cols: d.cols, rows: d.rows,
+    rgb: rgb.buffer, heights: heights.buffer
+  }, [rgb.buffer, heights.buffer]);
 }
 
 // biome differences of two seeds over the viewport (#288): generate the
@@ -729,7 +821,9 @@ const HANDLERS = {
   structures: handleStructures,
   biome: handleBiomeMsg,
   composition: handleCompositionMsg,
+  pathAlerts: handlePathAlertsMsg,
   biomeDiff: handleDiffMsg,
+  terrain3d: handleTerrain3dMsg,
   cancelSearch: (d) => { searchCancelId = d.reqId; },
   rareBiome: handleRareMsg,
   cancelRare: (d) => { rareCancelId = d.reqId; },

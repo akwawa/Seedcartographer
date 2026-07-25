@@ -41,10 +41,10 @@ export default [
     files: [
       'i18n.js', 'biomes.js', 'coords.js', 'portals.js', 'presets.js', 'favorites.js',
       'legend.js', 'maptools.js', 'tilecache.js', 'sharestate.js',
-      'seedsearch.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'userzones.js', 'userpaths.js',
+      'seedsearch.js', 'searchqueue.js', 'searchhistory.js', 'userpresets.js', 'usermarkers.js', 'userzones.js', 'userpaths.js', 'userannotations.js',
       'profile.js', 'gallery.js', 'theme.js', 'export.js', 'version.js',
-      'errorreport.js', 'seed.js', 'search.js', 'rarebiomes.js', 'shapes.js', 'slime.js', 'tour.js', 'keys.js',
-      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'compare.js', 'composition.js'
+      'errorreport.js', 'vitals.js', 'seed.js', 'levelload.js', 'search.js', 'rarebiomes.js', 'shapes.js', 'sketch.js', 'slime.js', 'tour.js', 'keys.js',
+      'markers.js', 'palette.js', 'tilegrid.js', 'relief.js', 'view3d.js', 'compare.js', 'composition.js'
     ],
     languageOptions: {
       sourceType: 'module',

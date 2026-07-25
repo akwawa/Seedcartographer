@@ -3,6 +3,8 @@
 // hash values, legacy-link migration and view/world coordinate transforms.
 // Shared between app.js (script tag) and the Node test suite (require).
 
+import { sanitizeSketch } from './sketch.js';
+
 // btoa/atob exist in browsers AND in Node >= 16 (the test runtime), so the
 // Buffer fallback only runs on exotic runtimes: excluded from coverage.
 /* node:coverage ignore next 2 */
@@ -60,6 +62,7 @@ export function normalizeLegacyCriteria(c) {
  *            hm: string, hc: Array<{k: string, a: number[], b: number[], mx: number}>,
  *            sm: string, sc: Array<{t: number, mn: number, r: number, im: boolean}>,
  *            pc: Array<{t1: number, t2: number, g: number, r: number}>,
+ *            sk: {g: string[], r: number, m: number, p: number}|null,
  *            rg: number|null, sp: number|null, s0: number|null, s1: number|null}|null}
  *          clean criteria, or null when nothing was provided
  */
@@ -105,6 +108,8 @@ export function sanitizeCriteria(c, maxRows) {
     qm: c.qm === 'or' ? 'or' : 'and', qc,
     hm: c.hm === 'or' ? 'or' : 'and', hc,
     sm: c.sm === 'or' ? 'or' : 'and', sc, pc,
+    // sketch-search payload (#326): sanitized in sketch.js, absent -> null
+    sk: sanitizeSketch(c.sk),
     rg: intOrNull(c.rg), sp: intOrNull(c.sp),
     s0: intOrNull(c.s0), s1: intOrNull(c.s1)
   };

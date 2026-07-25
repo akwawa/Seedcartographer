@@ -46,8 +46,12 @@
           <option value="4096">4096 px</option>
         </select>
       </div>
+      <button id="openSaveBtn" class="btn" data-i18n="openSave" title="Load the level.dat of a Minecraft Java save — read locally, never uploaded" data-i18n-title="openSaveTitle">Open a save</button>
+      <label for="levelDatFile" hidden data-i18n="openSave">Open a save</label>
+      <input id="levelDatFile" type="file" accept=".dat" title="Open a save" data-i18n-title="openSave" hidden>
       <button id="pngBtn" class="btn" data-i18n="exportPng">Export PNG</button>
       <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
+      <button id="view3dBtn" class="btn" data-i18n="view3dBtn">3D view</button>
       <button id="shareBtn" class="btn" data-i18n="shareLink">Share link</button>
       <button id="cmpBtn" class="btn" aria-pressed="false" data-i18n="compareBtn">Compare seeds</button>
       <div class="menurow">
@@ -116,6 +120,19 @@
         <button id="addShape" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
       </details>
 
+      <details id="sketchSec" class="field critsec">
+        <summary><span data-i18n="sketchTitle">Sketch search</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <p class="lede" data-i18n="sketchLede">Draw the layout you want: each cell of the 5×5 grid covers about 480 blocks. Click a cell to cycle through the biome families.</p>
+        <div id="sketchGrid" class="sketchgrid"></div>
+        <div id="sketchLegend" class="sketchlegend"></div>
+        <label class="sub-lbl sketchopt"><input id="sketchRot" type="checkbox"> <span data-i18n="sketchRot">allow 90° rotations</span></label>
+        <label class="sub-lbl sketchopt"><input id="sketchMir" type="checkbox"> <span data-i18n="sketchMir">allow mirrors</span></label>
+        <div class="field two">
+          <div><label for="sketchPct" data-i18n="sketchMinPct">Min. match (%)</label><input id="sketchPct" class="num" type="number" min="1" max="100" step="5" value="60"></div>
+          <div><button id="sketchClear" class="btn tiny" data-i18n="sketchClear">Clear sketch</button></div>
+        </div>
+      </details>
+
       <details class="field critsec">
         <summary><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span></summary>
         <select id="structMode" class="mode" aria-label="Nearby structures" data-i18n-aria="nearbyStructures"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
@@ -168,9 +185,25 @@
       <button id="seedSearchBtn" class="btn primary" data-i18n="seedSearchBtn">Find a seed</button>
       <button id="surpriseBtn" class="btn" data-i18n="surpriseBtn" title="Load a random seed matching the criteria (or a village near spawn)" data-i18n-title="surpriseTitle">🎲 Surprise me</button>
       <button id="seedResumeBtn" class="btn" hidden></button>
+      <button id="queueAddBtn" class="btn" data-i18n="queueAdd">Add to queue</button>
       <progress id="seedProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="seedInfo" class="info"></output>
       <div id="seedResults" class="results"></div>
+      <ul id="queueList" class="queuelist" hidden></ul>
+      <button id="queueRunBtn" class="btn primary" data-i18n="queueRun" hidden>Run the queue</button>
+      <div id="queueTableWrap" class="tablewrap" hidden>
+        <table id="queueTable" class="qtable">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="none"><button type="button" class="qsort" data-key="entry" data-i18n="queueColCrit">Criteria set</button></th>
+              <th scope="col" aria-sort="none"><button type="button" class="qsort" data-key="seed" data-i18n="queueColSeed">Seed</button></th>
+              <th scope="col" aria-sort="descending"><button type="button" class="qsort" data-key="score" data-i18n="queueColScore">Score</button></th>
+              <th scope="col" aria-sort="none"><button type="button" class="qsort" data-key="dist" data-i18n="queueColDist">Distance</button></th>
+            </tr>
+          </thead>
+          <tbody id="queueRows"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="card">
@@ -285,11 +318,16 @@
     <button id="pathBtn" class="btn tiny pathbtn" title="Trace a path (click points, double-click or Esc to finish)" aria-label="Trace a path" data-i18n-title="pathTitle" data-i18n-aria="pathTitle">〰</button>
     <button id="portalBtn" class="btn tiny portalbtn" title="Plan a Nether portal (click the map)" aria-label="Plan a Nether portal" data-i18n-title="portalTitle" data-i18n-aria="portalTitle">🌀</button>
     <button id="compBtn" class="btn tiny compbtn" title="Biome composition around a point (click the map)" aria-label="Biome composition around a point" data-i18n-title="compBtnTitle" data-i18n-aria="compBtnTitle">◔</button>
+    <button id="annotBtn" class="btn tiny notebtn" title="Write a text annotation (click the map)" aria-label="Write a text annotation" data-i18n-title="annotTitle" data-i18n-aria="annotTitle">✎</button>
     <div id="selBar" class="selbar" hidden>
-      <span id="selInfo" class="mono"></span>
-      <button id="selPng" class="btn tiny" data-i18n="selPng">PNG</button>
-      <button id="selCopy" class="btn tiny" data-i18n="selCopy">Copy coords</button>
-      <button id="selClose" class="btn tiny" title="Close" data-i18n-title="close">×</button>
+      <div class="selbar-row">
+        <span id="selInfo" class="mono"></span>
+        <button id="selPng" class="btn tiny" data-i18n="selPng">PNG</button>
+        <button id="selCopy" class="btn tiny" data-i18n="selCopy">Copy coords</button>
+        <button id="selClose" class="btn tiny" title="Close" data-i18n-title="close">×</button>
+      </div>
+      <div id="selSurface" class="mono selbar-surface"></div>
+      <div id="selCompList" class="comp-list"></div>
     </div>
     <canvas id="minimap" width="176" height="132" aria-label="Overview minimap" data-i18n-aria="minimapAria"></canvas>
     <details id="legend" class="legend">
@@ -304,6 +342,23 @@
   <button id="galleryClose" class="help-close" data-i18n-title="close" title="Close">×</button>
   <h2 data-i18n="galleryTitle">Seed gallery</h2>
   <div id="galleryCards" class="gallerycards"><p class="muted small">…</p></div>
+</dialog>
+<dialog id="view3dDlg" class="help view3ddlg">
+  <button id="view3dClose" class="help-close" data-i18n-title="close" title="Close">×</button>
+  <h2 data-i18n="view3dTitle">3D terrain view</h2>
+  <div class="view3d-controls">
+    <button id="view3dRotL" class="btn tiny" title="Rotate left" data-i18n-title="view3dRotL" aria-label="Rotate left" data-i18n-aria="view3dRotL">↺</button>
+    <button id="view3dRotR" class="btn tiny" title="Rotate right" data-i18n-title="view3dRotR" aria-label="Rotate right" data-i18n-aria="view3dRotR">↻</button>
+    <label class="menulbl" for="view3dScale" data-i18n="view3dScaleLbl">Height scale</label>
+    <select id="view3dScale" class="ver">
+      <option value="0.5">×0.5</option>
+      <option value="1" selected>×1</option>
+      <option value="2">×2</option>
+    </select>
+    <button id="view3dPng" class="btn tiny" data-i18n="exportPng">Export PNG</button>
+  </div>
+  <canvas id="view3dCanvas" class="view3d-canvas" aria-label="Isometric view of the visible terrain" data-i18n-aria="view3dAria"></canvas>
+  <p id="view3dStatus" class="muted small" aria-live="polite"></p>
 </dialog>
 <dialog id="helpDlg" class="help">
   <button id="helpClose" class="help-close" data-i18n-title="close" title="Close">×</button>

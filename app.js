@@ -24,14 +24,21 @@ import {
   planBatches, originDist, insertCandidate, serializeSeedRun, parseSeedRun,
   SURPRISE_MAX_SEEDS, SURPRISE_RADIUS, surpriseCriteria
 } from './seedsearch.js';
+import {
+  createQueue, addEntry, removeEntry, nextPending, isRunning as queueIsRunning,
+  startNext, completeCurrent, cancelQueue, aggregateResults, sortRows, summarizeCriteria
+} from './searchqueue.js';
 import { addHistoryEntry, parseHistory } from './searchhistory.js';
 import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets } from './userpresets.js';
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
 import { ZONE_COLORS, ZONE_NAME_MAX, addZone, removeZone, renameZone, recolorZone, zonesFor, parseZones } from './userzones.js';
 import {
-  PATH_NAME_MAX, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
+  PATH_NAME_MAX, PATH_ALERT_RADII, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
   addPath, removePath, renamePath, pathsFor, parsePaths
 } from './userpaths.js';
+import {
+  ANNOTATION_TEXT_MAX, addAnnotation, removeAnnotation, editAnnotation, annotationsFor, parseAnnotations
+} from './userannotations.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
@@ -41,10 +48,18 @@ import {
 } from './export.js';
 import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
+import { formatVitalsEvent, inpEstimate, clsTotal } from './vitals.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
+import { rectSurface } from './composition.js';
+import {
+  view3dGrid, rotatedSize, rotatedIndex, isoProject, view3dLayout,
+  faceShades, cssRgb, heightSpan, heightNorm
+} from './view3d.js';
 import { keyAction } from './keys.js';
 import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
+import { SKETCH_SIZE, SKETCH_FAMILIES, SKETCH_FAMILY_COLORS } from './sketch.js';
+import { detectFormat, parseLevelData, matchVersion } from './levelload.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
@@ -84,11 +99,16 @@ let selected = -1;
 const ruler = { on: false, a: null, b: null, done: false };
 // selection tool: a/b world corners dragged on the map
 const sel = { on: false, a: null, b: null, done: false };
+let selReq = -1;             // selection-composition token (#319); -1 = none
 // zone tool: a/b world corners dragged on the map, turned into a named zone
 const zoneTool = { on: false, a: null, b: null };
 // path tool (#285): waypoints clicked so far, plus the live point under the
 // pointer; double-click or Escape turns them into a named persisted path
 const pathTool = { on: false, pts: [], hover: null };
+// annotation tool (#323): one armed click writes a short free text at the point
+let annotMode = false;
+let pathAlertReq = -1;        // path-alert token (#321); stale replies drop
+let pathAlertRadius = PATH_ALERT_RADII[0];   // sticky across editor openings
 const PATH_COLOR = '#7ee0c0';
 // portal calculator (#284): the placed portal {dim,x,z}; survives dimension
 // switches so the linked pin shows up in the other dimension
@@ -126,6 +146,50 @@ window.addEventListener('unhandledrejection', (e) => {
   const reason = e.reason;
   sendErrorEvent('promise', reason?.message || reason);
 });
+
+// Real-user Core Web Vitals (#322): passive PerformanceObserver collection,
+// bucketed (never raw values, see vitals.js) and sent once as anonymous
+// Umami events when the page is hidden — nothing runs at load beyond
+// registering the buffered observers, so the first-render perf budget is
+// untouched. Silent no-op when observers or umami are unavailable (CI).
+const vitals = { lcp: null, eventDurations: [], layoutShifts: [], sent: false };
+window.__vitals = vitals; // e2e/debug-observable state
+function observeVital(type, options, onEntries) {
+  try {
+    const po = new PerformanceObserver((list) => onEntries(list.getEntries()));
+    po.observe({ type, buffered: true, ...options });
+  } catch { /* observer type unsupported: skip this metric */ }
+}
+if (typeof PerformanceObserver !== 'undefined') {
+  observeVital('largest-contentful-paint', {}, (entries) => {
+    const last = entries.at(-1);
+    if (last) vitals.lcp = last.startTime;
+  });
+  observeVital('event', { durationThreshold: 40 }, (entries) => {
+    for (const e of entries) vitals.eventDurations.push(e.duration);
+  });
+  observeVital('layout-shift', {}, (entries) => {
+    for (const e of entries) {
+      vitals.layoutShifts.push({ value: e.value, hadRecentInput: e.hadRecentInput });
+    }
+  });
+}
+function sendVitals() {
+  if (vitals.sent) return;
+  vitals.sent = true;
+  if (typeof umami === 'undefined' || typeof umami.track !== 'function') return;
+  const inp = inpEstimate(vitals.eventDurations);
+  const measures = [['LCP', vitals.lcp], ['INP', inp], ['CLS', clsTotal(vitals.layoutShifts)]];
+  for (const [metric, value] of measures) {
+    const payload = formatVitalsEvent(metric, value);
+    if (payload === null) continue;
+    try { umami.track('web-vitals', payload); } catch { /* ignore */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') sendVitals();
+});
+window.addEventListener('pagehide', sendVitals);
 
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
@@ -290,6 +354,8 @@ worker.onmessage = (e) => {
     return;
   }
   if (d.type === 'composition') { onComposition(d); return; }
+  if (d.type === 'terrain3d') { onTerrain3d(d); return; }
+  if (d.type === 'pathAlerts') { onPathAlerts(d); return; }
   if (d.type === 'biome' && d.reqId === biomeProbeReq) {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     markLegend(d.id);
@@ -489,6 +555,8 @@ function draw() {
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
+  // free text annotations (#323) sit above the markers so they stay readable
+  drawAnnotations(W, H);
   drawPortal();
 
   // result pins
@@ -631,15 +699,37 @@ function drawSelection() {
 function setSelOn(on) {
   sel.on = on; sel.a = null; sel.b = null; sel.done = false;
   $('#selBtn').classList.toggle('on', on);
-  $('#selBar').hidden = true;
+  hideSelBar();
   canvas.style.cursor = on ? 'crosshair' : '';
   draw();
+}
+function hideSelBar() {
+  $('#selBar').hidden = true;
+  selReq = -1;                 // in-flight composition replies become stale
+}
+// selection stats (#319): exact surface (blocks + intersected chunks) plus
+// the biome composition of the rectangle, sampled in the worker like the
+// composition panel (#286); a new drag bumps selReq so stale replies drop
+function requestSelComposition(r) {
+  selReq = reqSeq++;
+  $('#selCompList').textContent = '…';
+  send({
+    type: 'composition', reqId: selReq, seed: world.seed, mc: world.mc,
+    large: world.large, dim: world.dim, y: yLayer,
+    rect: { x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1, w: r.w, h: r.h }
+  });
 }
 function showSelBar() {
   const bar = $('#selBar');
   bar.hidden = false;
   const r = normalizeRect(sel.a, sel.b);
   $('#selInfo').textContent = formatRect(r);
+  const s = rectSurface(r);
+  $('#selSurface').textContent =
+    `${t('selSurface')} ${s.blocks.toLocaleString('en-US')} ${t('selBlocks')} · ${s.chunks.toLocaleString('en-US')} ${t('selChunks')}`;
+  $('#selSurface').dataset.blocks = String(s.blocks);
+  $('#selSurface').dataset.chunks = String(s.chunks);
+  requestSelComposition(r);
 }
 // crop the current canvas to the selection and download it as PNG
 function exportSelectionPNG() {
@@ -803,12 +893,100 @@ function pathAt(mx, my) {
   }
   return null;
 }
+// ---- proximity alerts along the path (#321) ----
+// structure types worth alerting on in the path's dimension: every real
+// structure plus spawn/strongholds — slime chunks and quad-hut AFK spots
+// are derived overlays, not structures
+function pathAlertTypes(dim) {
+  return structToggles
+    .filter((tg) => (tg.dim || 0) === dim && !tg.slime && tg.type !== QUADHUT_STRUCT_TYPE)
+    .map((tg) => tg.type);
+}
+// computed in the worker with token cancellation, like the composition panel:
+// changing the radius or re-opening the editor makes older replies stale
+function requestPathAlerts(p) {
+  pathAlertReq = reqSeq++;
+  const list = $('#pathAlertList');
+  if (list) list.textContent = '…';
+  send({
+    type: 'pathAlerts', reqId: pathAlertReq, seed: p.seed, mc: p.mc,
+    large: p.large, dim: p.dim, pts: p.pts, radius: pathAlertRadius,
+    types: pathAlertTypes(p.dim)
+  });
+}
+// clicking an alert centers the map on the structure, with the temporary
+// pin that lives with the popup (like the rare-biome hit)
+function goToPathAlert(a) {
+  view.cx = a.x; view.cz = a.z;
+  if (view.bpp > 4) view.bpp = 3;
+  rarePin = { x: a.x, z: a.z };
+  draw(); requestRender(0); syncHash();
+}
+// one "● type  x, z · d blocks" line of the alert list; the whole row is a
+// button that centers the map on the structure
+function pathAlertRow(a) {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'comp-row path-alert';
+  const tg = structToggles.find((s) => s.type === a.type);
+  const dot = document.createElement('span');
+  dot.className = 'comp-dot';
+  dot.style.background = tg?.color || '#888';
+  const name = document.createElement('span');
+  name.className = 'comp-name';
+  name.textContent = tg ? t(tg.labelKey) : String(a.type);
+  const info = document.createElement('span');
+  info.className = 'comp-pct';
+  info.textContent = `${a.x}, ${a.z} · ${a.dist} ${t('blocks')}`;
+  row.append(dot, name, info);
+  row.onclick = () => goToPathAlert(a);
+  return row;
+}
+function onPathAlerts(d) {
+  if (d.reqId !== pathAlertReq) return;   // stale: a newer request won
+  const list = $('#pathAlertList');
+  if (!list) return;                      // the popup was replaced meanwhile
+  list.textContent = '';
+  if (!d.alerts.length) { list.textContent = t('pathAlertsNone'); return; }
+  for (const a of d.alerts) list.appendChild(pathAlertRow(a));
+}
+function pathAlertRadiusSelect(p) {
+  const sel = document.createElement('select');
+  sel.id = 'pathAlertRadius';
+  for (const r of PATH_ALERT_RADII) {
+    const o = document.createElement('option');
+    o.value = String(r); o.textContent = String(r);
+    sel.appendChild(o);
+  }
+  sel.value = String(pathAlertRadius);
+  sel.onchange = () => { pathAlertRadius = +sel.value; requestPathAlerts(p); };
+  return sel;
+}
+// the alert block of the path editor: title, labelled radius select, list
+function pathAlertSection(p) {
+  const wrap = document.createElement('div');
+  wrap.className = 'path-alerts';
+  const title = document.createElement('div');
+  title.className = 'small';
+  title.textContent = t('pathAlertsTitle');
+  const lbl = document.createElement('label');
+  lbl.className = 'comp-radius';
+  const txt = document.createElement('span');
+  txt.textContent = t('pathAlertRadius');
+  lbl.append(txt, pathAlertRadiusSelect(p));
+  const list = document.createElement('div');
+  list.className = 'comp-list'; list.id = 'pathAlertList'; list.textContent = '…';
+  wrap.append(title, lbl, list);
+  return wrap;
+}
 // small editor in the map popup: rename, read the cumulative distance and
 // its linked-dimension equivalent (÷8 / ×8), delete — like the zone editor
 function showPathEditor(p) {
   const pop = $('#popup');
   pop.textContent = '';
-  pop.classList.remove('comp');
+  // the alert list can be tall: center the editor on the map, like the
+  // composition popup, so it never overflows the viewport
+  pop.classList.add('comp');
   pop.setAttribute('aria-label', p.name);
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
@@ -829,8 +1007,85 @@ function showPathEditor(p) {
   const del = document.createElement('button');
   del.className = 'btn tiny path-del'; del.textContent = t('pathDelete');
   del.onclick = () => { setUserPaths(removePath(userPaths, p.id)); hidePopup(); };
-  pop.append(close, name, dist, del);
+  pop.append(close, name, dist, pathAlertSection(p), del);
   if (!pop.open) pop.show();
+  requestPathAlerts(p);
+}
+// ---------- free text annotations (#323) ----------
+// geometry of an annotation label on screen: anchor dot at the point, the
+// text on a halo band above-right of it — shared by the renderer and the
+// click hit-test so what you see is exactly what you can click
+function annotationLabelRect(d) {
+  ctx.font = '12px monospace';
+  const tw = ctx.measureText(d.ann.text).width;
+  return { x: w2sx(d.x) + 4, y: w2sy(d.z) - 22, w: tw + 8, h: 17 };
+}
+// short texts written on the map; a small anchor dot marks the exact block,
+// the halo band keeps the text readable on any tile in both themes;
+// converted (linked-dimension, 1:8) annotations render slightly faded
+function drawAnnotations(W, H) {
+  const shown = annotationsFor(userAnnotations, world);
+  canvas.dataset.annotations = String(shown.length);
+  ctx.save();
+  for (const d of shown) {
+    const r = annotationLabelRect(d);
+    if (r.x > W || r.y > H || r.x + r.w < 0 || r.y + r.h < 0) continue;
+    ctx.globalAlpha = d.converted ? 0.7 : 1;
+    ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = 'rgba(40,28,4,.75)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(w2sx(d.x), w2sy(d.z), 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = curTheme === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.65)';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = mapText;
+    ctx.fillText(d.ann.text, r.x + 4, r.y + 12);
+  }
+  ctx.restore();
+}
+function setAnnotMode(on) {
+  annotMode = on;
+  $('#annotBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+// armed click: create the annotation, leave the tool and open its editor —
+// the same flow as the zone and path tools
+function placeAnnotation(x, z) {
+  const next = addAnnotation(userAnnotations, { ...world, x, z });
+  const created = next.length > userAnnotations.length ? next.at(-1) : null;
+  setUserAnnotations(next);
+  setAnnotMode(false);
+  if (created) showAnnotationEditor(created);
+}
+// topmost annotation whose label band (or anchor dot) sits under the point
+function annotationAt(mx, my) {
+  const ds = annotationsFor(userAnnotations, world);
+  for (let i = ds.length - 1; i >= 0; i--) {
+    const d = ds[i], r = annotationLabelRect(d);
+    const onLabel = mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+    if (onLabel || Math.hypot(mx - w2sx(d.x), my - w2sy(d.z)) < 7) return d;
+  }
+  return null;
+}
+// small editor in the map popup: edit the text (implicit save on change),
+// delete — the same UX as the marker/zone editors
+function showAnnotationEditor(a) {
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.classList.remove('comp');
+  pop.setAttribute('aria-label', a.text);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const text = document.createElement('input');
+  text.className = 'annot-text mono'; text.value = a.text;
+  text.maxLength = ANNOTATION_TEXT_MAX;
+  text.placeholder = t('annotTextPh');
+  text.setAttribute('aria-label', t('annotTextPh'));
+  text.onchange = () => setUserAnnotations(editAnnotation(userAnnotations, a.id, text.value));
+  const del = document.createElement('button');
+  del.className = 'btn tiny annot-del'; del.textContent = t('annotDelete');
+  del.onclick = () => { setUserAnnotations(removeAnnotation(userAnnotations, a.id)); hidePopup(); };
+  pop.append(close, text, del);
+  if (!pop.open) pop.show();
+  text.focus();
 }
 // ---------- portal calculator (#284) ----------
 // source pin in its own dimension; ideal linked destination pin plus the
@@ -995,16 +1250,137 @@ function compRow(e) {
   row.append(dot, name, pct);
   return row;
 }
-function onComposition(d) {
-  if (d.reqId !== compReq) return;   // stale: a newer click/radius change won
-  const list = $('#compList');
-  if (!list) return;                 // the popup was replaced meanwhile
+// render a composition reply into a list element (shared by the composition
+// panel #286 and the selection stats #319)
+function fillCompList(list, d) {
   list.textContent = '';
   if (d.error) {
     list.textContent = t('tileFailed');
     return;
   }
   for (const e of d.list) list.appendChild(compRow(e));
+}
+function onComposition(d) {
+  if (d.reqId === selReq) {          // selection stats reply (#319)
+    fillCompList($('#selCompList'), d);
+    return;
+  }
+  if (d.reqId !== compReq) return;   // stale: a newer click/radius change won
+  const list = $('#compList');
+  if (!list) return;                 // the popup was replaced meanwhile
+  fillCompList(list, d);
+}
+
+// ---------- isometric 3D terrain view (#325) ----------
+// On-demand only: nothing is computed until the panel opens. The worker
+// samples a bounded grid of columns (biome color + surface height) over the
+// visible map area (view3d.js geometry); re-opening bumps the request token
+// so the previous in-flight reply is dropped as stale. Rotation and height
+// scale re-render locally from the cached columns.
+const VIEW3D_DRAW_WIDTH = 640;
+let view3dReq = -1;           // cancellation token: stale replies are ignored
+let view3dRot = 0;            // rotation in quarter turns (0..3)
+let view3dData = null;        // {cols, rows, rgb, heights} of the last reply
+function view3dHScale() {
+  return Number.parseFloat($('#view3dScale').value) || 1;
+}
+function requestView3d() {
+  view3dReq = reqSeq++;
+  view3dData = null;
+  $('#view3dStatus').textContent = '…';
+  drawView3d();
+  const wb = canvas.width / dpr * view.bpp, hb = canvas.height / dpr * view.bpp;
+  const g = view3dGrid(view.cx - wb / 2, view.cz - hb / 2, view.cx + wb / 2, view.cz + hb / 2);
+  send({
+    type: 'terrain3d', reqId: view3dReq, seed: world.seed, mc: world.mc,
+    large: world.large, dim: world.dim, y: yLayer, ...g
+  });
+}
+function openView3d() {
+  setMoreMenu(false);
+  const dlg = $('#view3dDlg');
+  if (!dlg.open) dlg.showModal();
+  requestView3d();
+}
+function onTerrain3d(d) {
+  if (d.reqId !== view3dReq || !$('#view3dDlg').open) return;   // stale or closed
+  if (!d.ok) {
+    $('#view3dStatus').textContent = t('tileFailed');
+    return;
+  }
+  $('#view3dStatus').textContent = '';
+  view3dData = {
+    cols: d.cols, rows: d.rows,
+    rgb: new Uint8ClampedArray(d.rgb), heights: new Float32Array(d.heights)
+  };
+  drawView3d();
+}
+// one terrain column: two darkened side faces then the biome-colored top
+// diamond, lightened with altitude (view3d.js tints)
+function drawView3dColumn(g, u, v, lay, range) {
+  const { cols, rows, rgb, heights } = view3dData;
+  const n = rotatedIndex(u, v, cols, rows, view3dRot);
+  const lift = (heights[n] - range.min) * lay.hUnit;
+  const p = isoProject(u, v, lift, lay);
+  const sh = faceShades([rgb[n * 3], rgb[n * 3 + 1], rgb[n * 3 + 2]], heightNorm(heights[n], range));
+  const h2 = lay.tile / 2, h4 = lay.tile / 4;
+  const depth = lift + h4;                    // side faces reach the ground plane + plinth
+  g.fillStyle = cssRgb(sh.left);
+  g.beginPath();
+  g.moveTo(p.x - h2, p.y); g.lineTo(p.x, p.y + h4);
+  g.lineTo(p.x, p.y + h4 + depth); g.lineTo(p.x - h2, p.y + depth);
+  g.closePath(); g.fill();
+  g.fillStyle = cssRgb(sh.right);
+  g.beginPath();
+  g.moveTo(p.x + h2, p.y); g.lineTo(p.x, p.y + h4);
+  g.lineTo(p.x, p.y + h4 + depth); g.lineTo(p.x + h2, p.y + depth);
+  g.closePath(); g.fill();
+  g.fillStyle = cssRgb(sh.top);
+  g.beginPath();
+  g.moveTo(p.x, p.y - h4); g.lineTo(p.x + h2, p.y);
+  g.lineTo(p.x, p.y + h4); g.lineTo(p.x - h2, p.y);
+  g.closePath(); g.fill();
+}
+// painter's algorithm: rows back to front in rotated space (view3d.js maps
+// the rotated traversal onto the original grid for every quarter turn)
+function drawView3d() {
+  const cv = $('#view3dCanvas'), g = cv.getContext('2d');
+  if (!view3dData) {
+    g.clearRect(0, 0, cv.width, cv.height);
+    return;
+  }
+  const range = heightSpan(view3dData.heights);
+  const r = rotatedSize(view3dData.cols, view3dData.rows, view3dRot);
+  const lay = view3dLayout(r.cols, r.rows, VIEW3D_DRAW_WIDTH, range.span, view3dHScale());
+  cv.width = lay.width; cv.height = lay.height;
+  g.fillStyle = mapBg;
+  g.fillRect(0, 0, cv.width, cv.height);
+  for (let v = 0; v < r.rows; v++) {
+    for (let u = 0; u < r.cols; u++) drawView3dColumn(g, u, v, lay, range);
+  }
+}
+function rotateView3d(turns) {
+  view3dRot = (view3dRot + turns + 4) % 4;
+  drawView3d();
+}
+function exportView3dPNG() {
+  if (!view3dData) return;
+  $('#view3dCanvas').toBlob((blob) => {
+    if (blob) downloadBlob(exportFileName(world.seed, 'view3d', 'png'), blob);
+  }, 'image/png');
+}
+function initView3d() {
+  $('#view3dBtn').onclick = openView3d;
+  $('#view3dClose').onclick = () => $('#view3dDlg').close();
+  $('#view3dRotL').onclick = () => rotateView3d(-1);
+  $('#view3dRotR').onclick = () => rotateView3d(1);
+  $('#view3dScale').onchange = () => drawView3d();
+  $('#view3dPng').onclick = exportView3dPNG;
+  // closing drops the cached columns; the next opening re-requests them
+  $('#view3dDlg').addEventListener('close', () => {
+    view3dReq = -1;
+    view3dData = null;
+  });
 }
 
 function setRulerOn(on) {
@@ -1217,7 +1593,7 @@ canvas.addEventListener('pointerdown', (e) => {
       const r = canvas.getBoundingClientRect();
       sel.a = { x: Math.round(s2wx(e.clientX - r.left)), z: Math.round(s2wz(e.clientY - r.top)) };
       sel.b = null; sel.done = false;
-      $('#selBar').hidden = true;
+      hideSelBar();
       dragging = false; moved = true;   // a selection drag never pans or clicks
       return;
     }
@@ -1355,6 +1731,7 @@ function dismissMapTools() {
   if (pathTool.on) { finishPathDraw(); return; }
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
+  if (annotMode) setAnnotMode(false);
   if (portalMode) setPortalMode(false);
   if (compMode) setCompMode(false);
   if (sel.on) setSelOn(false);
@@ -1601,6 +1978,7 @@ cmpCanvas.addEventListener('wheel', (e) => {
 function toolClick(mx, my) {
   const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
   if (markerMode) { setUserMarkers(addMarker(userMarkers, { ...world, ...p })); return true; }
+  if (annotMode) { placeAnnotation(p.x, p.z); return true; }
   if (portalMode) { placePortal(p.x, p.z); return true; }
   if (compMode) { placeComposition(p.x, p.z); return true; }
   if (pathTool.on) {
@@ -1625,6 +2003,9 @@ function clickAt(e) {
   }
   // hit-test the portal pins: clicking one re-opens the portal popup
   if (portal && portalPinAt(mx, my)) { showPortalPopup(); return; }
+  // hit-test annotations (their labels draw above paths and zones)
+  const aHit = annotationAt(mx, my);
+  if (aHit) { showAnnotationEditor(aHit.ann); return; }
   // hit-test paths (above the zones: a path crossing a zone stays clickable)
   const pHit = pathAt(mx, my);
   if (pHit) { showPathEditor(pHit.path); return; }
@@ -1787,6 +2168,88 @@ function addPairRow(t1, t2, gap, radius) {
 }
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
+// ---------- sketch search (#326) ----------
+// The user draws the wanted biome-family layout on a 5×5 grid of buttons:
+// clicking (or Enter, they are native buttons) cycles a cell through the
+// families and back to "indifferent". State lives in `sketchCells`
+// (25 family keys, '' = indifferent), read by collectCriteria/readCriteria.
+let sketchCells = new Array(SKETCH_SIZE * SKETCH_SIZE).fill('');
+function sketchFamilyLabel(f) {
+  return f ? t('sketchFam' + f[0].toUpperCase() + f.slice(1)) : t('sketchFamAny');
+}
+function refreshSketchCell(btn) {
+  const idx = Number.parseInt(btn.dataset.idx, 10);
+  const f = sketchCells[idx];
+  const label = sketchFamilyLabel(f);
+  btn.style.background = f ? SKETCH_FAMILY_COLORS[f] : '';
+  btn.classList.toggle('set', !!f);
+  btn.title = label;
+  btn.setAttribute('aria-label', t('ariaSketchCell', {
+    r: Math.floor(idx / SKETCH_SIZE) + 1, c: (idx % SKETCH_SIZE) + 1, f: label
+  }));
+}
+// cell titles/aria carry translated family names: refreshed on language switch
+function refreshSketchCells() {
+  document.querySelectorAll('#sketchGrid button').forEach((btn) => refreshSketchCell(btn));
+}
+function buildSketchUI() {
+  const grid = $('#sketchGrid');
+  for (let i = 0; i < SKETCH_SIZE * SKETCH_SIZE; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'sketchcell'; btn.dataset.idx = String(i);
+    btn.onclick = () => {
+      const cur = SKETCH_FAMILIES.indexOf(sketchCells[i]);
+      const next = cur === SKETCH_FAMILIES.length - 1 ? '' : SKETCH_FAMILIES[cur + 1];
+      sketchCells[i] = next;
+      refreshSketchCell(btn);
+    };
+    grid.appendChild(btn);
+    refreshSketchCell(btn);
+  }
+  const legend = $('#sketchLegend');
+  for (const f of SKETCH_FAMILIES) {
+    const item = document.createElement('span');
+    item.className = 'sketchfam';
+    const dot = document.createElement('span');
+    dot.className = 'dot'; dot.style.background = SKETCH_FAMILY_COLORS[f];
+    const lbl = document.createElement('span');
+    lbl.dataset.i18n = 'sketchFam' + f[0].toUpperCase() + f.slice(1);
+    lbl.textContent = sketchFamilyLabel(f);
+    item.append(dot, lbl);
+    legend.appendChild(item);
+  }
+  $('#sketchClear').onclick = () => {
+    sketchCells.fill('');
+    refreshSketchCells();
+  };
+}
+// restore a sanitized sketch payload (share link / preset / history), or
+// reset the whole section when the criteria carry none
+function applySketch(sk) {
+  sketchCells = new Array(SKETCH_SIZE * SKETCH_SIZE).fill('');
+  $('#sketchRot').checked = false;
+  $('#sketchMir').checked = false;
+  $('#sketchPct').value = '60';
+  if (sk) {
+    sketchCells = sk.g.slice();
+    $('#sketchRot').checked = sk.r === 1;
+    $('#sketchMir').checked = sk.m === 1;
+    $('#sketchPct').value = String(sk.p);
+    $('#sketchSec').open = true;
+  }
+  refreshSketchCells();
+}
+// current sketch as a search-message field, or null when nothing is drawn
+function collectSketch() {
+  if (!sketchCells.some(Boolean)) return null;
+  const pct = Number.parseInt($('#sketchPct').value, 10);
+  return {
+    cells: sketchCells.slice(),
+    rot: $('#sketchRot').checked, mir: $('#sketchMir').checked,
+    pct: pct >= 1 && pct <= 100 ? pct : 60
+  };
+}
+
 // ---------- search ----------
 // Criteria panel -> search-message fields, or null when the criteria cannot
 // anchor a search (no main biome and no structure criterion).
@@ -1847,13 +2310,16 @@ function collectCriteria() {
     return v !== '' && Number.isFinite(n) ? n : null;
   };
   const surfMin = intOrNull('#surfMin'), surfMax = intOrNull('#surfMax');
+  const sketch = collectSketch();
   // without a main biome the search must be anchored by structure criteria
-  if (!mainBiomes.length && !structClauses.length && !pairClauses.length) return null;
+  // or by a drawn sketch (#326)
+  if (!mainBiomes.length && !structClauses.length && !pairClauses.length && !sketch) return null;
   return {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
     pctMode: $('#pctMode').value, pctClauses,
     shapeMode: $('#shapeMode').value, shapeClauses,
+    sketch,
     structMode: $('#structMode').value, structClauses, pairClauses,
     surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null
   };
@@ -2079,6 +2545,8 @@ function finishSeedSearchIfIdle() {
     seedInfo.textContent = t('seedNone', { n: seedScannedCount });
     seedInfo.className = 'info empty';
   }
+  // a queue entry was running: bank its findings, chain to the next one
+  if (queueIsRunning(searchQueue)) onQueueSearchDone();
 }
 function cancelSeedSearch() {
   // in-flight batches are lost mid-scan: put them back before the snapshot
@@ -2142,12 +2610,7 @@ function seedResultRow(cand) {
   rc.textContent = `${cand.count} ⚑ · ${cand.dist} ${t('blocks')}`;
   rc.title = `${cand.hit.x}, ${cand.hit.z}`;
   li.append(rx, rc);
-  li.onclick = () => {
-    $('#seed').value = cand.seed;
-    world.seed = cand.seed;
-    view.cx = cand.hit.x; view.cz = cand.hit.z;
-    curReset(); draw(); requestRender(0); syncHash();
-  };
+  li.onclick = () => loadFoundSeed(cand.seed, cand.hit);
   // side-by-side shortcut: open the compare pane on this candidate (#250)
   const cmp = document.createElement('button');
   cmp.className = 'btn tiny seedcmp';
@@ -2159,6 +2622,155 @@ function seedResultRow(cand) {
   row.className = 'seedrow';
   row.append(li, cmp);
   return row;
+}
+// existing candidate-click behavior, shared with the queue table (#324)
+function loadFoundSeed(seed, hit) {
+  $('#seed').value = seed;
+  world.seed = seed;
+  view.cx = hit.x; view.cz = hit.z;
+  curReset(); draw(); requestRender(0); syncHash();
+}
+// ---------- multi-seed search queue (#324) ----------
+// Chain several searches with different criteria sets: each entry snapshots
+// the panel (criteria + seed-search parameters); "run" executes them
+// sequentially on the existing multi-seed engine and the findings accumulate
+// in a sortable comparative table. Pure state lives in searchqueue.js.
+let searchQueue = createQueue();
+let queueSortKey = 'score';
+let queueStopped = false;   // "stop the queue" clicked while an entry ran
+const QUEUE_STATUS_KEY = {
+  pending: 'queueStatusPending', running: 'queueStatusRunning',
+  done: 'queueStatusDone', cancelled: 'queueStatusCancelled'
+};
+const QUEUE_SORT_DIR = { entry: 'ascending', seed: 'ascending', score: 'descending', dist: 'ascending' };
+function queueBiomeName(id) {
+  const b = biomesSorted.find((x) => x.id === id);
+  return b ? biomeLabel(b.name) : '';
+}
+function addToQueue() {
+  const crit = collectCriteria();
+  const seedInfo = $('#seedInfo');
+  if (!crit) {
+    seedInfo.textContent = t('pickCriteria');
+    seedInfo.className = 'info err';
+    return;
+  }
+  const raw = readCriteria();
+  const label = summarizeCriteria(raw, queueBiomeName)
+    || t('queueEntry', { n: searchQueue.entries.length + 1 });
+  searchQueue = addEntry(searchQueue, {
+    label, crit: raw,
+    mode: $('#seedMode').value,
+    count: Math.min(SEED_SEARCH_MAX_TOTAL, Math.max(1, Number.parseInt($('#seedCount').value, 10) || 500)),
+    radius: Math.min(5000, Math.max(500, Number.parseInt($('#seedRadius').value, 10) || 1500))
+  });
+  renderQueueList();
+}
+function queueRunClick() {
+  if (queueIsRunning(searchQueue)) {
+    queueStopped = true;
+    cancelSeedSearch();
+    return;
+  }
+  if (seedBusy || nextPending(searchQueue) < 0) return;
+  runNextQueueEntry();
+}
+// Start the next pending entry: restore its criteria/parameters in the panel
+// (like a resume does) and launch a regular multi-seed search on them.
+function runNextQueueEntry() {
+  const started = startNext(searchQueue);
+  if (!started) { renderQueueList(); return; }
+  searchQueue = started;
+  const e = searchQueue.entries[searchQueue.current];
+  applyCriteria(e.crit);
+  $('#seedMode').value = e.mode;
+  $('#seedCount').value = String(e.count);
+  $('#seedRadius').value = String(e.radius);
+  renderQueueList();
+  startSeedSearch();
+  if (!seedBusy) {   // snapshot no longer valid: skip the entry
+    searchQueue = completeCurrent(searchQueue, []);
+    runNextQueueEntry();
+  }
+}
+// Called when the engine went idle while a queue entry was running: bank the
+// findings (or stop everything) and chain to the next pending entry.
+function onQueueSearchDone() {
+  if (queueStopped) {
+    queueStopped = false;
+    searchQueue = cancelQueue(searchQueue);
+    renderQueueList(); renderQueueTable();
+    return;
+  }
+  searchQueue = completeCurrent(searchQueue, seedCandidates);
+  renderQueueTable();
+  runNextQueueEntry();
+}
+function renderQueueList() {
+  const box = $('#queueList');
+  box.textContent = '';
+  searchQueue.entries.forEach((e, i) => box.appendChild(queueItem(e, i)));
+  box.hidden = !searchQueue.entries.length;
+  const run = $('#queueRunBtn');
+  run.hidden = !searchQueue.entries.length;
+  run.dataset.i18n = queueIsRunning(searchQueue) ? 'cancelBtn' : 'queueRun';
+  run.textContent = t(run.dataset.i18n);
+}
+function queueItem(e, i) {
+  const li = document.createElement('li');
+  li.className = 'queueitem';
+  const lab = document.createElement('span');
+  lab.className = 'qlabel';
+  lab.textContent = `${i + 1}. ${e.label}`;
+  const st = document.createElement('span');
+  st.className = 'qstatus ' + e.status;
+  st.dataset.i18n = QUEUE_STATUS_KEY[e.status];
+  st.textContent = t(st.dataset.i18n);
+  li.append(lab, st);
+  if (e.status === 'pending') {
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'btn tiny qrm';
+    rm.textContent = '✕';
+    rm.setAttribute('aria-label', t('queueRemove')); rm.dataset.i18nAria = 'queueRemove';
+    rm.onclick = () => {
+      searchQueue = removeEntry(searchQueue, i);
+      renderQueueList();
+    };
+    li.appendChild(rm);
+  }
+  return li;
+}
+function renderQueueTable() {
+  const rows = sortRows(aggregateResults(searchQueue.entries), queueSortKey);
+  const tbody = $('#queueRows');
+  tbody.textContent = '';
+  for (const r of rows) tbody.appendChild(queueRow(r));
+  $('#queueTableWrap').hidden = !rows.length;
+  for (const th of document.querySelectorAll('#queueTable th')) {
+    const key = th.querySelector('button').dataset.key;
+    th.setAttribute('aria-sort', key === queueSortKey ? QUEUE_SORT_DIR[key] : 'none');
+  }
+}
+function queueRow(r) {
+  const tr = document.createElement('tr');
+  const tdE = document.createElement('td');
+  tdE.textContent = `${r.entry + 1} · ${r.label}`;
+  const tdS = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'qseed';
+  btn.textContent = r.seed;
+  tdS.appendChild(btn);
+  const tdC = document.createElement('td');
+  tdC.textContent = `${r.count} ⚑`;
+  const tdD = document.createElement('td');
+  tdD.textContent = `${r.dist} ${t('blocks')}`;
+  tdD.title = `${r.hit.x}, ${r.hit.z}`;
+  tr.append(tdE, tdS, tdC, tdD);
+  // the whole row loads the seed; the button click bubbles up to it
+  tr.onclick = () => loadFoundSeed(r.seed, r.hit);
+  return tr;
 }
 // ---------- "Surprise me" (#287) ----------
 // First random seed matching the criteria (or, with an empty panel, the
@@ -2323,6 +2935,53 @@ function importLocationsCSV(file) {
     searchInfo.className = 'info err';
   });
 }
+// ---------- Java save import (#320) ----------
+// "Open a save": the user picks the level.dat of a Minecraft Java world and
+// the app loads its seed, generation version and spawn point. Everything
+// happens in the browser — the file is never sent anywhere: gunzip via the
+// native DecompressionStream, then the pure NBT reader (levelload.js).
+function levelDatInfo(key, params, cls) {
+  searchInfo.textContent = t(key, params);
+  searchInfo.className = `info ${cls}`;
+}
+async function levelDatBytes(file) {
+  const raw = new Uint8Array(await file.arrayBuffer());
+  const format = detectFormat(raw);
+  if (format === 'bedrock' || format === 'invalid') throw new Error(format);
+  if (format === 'nbt') return raw;   // uncompressed level.dat (edited by tools)
+  const inflated = new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(inflated).arrayBuffer());
+}
+function applyLevelDat(lvl) {
+  const seedStr = String(lvl.seed);
+  $('#seed').value = seedStr;
+  world.seed = seedStr;
+  // Unknown version (snapshot, pre-1.0, missing tag): the seed and spawn
+  // still load — more useful than refusing the whole file — but with the
+  // current generation version kept, and the status warns instead of
+  // confirming, so the user knows the map may differ from the save.
+  const match = matchVersion(lvl.versionName, MC_VERSIONS);
+  if (match) { world.mc = match.mc; $('#mcver').value = String(match.mc); }
+  const spawn = lvl.spawn || { x: 0, z: 0 };
+  view.cx = spawn.x; view.cz = spawn.z;
+  if (view.bpp > 4) view.bpp = 3;
+  if (match) levelDatInfo('levelDatLoaded', { seed: seedStr, x: spawn.x, z: spawn.z }, 'ok');
+  else levelDatInfo('levelDatVerUnknown', { seed: seedStr, v: lvl.versionName || '?' }, 'empty');
+  // curReset's hidePopup clears any previous temporary pin: place ours after
+  curReset();
+  rarePin = spawn;   // temporary spawn pin, lives with the popup like the rare-biome one
+  draw(); requestRender(0); syncHash(); showPopup(spawn);
+}
+async function importLevelDat(file) {
+  try {
+    const lvl = parseLevelData(await levelDatBytes(file));
+    if (lvl.seed === null) throw new Error('invalid');   // NBT but not a level.dat
+    applyLevelDat(lvl);
+  } catch (err) {
+    const key = err.message === 'bedrock' ? 'levelDatBedrock' : 'levelDatInvalid';
+    levelDatInfo(key, {}, 'err');
+  }
+}
 function selectPin(i) {
   selected = i;
   const p = pins[i]; if (!p) return;
@@ -2438,6 +3097,14 @@ let userPaths = parsePaths((() => {
 function setUserPaths(list) {
   userPaths = list;
   try { localStorage.setItem('paths', JSON.stringify(userPaths)); } catch { /* ignore */ }
+  draw();
+}
+let userAnnotations = parseAnnotations((() => {
+  try { return localStorage.getItem('annotations'); } catch { return null; }
+})());
+function setUserAnnotations(list) {
+  userAnnotations = list;
+  try { localStorage.setItem('annotations', JSON.stringify(userAnnotations)); } catch { /* ignore */ }
   draw();
 }
 let markerMode = false;
@@ -2696,6 +3363,14 @@ function readCriteria() {
         g: Number.parseInt(ins[0].value, 10) || 0, r: Number.parseInt(ins[1].value, 10) || 0
       };
     }),
+    ...(sketchCells.some(Boolean) ? {
+      sk: {
+        g: sketchCells.slice(),
+        r: $('#sketchRot').checked ? 1 : 0,
+        m: $('#sketchMir').checked ? 1 : 0,
+        p: Number.parseInt($('#sketchPct').value, 10) || 60
+      }
+    } : {}),
     rg: $('#range').value, sp: $('#step').value,
     s0: $('#surfMin').value, s1: $('#surfMax').value
   };
@@ -2722,7 +3397,7 @@ function importProfileText(txt) {
     return;
   }
   const merged = mergeProfile(
-    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }, imported);
+    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths, annotations: userAnnotations }, imported);
   setFavorites(merged.favorites);
   userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
   searchHistory = merged.history;
@@ -2731,6 +3406,7 @@ function importProfileText(txt) {
   setUserMarkers(merged.markers);
   setUserZones(merged.zones);
   setUserPaths(merged.paths);
+  setUserAnnotations(merged.annotations);
   info.textContent = t('profileImported', {
     f: imported.favorites.length, p: imported.userPresets.length,
     h: imported.history.length, m: imported.markers.length, z: imported.zones.length,
@@ -2981,9 +3657,11 @@ function applyCriteria(raw) {
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
   collapseCritSections();
+  applySketch(null);
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
   if (!c) return;
+  applySketch(c.sk);
   c.mb.forEach((b) => addMainBiomeRow(b));
   $('#adjMode').value = c.am;
   c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n, r.yl));
@@ -3007,7 +3685,8 @@ function applyHashCriteria() {
   // legacy single-criteria share links (c.a = main biome id) are migrated
   const c = normalizeLegacyCriteria(hashState?.c);
   applyCriteria(c);
-  if (!rowsOf('#mainBiomes').length) {
+  // a sketch-only share link needs no demo rows: the sketch anchors it
+  if (!rowsOf('#mainBiomes').length && !sketchCells.some(Boolean)) {
     // demo: cherry grove + warm ocean + >=2 villages (matches built-in seed 141)
     addMainBiomeRow(185); addAdjRow(44, 400); addStructRow(structToggles[0].type, 2, 800);
     if (!c) { $('#range').value = 5000; $('#step').value = 16; }
@@ -3337,11 +4016,22 @@ async function init() {
     else startSeedSearch();
   };
   $('#surpriseBtn').onclick = startSurprise;
+  $('#queueAddBtn').onclick = addToQueue;
+  $('#queueRunBtn').onclick = queueRunClick;
+  for (const b of document.querySelectorAll('#queueTable thead button')) {
+    b.onclick = () => { queueSortKey = b.dataset.key; renderQueueTable(); };
+  }
   $('#pngBtn').onclick = () => {
     if (exportBusy) { sendSearch({ type: 'cancelExport', reqId: exportReq }); return; }
     const size = $('#pngSizeSel').value;
     if (size === 'view') exportMapPNG();
     else startExportHD(Number.parseInt(size, 10));
+  };
+  const levelInput = $('#levelDatFile');
+  $('#openSaveBtn').onclick = () => levelInput.click();
+  levelInput.onchange = () => {
+    if (levelInput.files[0]) importLevelDat(levelInput.files[0]);
+    levelInput.value = '';   // allow re-opening the same file
   };
   const importInput = $('#importFile');
   $('#importCsv').onclick = () => importInput.click();
@@ -3354,6 +4044,7 @@ async function init() {
   buildPresetSelect();
   wirePresetSave();
   buildRareBiomeUI();
+  buildSketchUI();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addPct').onclick = () => addPctRow();
@@ -3374,7 +4065,7 @@ async function init() {
   }
   langSel.value = currentLang();
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
-  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
+  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); refreshSketchCells(); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
   $('#netherChk').onchange = (e) => { showNetherGrid = e.target.checked; draw(); };
   // relief is baked into the tile pixels: re-request tiles under the new key
@@ -3416,6 +4107,7 @@ async function init() {
   $('#compBtn').onclick = () => setCompMode(!compMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
   $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
+  $('#annotBtn').onclick = () => setAnnotMode(!annotMode);
   $('#pathBtn').onclick = () => setPathOn(!pathTool.on);
   $('#selPng').onclick = exportSelectionPNG;
   $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
@@ -3435,7 +4127,7 @@ async function init() {
   // profile: one-file backup/restore of every local store
   $('#profileExport').onclick = () => {
     downloadFile('seedcartographer-profile.json',
-      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }),
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths, annotations: userAnnotations }),
       'application/json');
   };
   // manual purge of the persistent tile cache (#289)
@@ -3458,7 +4150,7 @@ async function init() {
   // handy between devices with no easy file transfer.
   const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
   $('#syncCodeShow').onclick = () => {
-    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths })))
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths, annotations: userAnnotations })))
       .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
   };
   $('#syncCodePaste').onclick = () => {
@@ -3491,6 +4183,7 @@ async function init() {
   $('#galleryBtn').onclick = openGallery;
   $('#galleryClose').onclick = () => $('#galleryDlg').close();
   initMoreMenu();
+  initView3d();
   buildDimSelect();
   buildFavList();
   initTheme();
@@ -3526,6 +4219,7 @@ Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
   portalState: () => portal,
   zonesOnMap: () => zonesFor(userZones, world),
+  annotationsOnMap: () => annotationsFor(userAnnotations, world),
   pathsOnMap: () => pathsFor(userPaths, world),
   cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })

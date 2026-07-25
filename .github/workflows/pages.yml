@@ -39,15 +39,19 @@ jobs:
       # the version-stamping scripts refuse any path outside their cwd
       # (insideCwd guard), so each build stages inside its own checkout and
       # the result is moved into the shared _site tree afterwards
+      # each checkout stages its own runtime file list (scripts/stage-site.js,
+      # #336): a file added on one branch can no longer break the other
+      # branch's build
       - name: Build main into the site root
         working-directory: build-main
         run: |
-          mkdir -p _site_stage
-          cp index.html styles.css app.js worker.js seed.js search.js rarebiomes.js shapes.js i18n.js \
-             biomes.js coords.js portals.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js tiledb.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js userzones.js userpaths.js palette.js tilegrid.js relief.js compare.js composition.js profile.js gallery.js gallery.json errorreport.js tour.js keys.js \
-             theme.js export.js mcfinder.js mcfinder.wasm \
-             manifest.webmanifest icon.svg sw.js version.js CNAME _site_stage/
-          cp -r fonts _site_stage/
+          # transition fallback until this script reaches main: borrow the
+          # dev checkout's copy, tolerating files main does not have yet
+          if [ -f scripts/stage-site.js ]; then
+            node scripts/stage-site.js _site_stage --cname
+          else
+            node ../build-dev/scripts/stage-site.js _site_stage --cname --skip-missing
+          fi
           node scripts/app-version.js _site_stage
           node scripts/sw-version.js _site_stage
           mkdir -p ../_site
@@ -55,12 +59,7 @@ jobs:
       - name: Build dev into /dev/ (staging preview)
         working-directory: build-dev
         run: |
-          mkdir -p _site_stage
-          cp index.html styles.css app.js worker.js seed.js search.js rarebiomes.js shapes.js i18n.js \
-             biomes.js coords.js portals.js slime.js markers.js presets.js favorites.js legend.js maptools.js tilecache.js tiledb.js sharestate.js seedsearch.js searchhistory.js userpresets.js usermarkers.js userzones.js userpaths.js palette.js tilegrid.js relief.js compare.js composition.js profile.js gallery.js gallery.json errorreport.js tour.js keys.js \
-             theme.js export.js mcfinder.js mcfinder.wasm \
-             manifest.webmanifest icon.svg sw.js version.js _site_stage/
-          cp -r fonts _site_stage/
+          node scripts/stage-site.js _site_stage
           node scripts/app-version.js _site_stage
           node scripts/sw-version.js _site_stage
           mkdir -p ../_site/dev

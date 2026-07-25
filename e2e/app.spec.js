@@ -780,6 +780,56 @@ test('multi-seed search finds candidate seeds and loads one', async ({ page }) =
   await expect(page.locator('#seed')).toHaveValue(seed);
 });
 
+// #324: two easy criteria sets queued and run sequentially; their findings
+// accumulate in the comparative table and a pending entry can be withdrawn.
+test('search queue runs several criteria sets into the comparative table', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/');
+  await waitForApp(page);
+  // easy criteria + tiny sequential seed budget to keep the run fast
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'plains').value;
+  });
+  await page.click('#adjClauses .row .rm');
+  await page.click('#structClauses .row .rm');
+  await page.selectOption('#seedMode', 'seq');
+  await page.fill('#seedCount', '5');
+  await page.fill('#seedRadius', '1500');
+  await page.click('#queueAddBtn');   // entry 1: plains
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'forest').value;
+  });
+  await page.click('#queueAddBtn');   // entry 2: forest
+  await page.click('#queueAddBtn');   // entry 3: added, then withdrawn
+  await expect(page.locator('#queueList .queueitem')).toHaveCount(3);
+  await page.click('#queueList .queueitem:nth-child(3) .qrm');
+  await expect(page.locator('#queueList .queueitem')).toHaveCount(2);
+  await page.click('#queueRunBtn');
+  await page.waitForFunction(() => {
+    const st = document.querySelectorAll('#queueList .qstatus');
+    return st.length === 2 && [...st].every((s) => s.classList.contains('done'));
+  }, { timeout: 90000 });
+  // the cumulative table holds rows from both queue entries
+  await expect(page.locator('#queueTable')).toBeVisible();
+  const entries = await page.$$eval('#queueRows td:first-child', (tds) =>
+    tds.map((td) => td.textContent.charAt(0)));
+  expect(entries).toContain('1');
+  expect(entries).toContain('2');
+  // default order: best score first (place count descending)
+  const scores = await page.$$eval('#queueRows td:nth-child(3)', (tds) =>
+    tds.map((td) => Number.parseInt(td.textContent, 10)));
+  expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  // sorting by queue entry groups the rows per criteria set
+  await page.click('#queueTable button[data-key="entry"]');
+  const byEntry = await page.$$eval('#queueRows td:first-child', (tds) =>
+    tds.map((td) => Number.parseInt(td.textContent, 10)));
+  expect(byEntry).toEqual([...byEntry].sort((a, b) => a - b));
+  // clicking a row loads its seed
+  const seed = await page.locator('#queueRows .qseed').first().textContent();
+  await page.locator('#queueRows tr').first().click();
+  await expect(page.locator('#seed')).toHaveValue(seed);
+});
+
 test('the minimap is painted across its whole surface', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -1109,6 +1159,43 @@ test('zone annotations: drag to draw, rename, persist across reload, delete', as
   expect(await page.evaluate(() => window.zonesOnMap().length)).toBe(0);
 });
 
+test('text annotations: click to write, edit, persist across reload, delete (#323)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#annotBtn');
+  await expect(page.locator('#annotBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.click(box.x + 300, box.y + 260);
+  // the click created the annotation and opened its editor; write the text
+  await expect(page.locator('#popup .annot-text')).toBeVisible();
+  await expect(page.locator('#annotBtn')).not.toHaveClass(/on/);
+  await page.fill('#popup .annot-text', 'Entrée de la mine');
+  await page.press('#popup .annot-text', 'Enter');
+  // the annotation counter is exposed on the canvas and the text renders
+  await expect(page.locator('#map')).toHaveAttribute('data-annotations', '1');
+  let anns = await page.evaluate(() => window.annotationsOnMap());
+  expect(anns).toHaveLength(1);
+  expect(anns[0].ann.text).toBe('Entrée de la mine');
+  // editing through the popup saves implicitly on change
+  await page.fill('#popup .annot-text', 'Base avancée');
+  await page.press('#popup .annot-text', 'Enter');
+  expect((await page.evaluate(() => window.annotationsOnMap()))[0].ann.text).toBe('Base avancée');
+  // annotations survive a reload (localStorage) and render on the map
+  await page.reload();
+  await waitForApp(page);
+  anns = await page.evaluate(() => window.annotationsOnMap());
+  expect(anns).toHaveLength(1);
+  expect(anns[0].ann.text).toBe('Base avancée');
+  await expect(page.locator('#map')).toHaveAttribute('data-annotations', '1');
+  // clicking the annotation label reopens the editor; delete removes it
+  await page.mouse.click(box.x + 300 + 20, box.y + 260 - 14);
+  await expect(page.locator('#popup .annot-del')).toBeVisible();
+  await page.click('#popup .annot-del');
+  await expect(page.locator('#popup .annot-del')).toBeHidden();
+  expect(await page.evaluate(() => window.annotationsOnMap().length)).toBe(0);
+  await expect(page.locator('#map')).toHaveAttribute('data-annotations', '0');
+});
+
 test('path tool: three clicked points, cumulative distance, persist, delete (#285)', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
@@ -1155,6 +1242,38 @@ test('path tool: three clicked points, cumulative distance, persist, delete (#28
   await page.click('#popup .path-del');
   await expect(page.locator('#popup .path-del')).toBeHidden();
   expect(await page.evaluate(() => window.pathsOnMap().length)).toBe(0);
+});
+
+test('path alerts: nearby structures listed, radius select, click centers (#321)', async ({ page }) => {
+  // view centered on a known seed-141 village at (240, 112), 2 blocks/px
+  const hash = Buffer.from(encodeURIComponent(JSON.stringify({ s: '141', x: 240, z: 112, b: 2 })))
+    .toString('base64');
+  await page.goto('/#' + hash);
+  await waitForApp(page);
+  await page.click('#pathBtn');
+  const box = await page.locator('#map').boundingBox();
+  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  // horizontal trace through the view center: it passes right by the village
+  await page.mouse.click(cx - 100, cy);
+  await page.mouse.dblclick(cx + 100, cy);
+  await expect(page.locator('#popup .path-name')).toBeVisible();
+  // the editor opens with the default 128-block alert radius and lists the
+  // village with its coordinates and distance to the trace
+  await expect(page.locator('#pathAlertRadius')).toHaveValue('128');
+  const village = page.locator('#pathAlertList .path-alert', { hasText: 'Village' }).first();
+  await expect(village).toBeVisible();
+  await expect(village).toContainText('240, 112');
+  const dist = Number((await village.textContent()).match(/· (\d+) blocks/)[1]);
+  expect(dist).toBeLessThanOrEqual(128);
+  // the world spawn (-64,-64) is ~200 blocks away: absent at 128, listed at 512
+  await expect(page.locator('#pathAlertList .path-alert', { hasText: 'World spawn' })).toHaveCount(0);
+  await page.selectOption('#pathAlertRadius', '512');
+  await expect(page.locator('#pathAlertList .path-alert', { hasText: 'World spawn' })).toBeVisible();
+  // clicking an alert centers the map on the structure
+  await village.click();
+  const c = await page.evaluate(() => window.viewCenter());
+  expect(c.x).toBe(240);
+  expect(c.z).toBe(112);
 });
 
 test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
@@ -1344,6 +1463,21 @@ test('the area selection drags a rectangle and copies its coordinates', async ({
   // the toolbar shows the world-block summary of the dragged rectangle
   await expect(page.locator('#selBar')).toBeVisible();
   await expect(page.locator('#selInfo')).toContainText('->');
+  // #319: the bar shows the exact surface computed from the dragged corners
+  const info = await page.locator('#selInfo').textContent();
+  const m = info.match(/^(-?\d+), (-?\d+) -> (-?\d+), (-?\d+) \((\d+) x (\d+)\)$/);
+  expect(m).not.toBeNull();
+  const [x0, z0, x1, z1, w, h] = m.slice(1).map(Number);
+  const chunks = (Math.floor(x1 / 16) - Math.floor(x0 / 16) + 1)
+    * (Math.floor(z1 / 16) - Math.floor(z0 / 16) + 1);
+  await expect(page.locator('#selSurface')).toHaveAttribute('data-blocks', String(w * h));
+  await expect(page.locator('#selSurface')).toHaveAttribute('data-chunks', String(chunks));
+  // and the biome composition of the rectangle, with percentages summing to ~100
+  await expect(page.locator('#selCompList .comp-row').first()).toBeVisible();
+  const sum = await page.$$eval('#selCompList .comp-row',
+    (rows) => rows.reduce((s, r) => s + parseFloat(r.dataset.pct), 0));
+  expect(sum).toBeGreaterThan(99);
+  expect(sum).toBeLessThan(101);
   await page.click('#selCopy');
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toMatch(/-?\d+, -?\d+ -> -?\d+, -?\d+ \(\d+ x \d+\)/);

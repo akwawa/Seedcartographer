@@ -16,6 +16,96 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Ajouté
+- Recherche par croquis de motif géographique : une mini-grille 5×5 dans la
+  section des critères permet de dessiner la disposition recherchée en
+  familles de biomes (océan, plaine, forêt, désert, montagne, neige, jungle,
+  marais ou indifférent) — chaque cellule couvre environ 480 blocs (~1200
+  blocs de rayon autour du point). Cellules accessibles au clavier (boutons
+  natifs avec aria-label, clic/Entrée fait défiler les familles), palette de
+  familles colorée, bouton d'effacement, options rotations (90°) et miroirs,
+  seuil de correspondance réglable. Le score d'un emplacement est la
+  proportion de cellules contraintes dont la famille dominante correspond
+  (module pur `sketch.js`, testé à 100 %) ; la recherche réutilise le flux
+  des motifs géographiques (progression, annulation, résultats en liste et
+  épingles) et fonctionne aussi dans la recherche de seeds. Le croquis est
+  partagé dans les liens et sauvegardé avec les presets personnalisés. (#326)
+- Vue 3D légère du terrain : un bouton du menu « ⋯ » ouvre un panneau qui
+  rend la zone visible de la carte en isométrique (canvas 2D pur, sans
+  WebGL) — colonnes échantillonnées dans le worker (hauteurs du relief +
+  couleurs de biomes de la palette courante, budget borné à 128×128
+  colonnes), sommets éclaircis selon l'altitude et faces latérales
+  assombries. Rotation par pas de 90°, échelle de hauteur réglable
+  (×0,5/×1/×2), export PNG de la vue et calcul uniquement à l'ouverture du
+  panneau (aucun impact sur le premier rendu). (#325)
+- File d'attente de recherches multi-seeds avec tableau comparatif : un
+  bouton « Ajouter à la file » capture le jeu de critères courant (avec un
+  libellé résumé), la file affiche l'état de chaque entrée (en attente, en
+  cours, terminée, annulée) et « Lancer la file » exécute les recherches
+  séquentiellement sur le moteur multi-seeds existant. Les trouvailles de
+  toutes les entrées s'accumulent dans un tableau comparatif (seed, jeu de
+  critères, score, distance au spawn) triable par colonne ; un clic sur une
+  ligne charge la seed. La file entière peut être stoppée et une entrée en
+  attente retirée. (#324)
+- Annotations texte libres sur la carte : un nouvel outil « ✎ » dans la
+  rangée d'outils permet d'écrire un court texte (60 caractères max) à
+  n'importe quel point de la carte ; le texte est dessiné directement sur le
+  canvas avec un fond semi-transparent lisible dans les deux thèmes. Un clic
+  sur une annotation ouvre un petit éditeur (modification implicite à la
+  validation, suppression), comme pour les marqueurs personnalisés. Les
+  annotations sont persistées en local (liées au monde exact : seed, version,
+  biomes larges, dimension, plafond de 100), converties 1:8 entre Overworld
+  et Nether à l'affichage comme les zones et les chemins, incluses dans
+  l'export PNG de la carte ainsi que dans l'export/import de profil et le
+  code de synchronisation (#323)
+- Web Vitals réels : les Core Web Vitals (LCP, INP, CLS) sont mesurés dans le
+  navigateur via des `PerformanceObserver` natifs (aucune dépendance) et
+  remontés dans Umami sous forme d'événements anonymes bucketisés (jamais la
+  valeur brute — uniquement la note good/needs-improvement/poor et une tranche
+  selon les seuils officiels). Collecte passive, envoi unique et différé au
+  masquage de la page, aucun impact sur le premier rendu ; silencieux si
+  Umami est absent ou bloqué. La ligne d'information du dialogue d'aide
+  mentionne désormais ces mesures de performance anonymes (#322)
+- Ouverture d'une sauvegarde Minecraft Java : le menu « ⋯ » propose de charger
+  le `level.dat` d'une sauvegarde (NBT gzippé lu entièrement en local, jamais
+  envoyé) pour en extraire la seed (`WorldGenSettings.seed`, repli
+  `RandomSeed` pour les mondes legacy), la version (`Version.Name` mappée sur
+  la version de génération supportée la plus proche ; si elle est inconnue, la
+  seed et le spawn sont chargés quand même avec la version courante et un
+  avertissement) et le point de spawn (`SpawnX`/`SpawnZ`), avec carte centrée
+  sur le spawn et épingle temporaire ; les fichiers non compressés sont
+  acceptés, les sauvegardes Bedrock et les fichiers invalides affichent un
+  message dédié (#320)
+- Statistiques de la sélection rectangulaire : la barre de sélection affiche
+  la surface exacte de la zone (en blocs et en chunks intersectés) et sa
+  composition de biomes (pastilles de couleur, pourcentages à une décimale
+  sommant à 100), calculée dans le worker avec annulation par jeton comme le
+  panneau de composition (#319)
+- Alertes de proximité le long d'un chemin tracé : le popup d'édition d'un
+  chemin (outil 〰, #285) liste les structures notables situées à moins de
+  128/256/512 blocs du trajet (rayon sélectionnable), triées par distance
+  croissante au segment le plus proche, avec type, coordonnées et distance en
+  blocs ; le calcul se fait dans le worker avec annulation par jeton et un
+  clic sur une alerte centre la carte sur la structure avec une épingle
+  temporaire (#321)
+
+### Modifié
+- CI mutation : le run Stryker est partitionné en trois shards équilibrés par
+  coût (matrix `core` / `world` / `user`, `npx stryker run --mutate <liste>`)
+  pour ramener chaque job sous ~40 minutes et redonner de la marge au budget ;
+  le seuil `break: 75` s'applique désormais par shard, et un test vérifie que
+  les shards couvrent exactement le périmètre `mutate` de
+  `stryker.config.json` (#318).
+
+### Corrigé
+- Pages : le déploiement déclenché sur `dev` échouait dès qu'un jalon
+  ajoutait un fichier absent de `main` (#336) — la mise en scène des
+  fichiers vit désormais dans `scripts/stage-site.js`, exécuté depuis
+  chaque checkout (chaque branche stage sa propre liste), avec un repli
+  transitoire tolérant jusqu'à la prochaine release.
+
 ## [0.13.4](https://github.com/akwawa/Seedcartographer/compare/v0.13.3...v0.13.4) (2026-07-24)
 
 
