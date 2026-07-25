@@ -729,7 +729,7 @@ function fillTerrain3dColumns(d, rgb, heights) {
 }
 function handleTerrain3dMsg(d) {
   const cells = d.cols * d.rows;
-  if (!(cells > 0) || cells > VIEW3D_MAX_CELLS) {
+  if (cells <= 0 || cells > VIEW3D_MAX_CELLS) {
     postMessage({ type: 'terrain3d', reqId: d.reqId, ok: false });
     return;
   }
