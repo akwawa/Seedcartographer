@@ -1157,6 +1157,38 @@ test('path tool: three clicked points, cumulative distance, persist, delete (#28
   expect(await page.evaluate(() => window.pathsOnMap().length)).toBe(0);
 });
 
+test('path alerts: nearby structures listed, radius select, click centers (#321)', async ({ page }) => {
+  // view centered on a known seed-141 village at (240, 112), 2 blocks/px
+  const hash = Buffer.from(encodeURIComponent(JSON.stringify({ s: '141', x: 240, z: 112, b: 2 })))
+    .toString('base64');
+  await page.goto('/#' + hash);
+  await waitForApp(page);
+  await page.click('#pathBtn');
+  const box = await page.locator('#map').boundingBox();
+  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  // horizontal trace through the view center: it passes right by the village
+  await page.mouse.click(cx - 100, cy);
+  await page.mouse.dblclick(cx + 100, cy);
+  await expect(page.locator('#popup .path-name')).toBeVisible();
+  // the editor opens with the default 128-block alert radius and lists the
+  // village with its coordinates and distance to the trace
+  await expect(page.locator('#pathAlertRadius')).toHaveValue('128');
+  const village = page.locator('#pathAlertList .path-alert', { hasText: 'Village' }).first();
+  await expect(village).toBeVisible();
+  await expect(village).toContainText('240, 112');
+  const dist = Number((await village.textContent()).match(/· (\d+) blocks/)[1]);
+  expect(dist).toBeLessThanOrEqual(128);
+  // the world spawn (-64,-64) is ~200 blocks away: absent at 128, listed at 512
+  await expect(page.locator('#pathAlertList .path-alert', { hasText: 'World spawn' })).toHaveCount(0);
+  await page.selectOption('#pathAlertRadius', '512');
+  await expect(page.locator('#pathAlertList .path-alert', { hasText: 'World spawn' })).toBeVisible();
+  // clicking an alert centers the map on the structure
+  await village.click();
+  const c = await page.evaluate(() => window.viewCenter());
+  expect(c.x).toBe(240);
+  expect(c.z).toBe(112);
+});
+
 test('the Nether grid overlay shows both referentials in the HUD', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
