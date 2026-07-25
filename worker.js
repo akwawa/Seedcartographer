@@ -15,6 +15,7 @@ import { discCounts, rectCounts, rectSampleStep, compositionShares } from './com
 import { VIEW3D_MAX_CELLS } from './view3d.js';
 import { diffGrids } from './compare.js';
 import { pathBoundingBox, pathStructureAlerts } from './userpaths.js';
+import { SKETCH_PAD_BLOCKS } from './sketch.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -192,7 +193,8 @@ function needsBiomeGrid(d) {
   return (d.mainBiomes || []).length > 0
     || (d.adjClauses || []).length > 0
     || (d.pctClauses || []).length > 0
-    || (d.shapeClauses || []).length > 0;
+    || (d.shapeClauses || []).length > 0
+    || !!d.sketch;
 }
 
 // shape clauses cross the message boundary as plain arrays: rebuild the sets
@@ -283,7 +285,9 @@ async function runSearchJob(d) {
     const SC = 16;
     const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
     const pctClauses = (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct }));
-    const pad = [...adjClauses, ...pctClauses].reduce((m, c) => Math.max(m, c.dist), 0);
+    // a sketch samples 25 zones up to SKETCH_PAD_BLOCKS around each candidate
+    const pad = [...adjClauses, ...pctClauses]
+      .reduce((m, c) => Math.max(m, c.dist), d.sketch ? SKETCH_PAD_BLOCKS : 0);
     const gx0 = Math.floor((d.cx - d.range - pad) / SC);
     const gz0 = Math.floor((d.cz - d.range - pad) / SC);
     const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
@@ -309,6 +313,7 @@ async function runSearchJob(d) {
       adjMode: d.adjMode, adjClauses,
       pctMode: d.pctMode, pctClauses,
       shapeMode: d.shapeMode, shapeClauses: workerShapeClauses(d),
+      sketch: d.sketch || null,
       structMode: d.structMode, structClauses,
       // surface height is Overworld-only; heightAt calls into the engine
       surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -426,6 +431,7 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
     pctClauses: (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct })),
     shapeMode: d.shapeMode,
     shapeClauses: workerShapeClauses(d),
+    sketch: d.sketch || null,
     structMode: d.structMode,
     structClauses: buildStructClauses({ ...d, cx: 0, cz: 0 }),
     surface: (d.dim || 0) === 0 && d.surface && (Number.isInteger(d.surface.min) || Number.isInteger(d.surface.max))
@@ -438,7 +444,8 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
 async function runSeedSearchJob(d) {
   const cancelled = () => seedCancelId === d.reqId;
   const SC = 16;
-  const pad = [...(d.adjClauses || []), ...(d.pctClauses || [])].reduce((m, c) => Math.max(m, c.dist), 0);
+  const pad = [...(d.adjClauses || []), ...(d.pctClauses || [])]
+    .reduce((m, c) => Math.max(m, c.dist), d.sketch ? SKETCH_PAD_BLOCKS : 0);
   const gx0 = Math.floor((-d.range - pad) / SC);
   const gz0 = gx0;
   const cols = Math.ceil((d.range + pad) / SC) - gx0 + 2;

@@ -58,6 +58,7 @@ import {
 } from './view3d.js';
 import { keyAction } from './keys.js';
 import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
+import { SKETCH_SIZE, SKETCH_FAMILIES, SKETCH_FAMILY_COLORS } from './sketch.js';
 import { detectFormat, parseLevelData, matchVersion } from './levelload.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
@@ -2167,6 +2168,88 @@ function addPairRow(t1, t2, gap, radius) {
 }
 function rowsOf(sel) { return [...$(sel).querySelectorAll('.row')]; }
 
+// ---------- sketch search (#326) ----------
+// The user draws the wanted biome-family layout on a 5×5 grid of buttons:
+// clicking (or Enter, they are native buttons) cycles a cell through the
+// families and back to "indifferent". State lives in `sketchCells`
+// (25 family keys, '' = indifferent), read by collectCriteria/readCriteria.
+let sketchCells = new Array(SKETCH_SIZE * SKETCH_SIZE).fill('');
+function sketchFamilyLabel(f) {
+  return f ? t('sketchFam' + f[0].toUpperCase() + f.slice(1)) : t('sketchFamAny');
+}
+function refreshSketchCell(btn) {
+  const idx = Number.parseInt(btn.dataset.idx, 10);
+  const f = sketchCells[idx];
+  const label = sketchFamilyLabel(f);
+  btn.style.background = f ? SKETCH_FAMILY_COLORS[f] : '';
+  btn.classList.toggle('set', !!f);
+  btn.title = label;
+  btn.setAttribute('aria-label', t('ariaSketchCell', {
+    r: Math.floor(idx / SKETCH_SIZE) + 1, c: (idx % SKETCH_SIZE) + 1, f: label
+  }));
+}
+// cell titles/aria carry translated family names: refreshed on language switch
+function refreshSketchCells() {
+  document.querySelectorAll('#sketchGrid button').forEach((btn) => refreshSketchCell(btn));
+}
+function buildSketchUI() {
+  const grid = $('#sketchGrid');
+  for (let i = 0; i < SKETCH_SIZE * SKETCH_SIZE; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'sketchcell'; btn.dataset.idx = String(i);
+    btn.onclick = () => {
+      const cur = SKETCH_FAMILIES.indexOf(sketchCells[i]);
+      const next = cur === SKETCH_FAMILIES.length - 1 ? '' : SKETCH_FAMILIES[cur + 1];
+      sketchCells[i] = next;
+      refreshSketchCell(btn);
+    };
+    grid.appendChild(btn);
+    refreshSketchCell(btn);
+  }
+  const legend = $('#sketchLegend');
+  for (const f of SKETCH_FAMILIES) {
+    const item = document.createElement('span');
+    item.className = 'sketchfam';
+    const dot = document.createElement('span');
+    dot.className = 'dot'; dot.style.background = SKETCH_FAMILY_COLORS[f];
+    const lbl = document.createElement('span');
+    lbl.dataset.i18n = 'sketchFam' + f[0].toUpperCase() + f.slice(1);
+    lbl.textContent = sketchFamilyLabel(f);
+    item.append(dot, lbl);
+    legend.appendChild(item);
+  }
+  $('#sketchClear').onclick = () => {
+    sketchCells.fill('');
+    refreshSketchCells();
+  };
+}
+// restore a sanitized sketch payload (share link / preset / history), or
+// reset the whole section when the criteria carry none
+function applySketch(sk) {
+  sketchCells = new Array(SKETCH_SIZE * SKETCH_SIZE).fill('');
+  $('#sketchRot').checked = false;
+  $('#sketchMir').checked = false;
+  $('#sketchPct').value = '60';
+  if (sk) {
+    sketchCells = sk.g.slice();
+    $('#sketchRot').checked = sk.r === 1;
+    $('#sketchMir').checked = sk.m === 1;
+    $('#sketchPct').value = String(sk.p);
+    $('#sketchSec').open = true;
+  }
+  refreshSketchCells();
+}
+// current sketch as a search-message field, or null when nothing is drawn
+function collectSketch() {
+  if (!sketchCells.some(Boolean)) return null;
+  const pct = Number.parseInt($('#sketchPct').value, 10);
+  return {
+    cells: sketchCells.slice(),
+    rot: $('#sketchRot').checked, mir: $('#sketchMir').checked,
+    pct: pct >= 1 && pct <= 100 ? pct : 60
+  };
+}
+
 // ---------- search ----------
 // Criteria panel -> search-message fields, or null when the criteria cannot
 // anchor a search (no main biome and no structure criterion).
@@ -2227,13 +2310,16 @@ function collectCriteria() {
     return v !== '' && Number.isFinite(n) ? n : null;
   };
   const surfMin = intOrNull('#surfMin'), surfMax = intOrNull('#surfMax');
+  const sketch = collectSketch();
   // without a main biome the search must be anchored by structure criteria
-  if (!mainBiomes.length && !structClauses.length && !pairClauses.length) return null;
+  // or by a drawn sketch (#326)
+  if (!mainBiomes.length && !structClauses.length && !pairClauses.length && !sketch) return null;
   return {
     mainBiomes,
     adjMode: $('#adjMode').value, adjClauses,
     pctMode: $('#pctMode').value, pctClauses,
     shapeMode: $('#shapeMode').value, shapeClauses,
+    sketch,
     structMode: $('#structMode').value, structClauses, pairClauses,
     surface: surfMin !== null || surfMax !== null ? { min: surfMin, max: surfMax } : null
   };
@@ -3277,6 +3363,14 @@ function readCriteria() {
         g: Number.parseInt(ins[0].value, 10) || 0, r: Number.parseInt(ins[1].value, 10) || 0
       };
     }),
+    ...(sketchCells.some(Boolean) ? {
+      sk: {
+        g: sketchCells.slice(),
+        r: $('#sketchRot').checked ? 1 : 0,
+        m: $('#sketchMir').checked ? 1 : 0,
+        p: Number.parseInt($('#sketchPct').value, 10) || 60
+      }
+    } : {}),
     rg: $('#range').value, sp: $('#step').value,
     s0: $('#surfMin').value, s1: $('#surfMax').value
   };
@@ -3563,9 +3657,11 @@ function applyCriteria(raw) {
   $('#mainBiomes').textContent = ''; $('#adjClauses').textContent = ''; $('#structClauses').textContent = ''; $('#pctClauses').textContent = ''; $('#shapeClauses').textContent = '';
   $('#pairClauses').textContent = '';
   collapseCritSections();
+  applySketch(null);
   $('#surfMin').value = ''; $('#surfMax').value = '';
   const c = sanitizeCriteria(raw, MAX_CRIT_ROWS);
   if (!c) return;
+  applySketch(c.sk);
   c.mb.forEach((b) => addMainBiomeRow(b));
   $('#adjMode').value = c.am;
   c.ac.forEach((r) => addAdjRow(r.b, r.d, r.n, r.yl));
@@ -3589,7 +3685,8 @@ function applyHashCriteria() {
   // legacy single-criteria share links (c.a = main biome id) are migrated
   const c = normalizeLegacyCriteria(hashState?.c);
   applyCriteria(c);
-  if (!rowsOf('#mainBiomes').length) {
+  // a sketch-only share link needs no demo rows: the sketch anchors it
+  if (!rowsOf('#mainBiomes').length && !sketchCells.some(Boolean)) {
     // demo: cherry grove + warm ocean + >=2 villages (matches built-in seed 141)
     addMainBiomeRow(185); addAdjRow(44, 400); addStructRow(structToggles[0].type, 2, 800);
     if (!c) { $('#range').value = 5000; $('#step').value = 16; }
@@ -3947,6 +4044,7 @@ async function init() {
   buildPresetSelect();
   wirePresetSave();
   buildRareBiomeUI();
+  buildSketchUI();
   $('#addMainBiome').onclick = () => addMainBiomeRow();
   $('#addAdj').onclick = () => addAdjRow();
   $('#addPct').onclick = () => addPctRow();
@@ -3967,7 +4065,7 @@ async function init() {
   }
   langSel.value = currentLang();
   // dynamic rows carry data-i18n attributes, so applyI18n (via setLang) covers them
-  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); };
+  langSel.onchange = () => { setLang(langSel.value); hidePopup(); buildFavList(); buildLegend(legendPresent); refreshSketchCells(); };
   $('#gridChk').onchange = (e) => { showGrid = e.target.checked; draw(); };
   $('#netherChk').onchange = (e) => { showNetherGrid = e.target.checked; draw(); };
   // relief is baked into the tile pixels: re-request tiles under the new key

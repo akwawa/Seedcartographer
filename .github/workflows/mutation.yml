@@ -33,7 +33,7 @@ jobs:
           - shard: core
             mutate: search.js,userzones.js,shapes.js,tour.js,tilegrid.js,coords.js,seed.js,vitals.js,userannotations.js,view3d.js
           - shard: world
-            mutate: searchqueue.js,sharestate.js,userpaths.js,rarebiomes.js,tilecache.js,searchhistory.js,slime.js,keys.js,compare.js,levelload.js
+            mutate: searchqueue.js,sharestate.js,userpaths.js,rarebiomes.js,tilecache.js,searchhistory.js,slime.js,keys.js,compare.js,levelload.js,sketch.js
           - shard: user
             mutate: seedsearch.js,usermarkers.js,relief.js,userpresets.js,export.js,favorites.js,gallery.js,errorreport.js,legend.js,maptools.js,markers.js,palette.js,presets.js,profile.js,portals.js,theme.js,composition.js
     name: mutation (${{ matrix.shard }})

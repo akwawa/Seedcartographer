@@ -19,6 +19,19 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Recherche par croquis de motif géographique : une mini-grille 5×5 dans la
+  section des critères permet de dessiner la disposition recherchée en
+  familles de biomes (océan, plaine, forêt, désert, montagne, neige, jungle,
+  marais ou indifférent) — chaque cellule couvre environ 480 blocs (~1200
+  blocs de rayon autour du point). Cellules accessibles au clavier (boutons
+  natifs avec aria-label, clic/Entrée fait défiler les familles), palette de
+  familles colorée, bouton d'effacement, options rotations (90°) et miroirs,
+  seuil de correspondance réglable. Le score d'un emplacement est la
+  proportion de cellules contraintes dont la famille dominante correspond
+  (module pur `sketch.js`, testé à 100 %) ; la recherche réutilise le flux
+  des motifs géographiques (progression, annulation, résultats en liste et
+  épingles) et fonctionne aussi dans la recherche de seeds. Le croquis est
+  partagé dans les liens et sauvegardé avec les presets personnalisés. (#326)
 - Vue 3D légère du terrain : un bouton du menu « ⋯ » ouvre un panneau qui
   rend la zone visible de la carte en isométrique (canvas 2D pur, sans
   WebGL) — colonnes échantillonnées dans le worker (hauteurs du relief +

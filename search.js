@@ -4,6 +4,7 @@
 // WASM engine; this module only combines the criteria.
 
 import { prepShapeClauses as shapesPrep, shapePass as shapesPass } from './shapes.js';
+import { prepSketch, sketchPass } from './sketch.js';
 
 const SEARCH_MAX_HITS = 1500;   // result cap, mirrors the old C engine
 const SEARCH_MAX_CELLS = 60000000; // grid-size guard, mirrors the old C engine
@@ -225,7 +226,7 @@ function isDuplicate(hits, wx, wz, merge2) {
 /**
  * @param {{g: GridCtx, adj: object[], adjAll: boolean,
  *          pcts: object[], pctAll: boolean,
- *          shapes: object[], shapeAll: boolean, structs: object[],
+ *          shapes: object[], shapeAll: boolean, sketch: any, structs: object[],
  *          structAll: boolean, surf: {min: number, max: number,
  *          heightAt: (x: number, z: number) => number}|null}} ctx
  * @param {number} ci @param {number} cj @param {number} wx @param {number} wz
@@ -237,6 +238,7 @@ function evalCell(ctx, ci, cj, wx, wz) {
   if (ctx.adj.length && !adjPass(ctx.adj, ctx.adjAll, ctx.g, ci, cj)) return null;
   if (ctx.pcts.length && !pctPass(ctx.pcts, ctx.pctAll, ctx.g, ci, cj)) return null;
   if (ctx.shapes.length && !shapesPass(ctx.shapes, ctx.shapeAll, ctx.g, ci, cj)) return null;
+  if (ctx.sketch && !sketchPass(ctx.sketch, ctx.g, ci, cj)) return null;
   let count = 0;
   if (ctx.structs.length) {
     const total = structCount(ctx.structs, ctx.structAll, wx, wz);
@@ -261,6 +263,7 @@ function evalCell(ctx, ci, cj, wx, wz) {
  *          layers?: Array<{y: number, grid: Int32Array|number[]}>,
  *          pctMode?: string, pctClauses?: PctClause[],
  *          shapeMode?: string, shapeClauses?: import('./shapes.js').ShapeClause[],
+ *          sketch?: {cells: string[], rot?: boolean, mir?: boolean, pct: number}|null,
  *          structMode?: string, structClauses?: StructClause[],
  *          surface?: SurfaceClause|null,
  *          rowStart?: number, rowEnd?: number, hits?: SearchHit[]}} p
@@ -273,9 +276,9 @@ function scanGrid(p) {
   const pctAll = p.pctMode !== 'or';
   const shapeAll = p.shapeMode !== 'or';
   const structAll = p.structMode !== 'or';
-  // an empty main-biome set is only meaningful for a structures-only search
-  // ("any biome"): without structure clauses everything would match
-  if (!mainSet.size && !(p.structClauses || []).length) return null;
+  // an empty main-biome set is only meaningful when structure clauses or a
+  // sketch anchor the search: without any of them everything would match
+  if (!mainSet.size && !(p.structClauses || []).length && !p.sketch) return null;
 
   const g = { grid, cols, rows, gx0, gz0, SC, mainSet };
   const adj = prepAdjClauses(p.adjClauses || [], SC, grid, p.layers);
@@ -284,6 +287,8 @@ function scanGrid(p) {
   const shapes = shapesPrep(p.shapeClauses || [], SC, cols, rows);
   if (!shapes) return null;
   const structs = prepStructClauses(p.structClauses || [], g);
+  const sketch = p.sketch ? prepSketch(p.sketch, SC) : null;
+  if (p.sketch && !sketch) return null;
   const surf = typeof p.surface?.heightAt === 'function'
     ? { min: p.surface.min ?? -Infinity, max: p.surface.max ?? Infinity, heightAt: p.surface.heightAt }
     : null;
@@ -302,7 +307,7 @@ function scanGrid(p) {
   // stride alignment is identical to a full scan
   const rowStart = p.rowStart ?? bj0, rowEnd = p.rowEnd ?? bj1;
 
-  const ctx = { g, adj, adjAll, pcts, pctAll, shapes, shapeAll, structs, structAll, surf };
+  const ctx = { g, adj, adjAll, pcts, pctAll, shapes, shapeAll, sketch, structs, structAll, surf };
   const hits = p.hits || [];
   if (hits.length >= SEARCH_MAX_HITS) return hits;
   return scanCells(ctx, { bi0, bi1, bj0, bj1, rowStart, rowEnd, stride, merge2 }, hits);

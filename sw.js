@@ -15,6 +15,7 @@ const ASSETS = [
   './search.js',
   './rarebiomes.js',
   './shapes.js',
+  './sketch.js',
   './i18n.js',
   './version.js',
   './biomes.js',

@@ -120,6 +120,19 @@
         <button id="addShape" class="btn tiny" data-i18n="addCriterion">+ Add criterion</button>
       </details>
 
+      <details id="sketchSec" class="field critsec">
+        <summary><span data-i18n="sketchTitle">Sketch search</span> <span class="opt" data-i18n="optional">optional</span></summary>
+        <p class="lede" data-i18n="sketchLede">Draw the layout you want: each cell of the 5×5 grid covers about 480 blocks. Click a cell to cycle through the biome families.</p>
+        <div id="sketchGrid" class="sketchgrid"></div>
+        <div id="sketchLegend" class="sketchlegend"></div>
+        <label class="sub-lbl sketchopt"><input id="sketchRot" type="checkbox"> <span data-i18n="sketchRot">allow 90° rotations</span></label>
+        <label class="sub-lbl sketchopt"><input id="sketchMir" type="checkbox"> <span data-i18n="sketchMir">allow mirrors</span></label>
+        <div class="field two">
+          <div><label for="sketchPct" data-i18n="sketchMinPct">Min. match (%)</label><input id="sketchPct" class="num" type="number" min="1" max="100" step="5" value="60"></div>
+          <div><button id="sketchClear" class="btn tiny" data-i18n="sketchClear">Clear sketch</button></div>
+        </div>
+      </details>
+
       <details class="field critsec">
         <summary><span data-i18n="nearbyStructures">Nearby structures</span> <span class="opt" data-i18n="optional">optional</span></summary>
         <select id="structMode" class="mode" aria-label="Nearby structures" data-i18n-aria="nearbyStructures"><option value="and" data-i18n="matchAll">match all</option><option value="or" data-i18n="matchAny">match any</option></select>
