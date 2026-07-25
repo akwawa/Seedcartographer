@@ -49,6 +49,8 @@ jobs:
       - run: npm ci --ignore-scripts
       # --mutate on the CLI replaces the `mutate` array of the config file,
       # restricting this job to its shard.
-      - run: npx stryker run --mutate "$MUTATE"
+      # stryker is a pinned devDependency installed with lifecycle scripts
+      # disabled: no on-demand npx execution (S6505/S8543)
+      - run: ./node_modules/.bin/stryker run --mutate "$MUTATE"
         env:
           MUTATE: ${{ matrix.mutate }}
