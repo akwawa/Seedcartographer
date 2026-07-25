@@ -286,10 +286,14 @@
     <button id="portalBtn" class="btn tiny portalbtn" title="Plan a Nether portal (click the map)" aria-label="Plan a Nether portal" data-i18n-title="portalTitle" data-i18n-aria="portalTitle">🌀</button>
     <button id="compBtn" class="btn tiny compbtn" title="Biome composition around a point (click the map)" aria-label="Biome composition around a point" data-i18n-title="compBtnTitle" data-i18n-aria="compBtnTitle">◔</button>
     <div id="selBar" class="selbar" hidden>
-      <span id="selInfo" class="mono"></span>
-      <button id="selPng" class="btn tiny" data-i18n="selPng">PNG</button>
-      <button id="selCopy" class="btn tiny" data-i18n="selCopy">Copy coords</button>
-      <button id="selClose" class="btn tiny" title="Close" data-i18n-title="close">×</button>
+      <div class="selbar-row">
+        <span id="selInfo" class="mono"></span>
+        <button id="selPng" class="btn tiny" data-i18n="selPng">PNG</button>
+        <button id="selCopy" class="btn tiny" data-i18n="selCopy">Copy coords</button>
+        <button id="selClose" class="btn tiny" title="Close" data-i18n-title="close">×</button>
+      </div>
+      <div id="selSurface" class="mono selbar-surface"></div>
+      <div id="selCompList" class="comp-list"></div>
     </div>
     <canvas id="minimap" width="176" height="132" aria-label="Overview minimap" data-i18n-aria="minimapAria"></canvas>
     <details id="legend" class="legend">

@@ -43,6 +43,7 @@ import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
+import { rectSurface } from './composition.js';
 import { keyAction } from './keys.js';
 import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
@@ -84,6 +85,7 @@ let selected = -1;
 const ruler = { on: false, a: null, b: null, done: false };
 // selection tool: a/b world corners dragged on the map
 const sel = { on: false, a: null, b: null, done: false };
+let selReq = -1;             // selection-composition token (#319); -1 = none
 // zone tool: a/b world corners dragged on the map, turned into a named zone
 const zoneTool = { on: false, a: null, b: null };
 // path tool (#285): waypoints clicked so far, plus the live point under the
@@ -631,15 +633,37 @@ function drawSelection() {
 function setSelOn(on) {
   sel.on = on; sel.a = null; sel.b = null; sel.done = false;
   $('#selBtn').classList.toggle('on', on);
-  $('#selBar').hidden = true;
+  hideSelBar();
   canvas.style.cursor = on ? 'crosshair' : '';
   draw();
+}
+function hideSelBar() {
+  $('#selBar').hidden = true;
+  selReq = -1;                 // in-flight composition replies become stale
+}
+// selection stats (#319): exact surface (blocks + intersected chunks) plus
+// the biome composition of the rectangle, sampled in the worker like the
+// composition panel (#286); a new drag bumps selReq so stale replies drop
+function requestSelComposition(r) {
+  selReq = reqSeq++;
+  $('#selCompList').textContent = '…';
+  send({
+    type: 'composition', reqId: selReq, seed: world.seed, mc: world.mc,
+    large: world.large, dim: world.dim, y: yLayer,
+    rect: { x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1, w: r.w, h: r.h }
+  });
 }
 function showSelBar() {
   const bar = $('#selBar');
   bar.hidden = false;
   const r = normalizeRect(sel.a, sel.b);
   $('#selInfo').textContent = formatRect(r);
+  const s = rectSurface(r);
+  $('#selSurface').textContent =
+    `${t('selSurface')} ${s.blocks.toLocaleString('en-US')} ${t('selBlocks')} · ${s.chunks.toLocaleString('en-US')} ${t('selChunks')}`;
+  $('#selSurface').dataset.blocks = String(s.blocks);
+  $('#selSurface').dataset.chunks = String(s.chunks);
+  requestSelComposition(r);
 }
 // crop the current canvas to the selection and download it as PNG
 function exportSelectionPNG() {
@@ -995,16 +1019,25 @@ function compRow(e) {
   row.append(dot, name, pct);
   return row;
 }
-function onComposition(d) {
-  if (d.reqId !== compReq) return;   // stale: a newer click/radius change won
-  const list = $('#compList');
-  if (!list) return;                 // the popup was replaced meanwhile
+// render a composition reply into a list element (shared by the composition
+// panel #286 and the selection stats #319)
+function fillCompList(list, d) {
   list.textContent = '';
   if (d.error) {
     list.textContent = t('tileFailed');
     return;
   }
   for (const e of d.list) list.appendChild(compRow(e));
+}
+function onComposition(d) {
+  if (d.reqId === selReq) {          // selection stats reply (#319)
+    fillCompList($('#selCompList'), d);
+    return;
+  }
+  if (d.reqId !== compReq) return;   // stale: a newer click/radius change won
+  const list = $('#compList');
+  if (!list) return;                 // the popup was replaced meanwhile
+  fillCompList(list, d);
 }
 
 function setRulerOn(on) {
@@ -1217,7 +1250,7 @@ canvas.addEventListener('pointerdown', (e) => {
       const r = canvas.getBoundingClientRect();
       sel.a = { x: Math.round(s2wx(e.clientX - r.left)), z: Math.round(s2wz(e.clientY - r.top)) };
       sel.b = null; sel.done = false;
-      $('#selBar').hidden = true;
+      hideSelBar();
       dragging = false; moved = true;   // a selection drag never pans or clicks
       return;
     }

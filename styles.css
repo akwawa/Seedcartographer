@@ -233,11 +233,11 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .popup .portal-del{display:block;margin:0 auto}
 .popup.comp{transform:translate(-50%,-50%)}
 .popup .comp-radius{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 7px;font-size:12px;color:var(--muted)}
-.popup .comp-list{min-width:230px;max-height:40vh;overflow-y:auto;text-align:left;font-size:12.5px}
-.popup .comp-row{display:flex;align-items:center;gap:7px;margin:3px 0}
-.popup .comp-dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.45);flex:none}
-.popup .comp-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.popup .comp-pct{font-family:var(--mono)}
+.popup .comp-list,.selbar .comp-list{min-width:230px;max-height:40vh;overflow-y:auto;text-align:left;font-size:12.5px}
+.popup .comp-row,.selbar .comp-row{display:flex;align-items:center;gap:7px;margin:3px 0}
+.popup .comp-dot,.selbar .comp-dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.45);flex:none}
+.popup .comp-name,.selbar .comp-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.popup .comp-pct,.selbar .comp-pct{font-family:var(--mono)}
 
 /* ---------- map navigation aids ---------- */
 .maptoggles{position:absolute;left:14px;top:14px;display:flex;gap:6px}
@@ -283,10 +283,14 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .popup .path-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
 .popup .path-dist{margin:0 0 8px;text-align:center}
 .popup .path-del{display:block;margin:0 auto}
-.selbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+.selbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;flex-direction:column;gap:5px;
   background:var(--overlay);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;
   padding:6px 10px;font-size:12px}
 .selbar[hidden]{display:none}
+.selbar .selbar-row{display:flex;align-items:center;gap:8px}
+.selbar .selbar-surface{color:var(--muted)}
+.selbar .selbar-surface:empty,.selbar .comp-list:empty{display:none}
+.selbar .comp-list{max-height:28vh}
 .markerbtn.on{border-color:#b17ee0;background:var(--hover)}
 .palettebtn.on{border-color:var(--lapis);background:var(--hover)}
 

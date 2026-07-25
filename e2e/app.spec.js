@@ -1344,6 +1344,21 @@ test('the area selection drags a rectangle and copies its coordinates', async ({
   // the toolbar shows the world-block summary of the dragged rectangle
   await expect(page.locator('#selBar')).toBeVisible();
   await expect(page.locator('#selInfo')).toContainText('->');
+  // #319: the bar shows the exact surface computed from the dragged corners
+  const info = await page.locator('#selInfo').textContent();
+  const m = info.match(/^(-?\d+), (-?\d+) -> (-?\d+), (-?\d+) \((\d+) x (\d+)\)$/);
+  expect(m).not.toBeNull();
+  const [x0, z0, x1, z1, w, h] = m.slice(1).map(Number);
+  const chunks = (Math.floor(x1 / 16) - Math.floor(x0 / 16) + 1)
+    * (Math.floor(z1 / 16) - Math.floor(z0 / 16) + 1);
+  await expect(page.locator('#selSurface')).toHaveAttribute('data-blocks', String(w * h));
+  await expect(page.locator('#selSurface')).toHaveAttribute('data-chunks', String(chunks));
+  // and the biome composition of the rectangle, with percentages summing to ~100
+  await expect(page.locator('#selCompList .comp-row').first()).toBeVisible();
+  const sum = await page.$$eval('#selCompList .comp-row',
+    (rows) => rows.reduce((s, r) => s + parseFloat(r.dataset.pct), 0));
+  expect(sum).toBeGreaterThan(99);
+  expect(sum).toBeLessThan(101);
   await page.click('#selCopy');
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toMatch(/-?\d+, -?\d+ -> -?\d+, -?\d+ \(\d+ x \d+\)/);

@@ -37,6 +37,57 @@ export function discCounts(grid, cols, rows, ci, cj, sc, dist) {
 }
 
 /**
+ * Count the biome ids of every cell of a rectangular grid (#319). The worker
+ * generates the grid exactly over the selection rectangle, so counting all
+ * cells gives the biome shares of the selection.
+ * @param {Int32Array|number[]} grid row-major biome ids (rows × cols)
+ * @param {number} cols grid width in cells
+ * @param {number} rows grid height in cells
+ * @returns {Map<number, number>} biome id -> sampled cell count
+ */
+export function rectCounts(grid, cols, rows) {
+  const counts = new Map();
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const id = grid[j * cols + i];
+      counts.set(id, (counts.get(id) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/**
+ * Exact surface of a selection rectangle (#319): area in blocks (edges
+ * inclusive) and number of 16×16 chunks the rectangle intersects.
+ * @param {{x0: number, z0: number, x1: number, z1: number, w: number, h: number}} r normalized rectangle
+ * @returns {{blocks: number, chunks: number}}
+ */
+export function rectSurface(r) {
+  const cw = Math.floor(r.x1 / 16) - Math.floor(r.x0 / 16) + 1;
+  const ch = Math.floor(r.z1 / 16) - Math.floor(r.z0 / 16) + 1;
+  return { blocks: r.w * r.h, chunks: cw * ch };
+}
+
+// biome sampling scales supported by the generator, finest first
+const RECT_STEPS = [4, 16, 64, 256];
+const RECT_MAX_CELLS = 16384;
+
+/**
+ * Sampling step for the composition of a w×h-block rectangle (#319): the
+ * finest generator scale that keeps the sampled grid under RECT_MAX_CELLS
+ * cells, so tiny selections get exact 1:4 shares and huge ones stay cheap.
+ * @param {number} w rectangle width in blocks
+ * @param {number} h rectangle height in blocks
+ * @returns {number} cell size in blocks (4, 16, 64 or 256)
+ */
+export function rectSampleStep(w, h) {
+  for (const s of RECT_STEPS) {
+    if (Math.ceil(w / s) * Math.ceil(h / s) <= RECT_MAX_CELLS) return s;
+  }
+  return RECT_STEPS.at(-1);
+}
+
+/**
  * Turn raw biome counts into a list sorted by decreasing share, with
  * one-decimal percentages that sum to exactly 100 (largest-remainder
  * rounding on tenths). An empty count map yields an empty list.

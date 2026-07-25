@@ -11,7 +11,7 @@ import { TILE_CELLS } from './tilegrid.js';
 import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
 import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_RING_BLOCKS } from './rarebiomes.js';
 import { hdCellSpan, hdCellIndex } from './export.js';
-import { discCounts, compositionShares } from './composition.js';
+import { discCounts, rectCounts, rectSampleStep, compositionShares } from './composition.js';
 import { diffGrids } from './compare.js';
 
 let M = null;            // the WASM module
@@ -651,21 +651,40 @@ function handleStructures(d) {
 // stale replies by reqId, so a re-click or radius change simply outraces
 // the previous request.
 const COMPOSITION_SC = 16;
-function handleCompositionMsg(d) {
-  applyWorld(d.seed, d.mc, d.large, d.dim);
+// sample the biome grid over [x0..x1]×[z0..z1] cells at scale sc; null on failure
+function compositionGrid(ci0, cj0, cols, rows, sc, y) {
+  ensureArea(cols * rows);
+  if (!M._genBiomeArea(areaPtr, ci0, cj0, cols, rows, sc, scaledY(y))) return null;
+  return M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
+}
+// biome counts over the selection rectangle (#319): the sampling step adapts
+// to the rectangle size so tiny selections stay precise and huge ones cheap
+function rectCompositionCounts(r, y) {
+  const sc = rectSampleStep(r.w, r.h);
+  const ci0 = Math.floor(r.x0 / sc), cj0 = Math.floor(r.z0 / sc);
+  const cols = Math.floor(r.x1 / sc) - ci0 + 1;
+  const rows = Math.floor(r.z1 / sc) - cj0 + 1;
+  const grid = compositionGrid(ci0, cj0, cols, rows, sc, y);
+  return grid && rectCounts(grid, cols, rows);
+}
+// biome counts over the disc around the probed point (#286)
+function discCompositionCounts(d) {
   const SC = COMPOSITION_SC;
   const ci0 = Math.floor((d.x - d.radius) / SC);
   const cj0 = Math.floor((d.z - d.radius) / SC);
   const cols = Math.floor((d.x + d.radius) / SC) - ci0 + 1;
   const rows = Math.floor((d.z + d.radius) / SC) - cj0 + 1;
-  ensureArea(cols * rows);
-  if (!M._genBiomeArea(areaPtr, ci0, cj0, cols, rows, SC, scaledY(d.y))) {
+  const grid = compositionGrid(ci0, cj0, cols, rows, SC, d.y);
+  return grid && discCounts(grid, cols, rows,
+    Math.floor(d.x / SC) - ci0, Math.floor(d.z / SC) - cj0, SC, d.radius);
+}
+function handleCompositionMsg(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const counts = d.rect ? rectCompositionCounts(d.rect, d.y) : discCompositionCounts(d);
+  if (!counts) {
     postMessage({ type: 'composition', reqId: d.reqId, error: 'area-too-large', list: [] });
     return;
   }
-  const grid = M.HEAP32.subarray(areaPtr >> 2, (areaPtr >> 2) + cols * rows);
-  const counts = discCounts(grid, cols, rows,
-    Math.floor(d.x / SC) - ci0, Math.floor(d.z / SC) - cj0, SC, d.radius);
   postMessage({ type: 'composition', reqId: d.reqId, list: compositionShares(counts) });
 }
 
