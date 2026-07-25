@@ -52,6 +52,10 @@ import { formatVitalsEvent, inpEstimate, clsTotal } from './vitals.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
 import { rectSurface } from './composition.js';
+import {
+  view3dGrid, rotatedSize, rotatedIndex, isoProject, view3dLayout,
+  faceShades, cssRgb, heightSpan, heightNorm
+} from './view3d.js';
 import { keyAction } from './keys.js';
 import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
 import { detectFormat, parseLevelData, matchVersion } from './levelload.js';
@@ -349,6 +353,7 @@ worker.onmessage = (e) => {
     return;
   }
   if (d.type === 'composition') { onComposition(d); return; }
+  if (d.type === 'terrain3d') { onTerrain3d(d); return; }
   if (d.type === 'pathAlerts') { onPathAlerts(d); return; }
   if (d.type === 'biome' && d.reqId === biomeProbeReq) {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
@@ -1263,6 +1268,118 @@ function onComposition(d) {
   const list = $('#compList');
   if (!list) return;                 // the popup was replaced meanwhile
   fillCompList(list, d);
+}
+
+// ---------- isometric 3D terrain view (#325) ----------
+// On-demand only: nothing is computed until the panel opens. The worker
+// samples a bounded grid of columns (biome color + surface height) over the
+// visible map area (view3d.js geometry); re-opening bumps the request token
+// so the previous in-flight reply is dropped as stale. Rotation and height
+// scale re-render locally from the cached columns.
+const VIEW3D_DRAW_WIDTH = 640;
+let view3dReq = -1;           // cancellation token: stale replies are ignored
+let view3dRot = 0;            // rotation in quarter turns (0..3)
+let view3dData = null;        // {cols, rows, rgb, heights} of the last reply
+function view3dHScale() {
+  return Number.parseFloat($('#view3dScale').value) || 1;
+}
+function requestView3d() {
+  view3dReq = reqSeq++;
+  view3dData = null;
+  $('#view3dStatus').textContent = '…';
+  drawView3d();
+  const wb = canvas.width / dpr * view.bpp, hb = canvas.height / dpr * view.bpp;
+  const g = view3dGrid(view.cx - wb / 2, view.cz - hb / 2, view.cx + wb / 2, view.cz + hb / 2);
+  send({
+    type: 'terrain3d', reqId: view3dReq, seed: world.seed, mc: world.mc,
+    large: world.large, dim: world.dim, y: yLayer, ...g
+  });
+}
+function openView3d() {
+  setMoreMenu(false);
+  const dlg = $('#view3dDlg');
+  if (!dlg.open) dlg.showModal();
+  requestView3d();
+}
+function onTerrain3d(d) {
+  if (d.reqId !== view3dReq || !$('#view3dDlg').open) return;   // stale or closed
+  if (!d.ok) {
+    $('#view3dStatus').textContent = t('tileFailed');
+    return;
+  }
+  $('#view3dStatus').textContent = '';
+  view3dData = {
+    cols: d.cols, rows: d.rows,
+    rgb: new Uint8ClampedArray(d.rgb), heights: new Float32Array(d.heights)
+  };
+  drawView3d();
+}
+// one terrain column: two darkened side faces then the biome-colored top
+// diamond, lightened with altitude (view3d.js tints)
+function drawView3dColumn(g, u, v, lay, range) {
+  const { cols, rows, rgb, heights } = view3dData;
+  const n = rotatedIndex(u, v, cols, rows, view3dRot);
+  const lift = (heights[n] - range.min) * lay.hUnit;
+  const p = isoProject(u, v, lift, lay);
+  const sh = faceShades([rgb[n * 3], rgb[n * 3 + 1], rgb[n * 3 + 2]], heightNorm(heights[n], range));
+  const h2 = lay.tile / 2, h4 = lay.tile / 4;
+  const depth = lift + h4;                    // side faces reach the ground plane + plinth
+  g.fillStyle = cssRgb(sh.left);
+  g.beginPath();
+  g.moveTo(p.x - h2, p.y); g.lineTo(p.x, p.y + h4);
+  g.lineTo(p.x, p.y + h4 + depth); g.lineTo(p.x - h2, p.y + depth);
+  g.closePath(); g.fill();
+  g.fillStyle = cssRgb(sh.right);
+  g.beginPath();
+  g.moveTo(p.x + h2, p.y); g.lineTo(p.x, p.y + h4);
+  g.lineTo(p.x, p.y + h4 + depth); g.lineTo(p.x + h2, p.y + depth);
+  g.closePath(); g.fill();
+  g.fillStyle = cssRgb(sh.top);
+  g.beginPath();
+  g.moveTo(p.x, p.y - h4); g.lineTo(p.x + h2, p.y);
+  g.lineTo(p.x, p.y + h4); g.lineTo(p.x - h2, p.y);
+  g.closePath(); g.fill();
+}
+// painter's algorithm: rows back to front in rotated space (view3d.js maps
+// the rotated traversal onto the original grid for every quarter turn)
+function drawView3d() {
+  const cv = $('#view3dCanvas'), g = cv.getContext('2d');
+  if (!view3dData) {
+    g.clearRect(0, 0, cv.width, cv.height);
+    return;
+  }
+  const range = heightSpan(view3dData.heights);
+  const r = rotatedSize(view3dData.cols, view3dData.rows, view3dRot);
+  const lay = view3dLayout(r.cols, r.rows, VIEW3D_DRAW_WIDTH, range.span, view3dHScale());
+  cv.width = lay.width; cv.height = lay.height;
+  g.fillStyle = mapBg;
+  g.fillRect(0, 0, cv.width, cv.height);
+  for (let v = 0; v < r.rows; v++) {
+    for (let u = 0; u < r.cols; u++) drawView3dColumn(g, u, v, lay, range);
+  }
+}
+function rotateView3d(turns) {
+  view3dRot = (view3dRot + turns + 4) % 4;
+  drawView3d();
+}
+function exportView3dPNG() {
+  if (!view3dData) return;
+  $('#view3dCanvas').toBlob((blob) => {
+    if (blob) downloadBlob(exportFileName(world.seed, 'view3d', 'png'), blob);
+  }, 'image/png');
+}
+function initView3d() {
+  $('#view3dBtn').onclick = openView3d;
+  $('#view3dClose').onclick = () => $('#view3dDlg').close();
+  $('#view3dRotL').onclick = () => rotateView3d(-1);
+  $('#view3dRotR').onclick = () => rotateView3d(1);
+  $('#view3dScale').onchange = () => drawView3d();
+  $('#view3dPng').onclick = exportView3dPNG;
+  // closing drops the cached columns; the next opening re-requests them
+  $('#view3dDlg').addEventListener('close', () => {
+    view3dReq = -1;
+    view3dData = null;
+  });
 }
 
 function setRulerOn(on) {
@@ -3968,6 +4085,7 @@ async function init() {
   $('#galleryBtn').onclick = openGallery;
   $('#galleryClose').onclick = () => $('#galleryDlg').close();
   initMoreMenu();
+  initView3d();
   buildDimSelect();
   buildFavList();
   initTheme();

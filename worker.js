@@ -12,6 +12,7 @@ import { reliefSampleStep, hillshade, upsampleShade } from './relief.js';
 import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_RING_BLOCKS } from './rarebiomes.js';
 import { hdCellSpan, hdCellIndex } from './export.js';
 import { discCounts, rectCounts, rectSampleStep, compositionShares } from './composition.js';
+import { VIEW3D_MAX_CELLS } from './view3d.js';
 import { diffGrids } from './compare.js';
 import { pathBoundingBox, pathStructureAlerts } from './userpaths.js';
 
@@ -707,6 +708,47 @@ function handleCompositionMsg(d) {
   postMessage({ type: 'composition', reqId: d.reqId, list: compositionShares(counts) });
 }
 
+// isometric 3D terrain view (#325): one bounded grid of columns over the
+// visible map area — biome color from the active palette + approximate
+// surface height (Overworld; other dimensions are rendered flat). The app
+// drops stale replies by reqId, so re-opening the panel simply outraces
+// the previous request.
+function fillTerrain3dColumns(d, rgb, heights) {
+  const base = areaPtr >> 2;
+  const flat = (d.dim || 0) !== 0;
+  for (let j = 0; j < d.rows; j++) {
+    for (let i = 0; i < d.cols; i++) {
+      const n = j * d.cols + i;
+      let id = M.HEAP32[base + n];
+      if (id < 0 || id > 255) id = 0;
+      const c = id * 3;
+      rgb[n * 3] = colors[c]; rgb[n * 3 + 1] = colors[c + 1]; rgb[n * 3 + 2] = colors[c + 2];
+      heights[n] = flat ? 0 : M._approxSurfaceY((d.ci0 + i) * d.sc + d.sc / 2, (d.cj0 + j) * d.sc + d.sc / 2);
+    }
+  }
+}
+function handleTerrain3dMsg(d) {
+  const cells = d.cols * d.rows;
+  if (cells <= 0 || cells > VIEW3D_MAX_CELLS) {
+    postMessage({ type: 'terrain3d', reqId: d.reqId, ok: false });
+    return;
+  }
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  ensureArea(cells);
+  const ok = M._genBiomeArea(areaPtr, d.ci0, d.cj0, d.cols, d.rows, d.sc, scaledY(d.y));
+  if (!ok) {
+    postMessage({ type: 'terrain3d', reqId: d.reqId, ok: false });
+    return;
+  }
+  const rgb = new Uint8ClampedArray(cells * 3);
+  const heights = new Float32Array(cells);
+  fillTerrain3dColumns(d, rgb, heights);
+  postMessage({
+    type: 'terrain3d', reqId: d.reqId, ok: true, cols: d.cols, rows: d.rows,
+    rgb: rgb.buffer, heights: heights.buffer
+  }, [rgb.buffer, heights.buffer]);
+}
+
 // biome differences of two seeds over the viewport (#288): generate the
 // grid of each seed at the render scale on the same area and list the
 // differing cells (compare.js). The app drops stale replies by reqId, so
@@ -769,6 +811,7 @@ const HANDLERS = {
   composition: handleCompositionMsg,
   pathAlerts: handlePathAlertsMsg,
   biomeDiff: handleDiffMsg,
+  terrain3d: handleTerrain3dMsg,
   cancelSearch: (d) => { searchCancelId = d.reqId; },
   rareBiome: handleRareMsg,
   cancelRare: (d) => { rareCancelId = d.reqId; },

@@ -35,6 +35,7 @@ const ASSETS = [
   './compare.js',
   './composition.js',
   './relief.js',
+  './view3d.js',
   './gallery.js',
   './errorreport.js',
   './vitals.js',
