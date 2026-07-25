@@ -29,6 +29,7 @@ const ASSETS = [
   './usermarkers.js',
   './userzones.js',
   './userpaths.js',
+  './userannotations.js',
   './palette.js',
   './tilegrid.js',
   './compare.js',

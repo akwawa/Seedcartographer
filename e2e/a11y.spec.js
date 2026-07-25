@@ -97,6 +97,17 @@ test('search results with the result popup open are violation-free', async ({ pa
   await auditA11y(page, 'search results + popup');
 });
 
+// annotation editor popup (#323): input with its aria-label + delete button
+test('annotation editor popup is violation-free', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#annotBtn');
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator('#popup .annot-text')).toBeVisible();
+  await auditA11y(page, 'annotation editor popup');
+});
+
 test('compare mode is violation-free', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

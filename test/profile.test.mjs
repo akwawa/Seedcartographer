@@ -8,7 +8,8 @@ const HIST = { seed: '141', mc: 22, large: false, dim: 0, cx: 0, cz: 0, crit: { 
 const MARKER = { id: 1, seed: '141', mc: 22, large: false, dim: 0, x: 7, z: 8, name: 'portail' };
 const ZONE = { id: 1, seed: '141', mc: 22, large: false, dim: 0, x0: 0, z0: 0, x1: 100, z1: 80, name: 'base', color: '#e07a7a' };
 const PATH = { id: 1, seed: '141', mc: 22, large: false, dim: 0, pts: [{ x: 0, z: 0 }, { x: 300, z: 400 }], name: 'route' };
-const STATE = { favorites: [FAV], userPresets: [PRESET], history: [HIST], markers: [MARKER], zones: [ZONE], paths: [PATH] };
+const ANNOT = { id: 1, seed: '141', mc: 22, large: false, dim: 0, x: 12, z: 34, text: 'mine' };
+const STATE = { favorites: [FAV], userPresets: [PRESET], history: [HIST], markers: [MARKER], zones: [ZONE], paths: [PATH], annotations: [ANNOT] };
 
 test('exportProfile -> parseProfile round-trips every store', () => {
   const back = parseProfile(exportProfile(STATE));
@@ -31,7 +32,8 @@ test('parseProfile drops malformed entries and tolerates missing lists', () => {
     userPresets: 'nope',
     markers: [{ ...MARKER, dim: 9 }],
     zones: [{ ...ZONE, x1: 0, z1: 0 }],
-    paths: [{ ...PATH, pts: [{ x: 1, z: 1 }] }]
+    paths: [{ ...PATH, pts: [{ x: 1, z: 1 }] }],
+    annotations: [{ ...ANNOT, text: '' }]
   }));
   assert.deepStrictEqual(p.favorites, [FAV]);
   assert.deepStrictEqual(p.userPresets, []);
@@ -39,6 +41,7 @@ test('parseProfile drops malformed entries and tolerates missing lists', () => {
   assert.deepStrictEqual(p.markers, []);
   assert.deepStrictEqual(p.zones, []);
   assert.deepStrictEqual(p.paths, []);
+  assert.deepStrictEqual(p.annotations, []);
 });
 
 test('mergeProfile skips duplicates and reassigns ids', () => {
@@ -48,7 +51,8 @@ test('mergeProfile skips duplicates and reassigns ids', () => {
     history: [HIST, { ...HIST, cx: 5, at: 2000 }],
     markers: [MARKER, { ...MARKER, id: 4, x: 100 }],
     zones: [ZONE, { ...ZONE, id: 5, x1: 500 }],
-    paths: [PATH, { ...PATH, id: 6, pts: [{ x: 9, z: 9 }, { x: 20, z: 20 }] }]
+    paths: [PATH, { ...PATH, id: 6, pts: [{ x: 9, z: 9 }, { x: 20, z: 20 }] }],
+    annotations: [ANNOT, { ...ANNOT, id: 7, x: 555 }]
   }));
   const merged = mergeProfile(STATE, incoming);
   // same-spot favorite skipped, new spot appended with a fresh id
@@ -72,6 +76,10 @@ test('mergeProfile skips duplicates and reassigns ids', () => {
   assert.strictEqual(merged.paths.length, 2);
   assert.deepStrictEqual(merged.paths[1].pts, [{ x: 9, z: 9 }, { x: 20, z: 20 }]);
   assert.strictEqual(merged.paths[1].id, 2);
+  // same-spot annotation skipped, new spot appended with a fresh id
+  assert.strictEqual(merged.annotations.length, 2);
+  assert.strictEqual(merged.annotations[1].x, 555);
+  assert.strictEqual(merged.annotations[1].id, 2);
 });
 
 test('mergeProfile leaves its inputs untouched', () => {

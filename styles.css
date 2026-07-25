@@ -279,11 +279,16 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .pathbtn.on{border-color:#7ee0c0;color:#7ee0c0;background:var(--raise)}
 .compbtn{position:absolute;left:266px;top:128px}
 .compbtn.on{border-color:#f2a73b;color:#f2a73b;background:var(--raise)}
-.popup .zone-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
+.notebtn{position:absolute;left:308px;top:128px}
+.notebtn.on{border-color:#ffd24a;color:#ffd24a;background:var(--raise)}
+.popup .zone-name,.popup .annot-text{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
+/* the editor opens on the input alone: keep it clear of the × close button
+   (WCAG 2.5.8 target spacing, enforced by the strict axe audit) */
+.popup .annot-text{margin-top:16px}
 .popup .zone-colors{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
 .popup .zone-color{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .popup .zone-color[aria-pressed="true"]{border-color:var(--text)}
-.popup .zone-del{display:block;margin:0 auto}
+.popup .zone-del,.popup .annot-del{display:block;margin:0 auto}
 .popup .path-name{display:block;width:180px;margin:0 auto 8px;font-size:13px;padding:4px 7px}
 .popup .path-dist{margin:0 0 8px;text-align:center}
 .popup .path-del{display:block;margin:0 auto}
