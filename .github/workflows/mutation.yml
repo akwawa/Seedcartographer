@@ -31,7 +31,7 @@ jobs:
       matrix:
         include:
           - shard: core
-            mutate: search.js,userzones.js,shapes.js,tour.js,tilegrid.js,coords.js,seed.js
+            mutate: search.js,userzones.js,shapes.js,tour.js,tilegrid.js,coords.js,seed.js,vitals.js
           - shard: world
             mutate: sharestate.js,userpaths.js,rarebiomes.js,tilecache.js,searchhistory.js,slime.js,keys.js,compare.js,levelload.js
           - shard: user
