@@ -6,7 +6,7 @@
     "coords.js", "export.js", "favorites.js", "gallery.js", "errorreport.js", "vitals.js", "legend.js", "maptools.js",
     "markers.js", "palette.js", "presets.js", "profile.js", "relief.js", "rarebiomes.js", "search.js", "searchhistory.js",
     "keys.js", "levelload.js", "portals.js", "seed.js", "seedsearch.js", "searchqueue.js", "shapes.js", "sharestate.js", "slime.js", "theme.js", "tour.js",
-    "tilecache.js", "tilegrid.js", "compare.js", "composition.js", "usermarkers.js", "userpresets.js", "userzones.js", "userpaths.js", "userannotations.js"
+    "tilecache.js", "tilegrid.js", "compare.js", "composition.js", "view3d.js", "usermarkers.js", "userpresets.js", "userzones.js", "userpaths.js", "userannotations.js"
   ],
   "ignoreStatic": true,
   "tsconfigFile": "tsconfig.stryker-skip.json",

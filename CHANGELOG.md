@@ -19,6 +19,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Vue 3D légère du terrain : un bouton du menu « ⋯ » ouvre un panneau qui
+  rend la zone visible de la carte en isométrique (canvas 2D pur, sans
+  WebGL) — colonnes échantillonnées dans le worker (hauteurs du relief +
+  couleurs de biomes de la palette courante, budget borné à 128×128
+  colonnes), sommets éclaircis selon l'altitude et faces latérales
+  assombries. Rotation par pas de 90°, échelle de hauteur réglable
+  (×0,5/×1/×2), export PNG de la vue et calcul uniquement à l'ouverture du
+  panneau (aucun impact sur le premier rendu). (#325)
 - File d'attente de recherches multi-seeds avec tableau comparatif : un
   bouton « Ajouter à la file » capture le jeu de critères courant (avec un
   libellé résumé), la file affiche l'état de chaque entrée (en attente, en
