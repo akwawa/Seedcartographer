@@ -13,6 +13,7 @@ import { rareRingCount, ringRects, nearestMatch, rareSearchDone, rareHit, RARE_R
 import { hdCellSpan, hdCellIndex } from './export.js';
 import { discCounts, rectCounts, rectSampleStep, compositionShares } from './composition.js';
 import { diffGrids } from './compare.js';
+import { pathBoundingBox, pathStructureAlerts } from './userpaths.js';
 
 let M = null;            // the WASM module
 let colors = null;       // Uint8Array[256*3] biome colors (active table)
@@ -646,6 +647,24 @@ function handleStructures(d) {
   postMessage({ type: 'structures', reqId: d.reqId, groups: out });
 }
 
+// proximity alerts along a traced path (#321): enumerate the requested
+// structure types inside the path's grown bounding box, then keep the ones
+// within the alert radius of the polyline, sorted by increasing distance
+// (userpaths.js). The app drops stale replies by reqId, so editing the
+// radius or re-opening the editor simply outraces the previous request.
+const PATH_ALERT_TYPE_CAP = 2000;
+function handlePathAlertsMsg(d) {
+  applyWorld(d.seed, d.mc, d.large, d.dim);
+  const box = pathBoundingBox(d.pts, d.radius);
+  const structures = [];
+  for (const st of d.types) {
+    for (const [x, z] of pointsOfType(st, d.dim, box.x0, box.z0, box.x1, box.z1, PATH_ALERT_TYPE_CAP)) {
+      structures.push({ type: st, x, z });
+    }
+  }
+  postMessage({ type: 'pathAlerts', reqId: d.reqId, alerts: pathStructureAlerts(d.pts, d.radius, structures) });
+}
+
 // biome composition around a point (#286): sample a 1:16 grid over the
 // requested disc and aggregate the shares (composition.js). The app drops
 // stale replies by reqId, so a re-click or radius change simply outraces
@@ -748,6 +767,7 @@ const HANDLERS = {
   structures: handleStructures,
   biome: handleBiomeMsg,
   composition: handleCompositionMsg,
+  pathAlerts: handlePathAlertsMsg,
   biomeDiff: handleDiffMsg,
   cancelSearch: (d) => { searchCancelId = d.reqId; },
   rareBiome: handleRareMsg,

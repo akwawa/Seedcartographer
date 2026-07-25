@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import {
-  PATH_MAX, PATH_NAME_MAX, PATH_COORD_LIMIT, PATH_POINT_MAX,
+  PATH_MAX, PATH_NAME_MAX, PATH_COORD_LIMIT, PATH_POINT_MAX, PATH_ALERT_RADII,
   appendPathPoint, removeLastPathPoint, pathDistance, linkedDistance,
-  pointSegmentDist, addPath, removePath, renamePath, pathsFor, parsePaths, mergePaths
+  pointSegmentDist, pathBoundingBox, pathPointDist, pathStructureAlerts,
+  addPath, removePath, renamePath, pathsFor, parsePaths, mergePaths
 } from '../userpaths.js';
 
 const WORLD = { seed: '141', mc: 22, large: false, dim: 0 };
@@ -219,4 +220,48 @@ test('mergePaths appends with fresh ids and skips exact duplicates', () => {
   assert.deepStrictEqual(merged[0], mine[0]);       // input untouched
   assert.strictEqual(merged[1].id, 2);              // fresh id, not 8
   assert.strictEqual(merged[1].name, 'new');
+});
+
+// ---- proximity alerts along a path (#321) ----
+
+test('PATH_ALERT_RADII offers the three documented radii', () => {
+  assert.deepStrictEqual(PATH_ALERT_RADII, [128, 256, 512]);
+});
+
+test('pathBoundingBox grows the waypoint box by the radius on every side', () => {
+  assert.deepStrictEqual(pathBoundingBox(PTS, 128),
+    { x0: -128, z0: -128, x1: 428, z1: 528 });
+  // single waypoint and negative coordinates
+  assert.deepStrictEqual(pathBoundingBox([{ x: -10, z: 7 }], 5),
+    { x0: -15, z0: 2, x1: -5, z1: 12 });
+});
+
+test('pathPointDist is the distance to the nearest segment of the polyline', () => {
+  // (300,0)-(300,400) is the nearest segment of PTS from (350,200)
+  assert.strictEqual(pathPointDist(PTS, 350, 200), 50);
+  // beyond the last waypoint: distance to the endpoint
+  assert.strictEqual(pathPointDist(PTS, 300, 430), 30);
+  // a single point has no segment: Infinity
+  assert.strictEqual(pathPointDist([{ x: 0, z: 0 }], 1, 1), Infinity);
+});
+
+test('pathStructureAlerts keeps structures within the radius, rounded and sorted', () => {
+  const structures = [
+    { type: 7, x: 350, z: 200 },     // 50 blocks from PTS
+    { type: 8, x: 0, z: 129 },       // 129: just outside radius 128
+    { type: 9, x: 100, z: -128 },    // 128: exactly on the boundary
+    { type: 10, x: 10, z: 10.4 }     // ~10.4 -> rounds to 10
+  ];
+  assert.deepStrictEqual(pathStructureAlerts(PTS, 128, structures), [
+    { type: 10, x: 10, z: 10.4, dist: 10 },
+    { type: 7, x: 350, z: 200, dist: 50 },
+    { type: 9, x: 100, z: -128, dist: 128 }
+  ]);
+  // input untouched, ties keep the input order (stable sort)
+  assert.strictEqual('dist' in structures[0], false);
+  const tied = pathStructureAlerts(PTS, 200, [
+    { type: 1, x: 350, z: 100 }, { type: 2, x: 350, z: 200 }
+  ]);
+  assert.deepStrictEqual(tied.map((a) => a.type), [1, 2]);
+  assert.deepStrictEqual(pathStructureAlerts(PTS, 512, []), []);
 });

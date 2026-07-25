@@ -85,6 +85,59 @@ export function pointSegmentDist(px, pz, ax, az, bx, bz) {
   return Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
 }
 
+// ---- proximity alerts along a path (#321) ----
+// selectable alert radii offered by the path editor, in blocks
+export const PATH_ALERT_RADII = [128, 256, 512];
+
+// bounding box of the waypoints grown by `radius` on every side: the worker
+// enumerates candidate structures inside it before the exact distance filter
+/**
+ * @param {PathPoint[]} pts waypoints (at least one)
+ * @param {number} radius growth in blocks
+ * @returns {{x0: number, z0: number, x1: number, z1: number}} grown box
+ */
+export function pathBoundingBox(pts, radius) {
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (const p of pts) {
+    x0 = Math.min(x0, p.x); z0 = Math.min(z0, p.z);
+    x1 = Math.max(x1, p.x); z1 = Math.max(z1, p.z);
+  }
+  return { x0: x0 - radius, z0: z0 - radius, x1: x1 + radius, z1: z1 + radius };
+}
+
+// shortest distance from a point to the whole polyline, in blocks
+/**
+ * @param {PathPoint[]} pts waypoints
+ * @param {number} x @param {number} z
+ * @returns {number} distance to the nearest segment
+ */
+export function pathPointDist(pts, x, z) {
+  let best = Infinity;
+  for (let i = 1; i < pts.length; i++) {
+    best = Math.min(best, pointSegmentDist(x, z, pts[i - 1].x, pts[i - 1].z, pts[i].x, pts[i].z));
+  }
+  return best;
+}
+
+// proximity alerts: the structures whose distance to the polyline is at most
+// `radius`, sorted by increasing distance (stable: input order breaks ties)
+/**
+ * @template {{x: number, z: number}} S
+ * @param {PathPoint[]} pts waypoints
+ * @param {number} radius alert radius in blocks
+ * @param {S[]} structures candidate structure positions
+ * @returns {Array<S & {dist: number}>} alerts sorted by distance
+ */
+export function pathStructureAlerts(pts, radius, structures) {
+  /** @type {Array<S & {dist: number}>} */
+  const out = [];
+  for (const s of structures) {
+    const dist = Math.round(pathPointDist(pts, s.x, s.z));
+    if (dist <= radius) out.push({ ...s, dist });
+  }
+  return out.sort((a, b) => a.dist - b.dist);
+}
+
 /**
  * @param {{seed: string|number, mc: number, large: boolean, dim: number}} a
  * @param {{seed: string|number, mc: number, large: boolean, dim: number}} b

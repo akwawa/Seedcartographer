@@ -34,6 +34,13 @@ et la release GitHub.
   composition de biomes (pastilles de couleur, pourcentages à une décimale
   sommant à 100), calculée dans le worker avec annulation par jeton comme le
   panneau de composition (#319)
+- Alertes de proximité le long d'un chemin tracé : le popup d'édition d'un
+  chemin (outil 〰, #285) liste les structures notables situées à moins de
+  128/256/512 blocs du trajet (rayon sélectionnable), triées par distance
+  croissante au segment le plus proche, avec type, coordonnées et distance en
+  blocs ; le calcul se fait dans le worker avec annulation par jeton et un
+  clic sur une alerte centre la carte sur la structure avec une épingle
+  temporaire (#321)
 
 ### Modifié
 - CI mutation : le run Stryker est partitionné en trois shards équilibrés par

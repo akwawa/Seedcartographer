@@ -29,7 +29,7 @@ import { USER_PRESET_NAME_MAX, addUserPreset, removeUserPreset, parseUserPresets
 import { addMarker, removeMarker, renameMarker, markersFor, parseMarkers, mergeMarkers } from './usermarkers.js';
 import { ZONE_COLORS, ZONE_NAME_MAX, addZone, removeZone, renameZone, recolorZone, zonesFor, parseZones } from './userzones.js';
 import {
-  PATH_NAME_MAX, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
+  PATH_NAME_MAX, PATH_ALERT_RADII, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
   addPath, removePath, renamePath, pathsFor, parsePaths
 } from './userpaths.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
@@ -92,6 +92,8 @@ const zoneTool = { on: false, a: null, b: null };
 // path tool (#285): waypoints clicked so far, plus the live point under the
 // pointer; double-click or Escape turns them into a named persisted path
 const pathTool = { on: false, pts: [], hover: null };
+let pathAlertReq = -1;        // path-alert token (#321); stale replies drop
+let pathAlertRadius = PATH_ALERT_RADII[0];   // sticky across editor openings
 const PATH_COLOR = '#7ee0c0';
 // portal calculator (#284): the placed portal {dim,x,z}; survives dimension
 // switches so the linked pin shows up in the other dimension
@@ -293,6 +295,7 @@ worker.onmessage = (e) => {
     return;
   }
   if (d.type === 'composition') { onComposition(d); return; }
+  if (d.type === 'pathAlerts') { onPathAlerts(d); return; }
   if (d.type === 'biome' && d.reqId === biomeProbeReq) {
     hud.querySelector('.biome').textContent = d.name ? biomeLabel(d.name) : '—';
     markLegend(d.id);
@@ -828,12 +831,100 @@ function pathAt(mx, my) {
   }
   return null;
 }
+// ---- proximity alerts along the path (#321) ----
+// structure types worth alerting on in the path's dimension: every real
+// structure plus spawn/strongholds — slime chunks and quad-hut AFK spots
+// are derived overlays, not structures
+function pathAlertTypes(dim) {
+  return structToggles
+    .filter((tg) => (tg.dim || 0) === dim && !tg.slime && tg.type !== QUADHUT_STRUCT_TYPE)
+    .map((tg) => tg.type);
+}
+// computed in the worker with token cancellation, like the composition panel:
+// changing the radius or re-opening the editor makes older replies stale
+function requestPathAlerts(p) {
+  pathAlertReq = reqSeq++;
+  const list = $('#pathAlertList');
+  if (list) list.textContent = '…';
+  send({
+    type: 'pathAlerts', reqId: pathAlertReq, seed: p.seed, mc: p.mc,
+    large: p.large, dim: p.dim, pts: p.pts, radius: pathAlertRadius,
+    types: pathAlertTypes(p.dim)
+  });
+}
+// clicking an alert centers the map on the structure, with the temporary
+// pin that lives with the popup (like the rare-biome hit)
+function goToPathAlert(a) {
+  view.cx = a.x; view.cz = a.z;
+  if (view.bpp > 4) view.bpp = 3;
+  rarePin = { x: a.x, z: a.z };
+  draw(); requestRender(0); syncHash();
+}
+// one "● type  x, z · d blocks" line of the alert list; the whole row is a
+// button that centers the map on the structure
+function pathAlertRow(a) {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'comp-row path-alert';
+  const tg = structToggles.find((s) => s.type === a.type);
+  const dot = document.createElement('span');
+  dot.className = 'comp-dot';
+  dot.style.background = tg?.color || '#888';
+  const name = document.createElement('span');
+  name.className = 'comp-name';
+  name.textContent = tg ? t(tg.labelKey) : String(a.type);
+  const info = document.createElement('span');
+  info.className = 'comp-pct';
+  info.textContent = `${a.x}, ${a.z} · ${a.dist} ${t('blocks')}`;
+  row.append(dot, name, info);
+  row.onclick = () => goToPathAlert(a);
+  return row;
+}
+function onPathAlerts(d) {
+  if (d.reqId !== pathAlertReq) return;   // stale: a newer request won
+  const list = $('#pathAlertList');
+  if (!list) return;                      // the popup was replaced meanwhile
+  list.textContent = '';
+  if (!d.alerts.length) { list.textContent = t('pathAlertsNone'); return; }
+  for (const a of d.alerts) list.appendChild(pathAlertRow(a));
+}
+function pathAlertRadiusSelect(p) {
+  const sel = document.createElement('select');
+  sel.id = 'pathAlertRadius';
+  for (const r of PATH_ALERT_RADII) {
+    const o = document.createElement('option');
+    o.value = String(r); o.textContent = String(r);
+    sel.appendChild(o);
+  }
+  sel.value = String(pathAlertRadius);
+  sel.onchange = () => { pathAlertRadius = +sel.value; requestPathAlerts(p); };
+  return sel;
+}
+// the alert block of the path editor: title, labelled radius select, list
+function pathAlertSection(p) {
+  const wrap = document.createElement('div');
+  wrap.className = 'path-alerts';
+  const title = document.createElement('div');
+  title.className = 'small';
+  title.textContent = t('pathAlertsTitle');
+  const lbl = document.createElement('label');
+  lbl.className = 'comp-radius';
+  const txt = document.createElement('span');
+  txt.textContent = t('pathAlertRadius');
+  lbl.append(txt, pathAlertRadiusSelect(p));
+  const list = document.createElement('div');
+  list.className = 'comp-list'; list.id = 'pathAlertList'; list.textContent = '…';
+  wrap.append(title, lbl, list);
+  return wrap;
+}
 // small editor in the map popup: rename, read the cumulative distance and
 // its linked-dimension equivalent (÷8 / ×8), delete — like the zone editor
 function showPathEditor(p) {
   const pop = $('#popup');
   pop.textContent = '';
-  pop.classList.remove('comp');
+  // the alert list can be tall: center the editor on the map, like the
+  // composition popup, so it never overflows the viewport
+  pop.classList.add('comp');
   pop.setAttribute('aria-label', p.name);
   const close = document.createElement('button');
   close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
@@ -854,8 +945,9 @@ function showPathEditor(p) {
   const del = document.createElement('button');
   del.className = 'btn tiny path-del'; del.textContent = t('pathDelete');
   del.onclick = () => { setUserPaths(removePath(userPaths, p.id)); hidePopup(); };
-  pop.append(close, name, dist, del);
+  pop.append(close, name, dist, pathAlertSection(p), del);
   if (!pop.open) pop.show();
+  requestPathAlerts(p);
 }
 // ---------- portal calculator (#284) ----------
 // source pin in its own dimension; ideal linked destination pin plus the
