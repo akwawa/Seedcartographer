@@ -19,6 +19,16 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Ouverture d'une sauvegarde Minecraft Java : le menu « ⋯ » propose de charger
+  le `level.dat` d'une sauvegarde (NBT gzippé lu entièrement en local, jamais
+  envoyé) pour en extraire la seed (`WorldGenSettings.seed`, repli
+  `RandomSeed` pour les mondes legacy), la version (`Version.Name` mappée sur
+  la version de génération supportée la plus proche ; si elle est inconnue, la
+  seed et le spawn sont chargés quand même avec la version courante et un
+  avertissement) et le point de spawn (`SpawnX`/`SpawnZ`), avec carte centrée
+  sur le spawn et épingle temporaire ; les fichiers non compressés sont
+  acceptés, les sauvegardes Bedrock et les fichiers invalides affichent un
+  message dédié (#320)
 - Statistiques de la sélection rectangulaire : la barre de sélection affiche
   la surface exacte de la zone (en blocs et en chunks intersectés) et sa
   composition de biomes (pastilles de couleur, pourcentages à une décimale

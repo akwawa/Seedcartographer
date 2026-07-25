@@ -46,6 +46,9 @@
           <option value="4096">4096 px</option>
         </select>
       </div>
+      <button id="openSaveBtn" class="btn" data-i18n="openSave" title="Load the level.dat of a Minecraft Java save — read locally, never uploaded" data-i18n-title="openSaveTitle">Open a save</button>
+      <label for="levelDatFile" hidden data-i18n="openSave">Open a save</label>
+      <input id="levelDatFile" type="file" accept=".dat" title="Open a save" data-i18n-title="openSave" hidden>
       <button id="pngBtn" class="btn" data-i18n="exportPng">Export PNG</button>
       <progress id="pngProgress" class="progress pngprogress" max="100" value="0" data-i18n-aria="exporting" aria-label="Exporting…" hidden></progress>
       <button id="shareBtn" class="btn" data-i18n="shareLink">Share link</button>
