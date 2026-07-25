@@ -18,6 +18,13 @@ et la release GitHub.
 
 ## [Non publié]
 
+### Ajouté
+- Statistiques de la sélection rectangulaire : la barre de sélection affiche
+  la surface exacte de la zone (en blocs et en chunks intersectés) et sa
+  composition de biomes (pastilles de couleur, pourcentages à une décimale
+  sommant à 100), calculée dans le worker avec annulation par jeton comme le
+  panneau de composition (#319)
+
 ### Modifié
 - CI mutation : le run Stryker est partitionné en trois shards équilibrés par
   coût (matrix `core` / `world` / `user`, `npx stryker run --mutate <liste>`)
