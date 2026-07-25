@@ -16,7 +16,7 @@ function swAssets() {
   return [...m[1].matchAll(/'\.\/([^']+)'/g)].map(([, p]) => p).filter((p) => p !== '');
 }
 
-for (const [name, file] of [['Pages workflow', '.github/workflows/pages.yml'], ['Dockerfile', 'Dockerfile']]) {
+for (const [name, file] of [['Pages stage script', 'scripts/stage-site.js'], ['Dockerfile', 'Dockerfile']]) {
   test(`the ${name} ships every asset precached by sw.js`, () => {
     const text = read(file);
     for (const asset of swAssets()) {

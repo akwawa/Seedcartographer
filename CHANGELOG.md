@@ -99,6 +99,13 @@ et la release GitHub.
   les shards couvrent exactement le périmètre `mutate` de
   `stryker.config.json` (#318).
 
+### Corrigé
+- Pages : le déploiement déclenché sur `dev` échouait dès qu'un jalon
+  ajoutait un fichier absent de `main` (#336) — la mise en scène des
+  fichiers vit désormais dans `scripts/stage-site.js`, exécuté depuis
+  chaque checkout (chaque branche stage sa propre liste), avec un repli
+  transitoire tolérant jusqu'à la prochaine release.
+
 ## [0.13.4](https://github.com/akwawa/Seedcartographer/compare/v0.13.3...v0.13.4) (2026-07-24)
 
 
