@@ -1109,6 +1109,43 @@ test('zone annotations: drag to draw, rename, persist across reload, delete', as
   expect(await page.evaluate(() => window.zonesOnMap().length)).toBe(0);
 });
 
+test('text annotations: click to write, edit, persist across reload, delete (#323)', async ({ page }) => {
+  await page.goto('/');
+  await waitForApp(page);
+  await page.click('#annotBtn');
+  await expect(page.locator('#annotBtn')).toHaveClass(/on/);
+  const box = await page.locator('#map').boundingBox();
+  await page.mouse.click(box.x + 300, box.y + 260);
+  // the click created the annotation and opened its editor; write the text
+  await expect(page.locator('#popup .annot-text')).toBeVisible();
+  await expect(page.locator('#annotBtn')).not.toHaveClass(/on/);
+  await page.fill('#popup .annot-text', 'Entrée de la mine');
+  await page.press('#popup .annot-text', 'Enter');
+  // the annotation counter is exposed on the canvas and the text renders
+  await expect(page.locator('#map')).toHaveAttribute('data-annotations', '1');
+  let anns = await page.evaluate(() => window.annotationsOnMap());
+  expect(anns).toHaveLength(1);
+  expect(anns[0].ann.text).toBe('Entrée de la mine');
+  // editing through the popup saves implicitly on change
+  await page.fill('#popup .annot-text', 'Base avancée');
+  await page.press('#popup .annot-text', 'Enter');
+  expect((await page.evaluate(() => window.annotationsOnMap()))[0].ann.text).toBe('Base avancée');
+  // annotations survive a reload (localStorage) and render on the map
+  await page.reload();
+  await waitForApp(page);
+  anns = await page.evaluate(() => window.annotationsOnMap());
+  expect(anns).toHaveLength(1);
+  expect(anns[0].ann.text).toBe('Base avancée');
+  await expect(page.locator('#map')).toHaveAttribute('data-annotations', '1');
+  // clicking the annotation label reopens the editor; delete removes it
+  await page.mouse.click(box.x + 300 + 20, box.y + 260 - 14);
+  await expect(page.locator('#popup .annot-del')).toBeVisible();
+  await page.click('#popup .annot-del');
+  await expect(page.locator('#popup .annot-del')).toBeHidden();
+  expect(await page.evaluate(() => window.annotationsOnMap().length)).toBe(0);
+  await expect(page.locator('#map')).toHaveAttribute('data-annotations', '0');
+});
+
 test('path tool: three clicked points, cumulative distance, persist, delete (#285)', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

@@ -32,6 +32,9 @@ import {
   PATH_NAME_MAX, PATH_ALERT_RADII, appendPathPoint, pathDistance, linkedDistance, pointSegmentDist,
   addPath, removePath, renamePath, pathsFor, parsePaths
 } from './userpaths.js';
+import {
+  ANNOTATION_TEXT_MAX, addAnnotation, removeAnnotation, editAnnotation, annotationsFor, parseAnnotations
+} from './userannotations.js';
 import { exportProfile, parseProfile, mergeProfile } from './profile.js';
 import { validateGallery, galleryText, galleryThumbRender, galleryStructRender, galleryThumbPoint } from './gallery.js';
 import { THEME_COLORS, resolveTheme, otherTheme } from './theme.js';
@@ -93,6 +96,8 @@ const zoneTool = { on: false, a: null, b: null };
 // path tool (#285): waypoints clicked so far, plus the live point under the
 // pointer; double-click or Escape turns them into a named persisted path
 const pathTool = { on: false, pts: [], hover: null };
+// annotation tool (#323): one armed click writes a short free text at the point
+let annotMode = false;
 let pathAlertReq = -1;        // path-alert token (#321); stale replies drop
 let pathAlertRadius = PATH_ALERT_RADII[0];   // sticky across editor openings
 const PATH_COLOR = '#7ee0c0';
@@ -540,6 +545,8 @@ function draw() {
 
   drawFavMarkers(W, H);
   drawUserMarkers(W, H);
+  // free text annotations (#323) sit above the markers so they stay readable
+  drawAnnotations(W, H);
   drawPortal();
 
   // result pins
@@ -993,6 +1000,82 @@ function showPathEditor(p) {
   pop.append(close, name, dist, pathAlertSection(p), del);
   if (!pop.open) pop.show();
   requestPathAlerts(p);
+}
+// ---------- free text annotations (#323) ----------
+// geometry of an annotation label on screen: anchor dot at the point, the
+// text on a halo band above-right of it — shared by the renderer and the
+// click hit-test so what you see is exactly what you can click
+function annotationLabelRect(d) {
+  ctx.font = '12px monospace';
+  const tw = ctx.measureText(d.ann.text).width;
+  return { x: w2sx(d.x) + 4, y: w2sy(d.z) - 22, w: tw + 8, h: 17 };
+}
+// short texts written on the map; a small anchor dot marks the exact block,
+// the halo band keeps the text readable on any tile in both themes;
+// converted (linked-dimension, 1:8) annotations render slightly faded
+function drawAnnotations(W, H) {
+  const shown = annotationsFor(userAnnotations, world);
+  canvas.dataset.annotations = String(shown.length);
+  ctx.save();
+  for (const d of shown) {
+    const r = annotationLabelRect(d);
+    if (r.x > W || r.y > H || r.x + r.w < 0 || r.y + r.h < 0) continue;
+    ctx.globalAlpha = d.converted ? 0.7 : 1;
+    ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = 'rgba(40,28,4,.75)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(w2sx(d.x), w2sy(d.z), 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = curTheme === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.65)';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = mapText;
+    ctx.fillText(d.ann.text, r.x + 4, r.y + 12);
+  }
+  ctx.restore();
+}
+function setAnnotMode(on) {
+  annotMode = on;
+  $('#annotBtn').classList.toggle('on', on);
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+// armed click: create the annotation, leave the tool and open its editor —
+// the same flow as the zone and path tools
+function placeAnnotation(x, z) {
+  const next = addAnnotation(userAnnotations, { ...world, x, z });
+  const created = next.length > userAnnotations.length ? next.at(-1) : null;
+  setUserAnnotations(next);
+  setAnnotMode(false);
+  if (created) showAnnotationEditor(created);
+}
+// topmost annotation whose label band (or anchor dot) sits under the point
+function annotationAt(mx, my) {
+  const ds = annotationsFor(userAnnotations, world);
+  for (let i = ds.length - 1; i >= 0; i--) {
+    const d = ds[i], r = annotationLabelRect(d);
+    const onLabel = mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+    if (onLabel || Math.hypot(mx - w2sx(d.x), my - w2sy(d.z)) < 7) return d;
+  }
+  return null;
+}
+// small editor in the map popup: edit the text (implicit save on change),
+// delete — the same UX as the marker/zone editors
+function showAnnotationEditor(a) {
+  const pop = $('#popup');
+  pop.textContent = '';
+  pop.classList.remove('comp');
+  pop.setAttribute('aria-label', a.text);
+  const close = document.createElement('button');
+  close.className = 'pop-close'; close.textContent = '×'; close.title = t('close');
+  close.onclick = hidePopup;
+  const text = document.createElement('input');
+  text.className = 'annot-text mono'; text.value = a.text;
+  text.maxLength = ANNOTATION_TEXT_MAX;
+  text.placeholder = t('annotTextPh');
+  text.setAttribute('aria-label', t('annotTextPh'));
+  text.onchange = () => setUserAnnotations(editAnnotation(userAnnotations, a.id, text.value));
+  const del = document.createElement('button');
+  del.className = 'btn tiny annot-del'; del.textContent = t('annotDelete');
+  del.onclick = () => { setUserAnnotations(removeAnnotation(userAnnotations, a.id)); hidePopup(); };
+  pop.append(close, text, del);
+  if (!pop.open) pop.show();
+  text.focus();
 }
 // ---------- portal calculator (#284) ----------
 // source pin in its own dimension; ideal linked destination pin plus the
@@ -1526,6 +1609,7 @@ function dismissMapTools() {
   if (pathTool.on) { finishPathDraw(); return; }
   if (ruler.on) setRulerOn(false);
   if (markerMode) setMarkerMode(false);
+  if (annotMode) setAnnotMode(false);
   if (portalMode) setPortalMode(false);
   if (compMode) setCompMode(false);
   if (sel.on) setSelOn(false);
@@ -1772,6 +1856,7 @@ cmpCanvas.addEventListener('wheel', (e) => {
 function toolClick(mx, my) {
   const p = { x: Math.round(s2wx(mx)), z: Math.round(s2wz(my)) };
   if (markerMode) { setUserMarkers(addMarker(userMarkers, { ...world, ...p })); return true; }
+  if (annotMode) { placeAnnotation(p.x, p.z); return true; }
   if (portalMode) { placePortal(p.x, p.z); return true; }
   if (compMode) { placeComposition(p.x, p.z); return true; }
   if (pathTool.on) {
@@ -1796,6 +1881,9 @@ function clickAt(e) {
   }
   // hit-test the portal pins: clicking one re-opens the portal popup
   if (portal && portalPinAt(mx, my)) { showPortalPopup(); return; }
+  // hit-test annotations (their labels draw above paths and zones)
+  const aHit = annotationAt(mx, my);
+  if (aHit) { showAnnotationEditor(aHit.ann); return; }
   // hit-test paths (above the zones: a path crossing a zone stays clickable)
   const pHit = pathAt(mx, my);
   if (pHit) { showPathEditor(pHit.path); return; }
@@ -2658,6 +2746,14 @@ function setUserPaths(list) {
   try { localStorage.setItem('paths', JSON.stringify(userPaths)); } catch { /* ignore */ }
   draw();
 }
+let userAnnotations = parseAnnotations((() => {
+  try { return localStorage.getItem('annotations'); } catch { return null; }
+})());
+function setUserAnnotations(list) {
+  userAnnotations = list;
+  try { localStorage.setItem('annotations', JSON.stringify(userAnnotations)); } catch { /* ignore */ }
+  draw();
+}
 let markerMode = false;
 function setMarkerMode(on) {
   markerMode = on;
@@ -2940,7 +3036,7 @@ function importProfileText(txt) {
     return;
   }
   const merged = mergeProfile(
-    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }, imported);
+    { favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths, annotations: userAnnotations }, imported);
   setFavorites(merged.favorites);
   userPresets = merged.userPresets; saveUserPresets(); buildPresetSelect();
   searchHistory = merged.history;
@@ -2949,6 +3045,7 @@ function importProfileText(txt) {
   setUserMarkers(merged.markers);
   setUserZones(merged.zones);
   setUserPaths(merged.paths);
+  setUserAnnotations(merged.annotations);
   info.textContent = t('profileImported', {
     f: imported.favorites.length, p: imported.userPresets.length,
     h: imported.history.length, m: imported.markers.length, z: imported.zones.length,
@@ -3640,6 +3737,7 @@ async function init() {
   $('#compBtn').onclick = () => setCompMode(!compMode);
   $('#selBtn').onclick = () => setSelOn(!sel.on);
   $('#zoneBtn').onclick = () => setZoneOn(!zoneTool.on);
+  $('#annotBtn').onclick = () => setAnnotMode(!annotMode);
   $('#pathBtn').onclick = () => setPathOn(!pathTool.on);
   $('#selPng').onclick = exportSelectionPNG;
   $('#selCopy').onclick = () => { copyText(formatRect(normalizeRect(sel.a, sel.b))); };
@@ -3659,7 +3757,7 @@ async function init() {
   // profile: one-file backup/restore of every local store
   $('#profileExport').onclick = () => {
     downloadFile('seedcartographer-profile.json',
-      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths }),
+      exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths, annotations: userAnnotations }),
       'application/json');
   };
   // manual purge of the persistent tile cache (#289)
@@ -3682,7 +3780,7 @@ async function init() {
   // handy between devices with no easy file transfer.
   const syncBox = $('#syncCodeBox'), syncText = $('#syncCodeText'), syncApply = $('#syncCodeApply');
   $('#syncCodeShow').onclick = () => {
-    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths })))
+    encodeShareHash(JSON.parse(exportProfile({ favorites, userPresets, history: searchHistory, markers: userMarkers, zones: userZones, paths: userPaths, annotations: userAnnotations })))
       .then((code) => { syncText.value = code; syncBox.hidden = false; syncApply.hidden = true; syncText.select(); });
   };
   $('#syncCodePaste').onclick = () => {
@@ -3750,6 +3848,7 @@ Object.assign(window, {
   syncHash, decodeShareHash, ruler, tileCache, pendingTiles, rarePinAt: () => rarePin,
   portalState: () => portal,
   zonesOnMap: () => zonesFor(userZones, world),
+  annotationsOnMap: () => annotationsFor(userAnnotations, world),
   pathsOnMap: () => pathsFor(userPaths, world),
   cmpTileCache, cmpPendingTiles, cmpStructPoints, compareOn: () => cmpState.on,
   viewCenter: () => ({ x: view.cx, z: view.cz, b: view.bpp })

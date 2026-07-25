@@ -19,6 +19,17 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Annotations texte libres sur la carte : un nouvel outil « ✎ » dans la
+  rangée d'outils permet d'écrire un court texte (60 caractères max) à
+  n'importe quel point de la carte ; le texte est dessiné directement sur le
+  canvas avec un fond semi-transparent lisible dans les deux thèmes. Un clic
+  sur une annotation ouvre un petit éditeur (modification implicite à la
+  validation, suppression), comme pour les marqueurs personnalisés. Les
+  annotations sont persistées en local (liées au monde exact : seed, version,
+  biomes larges, dimension, plafond de 100), converties 1:8 entre Overworld
+  et Nether à l'affichage comme les zones et les chemins, incluses dans
+  l'export PNG de la carte ainsi que dans l'export/import de profil et le
+  code de synchronisation (#323)
 - Web Vitals réels : les Core Web Vitals (LCP, INP, CLS) sont mesurés dans le
   navigateur via des `PerformanceObserver` natifs (aucune dépendance) et
   remontés dans Umami sous forme d'événements anonymes bucketisés (jamais la

@@ -10,6 +10,7 @@ import { parseHistory, addHistoryEntry } from './searchhistory.js';
 import { parseMarkers, mergeMarkers } from './usermarkers.js';
 import { parseZones, mergeZones } from './userzones.js';
 import { parsePaths, mergePaths } from './userpaths.js';
+import { parseAnnotations, mergeAnnotations } from './userannotations.js';
 
 export const PROFILE_KIND = 'seedcartographer-profile';
 export const PROFILE_VERSION = 1;
@@ -20,7 +21,8 @@ export const PROFILE_VERSION = 1;
  *            history: import('./searchhistory.js').HistoryEntry[],
  *            markers: import('./usermarkers.js').UserMarker[],
  *            zones: import('./userzones.js').UserZone[],
- *            paths: import('./userpaths.js').UserPath[]}} ProfileState
+ *            paths: import('./userpaths.js').UserPath[],
+ *            annotations: import('./userannotations.js').UserAnnotation[]}} ProfileState
  */
 
 // The export payload, ready to stringify: a kind marker guards against
@@ -34,7 +36,7 @@ export function exportProfile(state) {
     kind: PROFILE_KIND, version: PROFILE_VERSION,
     favorites: state.favorites, userPresets: state.userPresets,
     history: state.history, markers: state.markers, zones: state.zones,
-    paths: state.paths
+    paths: state.paths, annotations: state.annotations
   }, null, 2);
 }
 
@@ -56,7 +58,8 @@ export function parseProfile(json) {
     history: parseHistory(list(raw.history)),
     markers: parseMarkers(list(raw.markers)),
     zones: parseZones(list(raw.zones)),
-    paths: parsePaths(list(raw.paths))
+    paths: parsePaths(list(raw.paths)),
+    annotations: parseAnnotations(list(raw.annotations))
   };
 }
 
@@ -83,6 +86,7 @@ export function mergeProfile(current, imported) {
     favorites, userPresets, history,
     markers: mergeMarkers(current.markers, imported.markers),
     zones: mergeZones(current.zones, imported.zones),
-    paths: mergePaths(current.paths, imported.paths)
+    paths: mergePaths(current.paths, imported.paths),
+    annotations: mergeAnnotations(current.annotations, imported.annotations)
   };
 }
