@@ -19,6 +19,14 @@ et la release GitHub.
 ## [Non publié]
 
 ### Ajouté
+- Web Vitals réels : les Core Web Vitals (LCP, INP, CLS) sont mesurés dans le
+  navigateur via des `PerformanceObserver` natifs (aucune dépendance) et
+  remontés dans Umami sous forme d'événements anonymes bucketisés (jamais la
+  valeur brute — uniquement la note good/needs-improvement/poor et une tranche
+  selon les seuils officiels). Collecte passive, envoi unique et différé au
+  masquage de la page, aucun impact sur le premier rendu ; silencieux si
+  Umami est absent ou bloqué. La ligne d'information du dialogue d'aide
+  mentionne désormais ces mesures de performance anonymes (#322)
 - Ouverture d'une sauvegarde Minecraft Java : le menu « ⋯ » propose de charger
   le `level.dat` d'une sauvegarde (NBT gzippé lu entièrement en local, jamais
   envoyé) pour en extraire la seed (`WorldGenSettings.seed`, repli

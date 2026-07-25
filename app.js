@@ -41,6 +41,7 @@ import {
 } from './export.js';
 import { APP_VERSION } from './version.js';
 import { formatErrorEvent } from './errorreport.js';
+import { formatVitalsEvent, inpEstimate, clsTotal } from './vitals.js';
 import { TOUR_SEEN_KEY, TOUR_STEPS, isFirstVisit, isLastStep, nextStep, tourBubblePosition } from './tour.js';
 import { sortHitsByDist } from './search.js';
 import { rectSurface } from './composition.js';
@@ -131,6 +132,50 @@ window.addEventListener('unhandledrejection', (e) => {
   const reason = e.reason;
   sendErrorEvent('promise', reason?.message || reason);
 });
+
+// Real-user Core Web Vitals (#322): passive PerformanceObserver collection,
+// bucketed (never raw values, see vitals.js) and sent once as anonymous
+// Umami events when the page is hidden — nothing runs at load beyond
+// registering the buffered observers, so the first-render perf budget is
+// untouched. Silent no-op when observers or umami are unavailable (CI).
+const vitals = { lcp: null, eventDurations: [], layoutShifts: [], sent: false };
+window.__vitals = vitals; // e2e/debug-observable state
+function observeVital(type, options, onEntries) {
+  try {
+    const po = new PerformanceObserver((list) => onEntries(list.getEntries()));
+    po.observe({ type, buffered: true, ...options });
+  } catch { /* observer type unsupported: skip this metric */ }
+}
+if (typeof PerformanceObserver !== 'undefined') {
+  observeVital('largest-contentful-paint', {}, (entries) => {
+    const last = entries.at(-1);
+    if (last) vitals.lcp = last.startTime;
+  });
+  observeVital('event', { durationThreshold: 40 }, (entries) => {
+    for (const e of entries) vitals.eventDurations.push(e.duration);
+  });
+  observeVital('layout-shift', {}, (entries) => {
+    for (const e of entries) {
+      vitals.layoutShifts.push({ value: e.value, hadRecentInput: e.hadRecentInput });
+    }
+  });
+}
+function sendVitals() {
+  if (vitals.sent) return;
+  vitals.sent = true;
+  if (typeof umami === 'undefined' || typeof umami.track !== 'function') return;
+  const inp = inpEstimate(vitals.eventDurations);
+  const measures = [['LCP', vitals.lcp], ['INP', inp], ['CLS', clsTotal(vitals.layoutShifts)]];
+  for (const [metric, value] of measures) {
+    const payload = formatVitalsEvent(metric, value);
+    if (payload === null) continue;
+    try { umami.track('web-vitals', payload); } catch { /* ignore */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') sendVitals();
+});
+window.addEventListener('pagehide', sendVitals);
 
 // ---------- worker plumbing ----------
 // per-worker readiness + queue of messages sent before the engine was up
