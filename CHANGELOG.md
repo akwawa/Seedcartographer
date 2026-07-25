@@ -16,6 +16,16 @@ commits conventionnels ; avant de la fusionner, déplacer le contenu de
 « Non publié » dans la nouvelle section de version. La fusion crée le tag
 et la release GitHub.
 
+## [Non publié]
+
+### Modifié
+- CI mutation : le run Stryker est partitionné en trois shards équilibrés par
+  coût (matrix `core` / `world` / `user`, `npx stryker run --mutate <liste>`)
+  pour ramener chaque job sous ~40 minutes et redonner de la marge au budget ;
+  le seuil `break: 75` s'applique désormais par shard, et un test vérifie que
+  les shards couvrent exactement le périmètre `mutate` de
+  `stryker.config.json` (#318).
+
 ## [0.13.4](https://github.com/akwawa/Seedcartographer/compare/v0.13.3...v0.13.4) (2026-07-24)
 
 
