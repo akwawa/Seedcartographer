@@ -41,7 +41,7 @@ export function addEntry(queue, entry) {
  */
 export function removeEntry(queue, index) {
   const e = queue.entries[index];
-  if (!e || e.status !== 'pending') return queue;
+  if (e?.status !== 'pending') return queue;
   return {
     entries: queue.entries.filter((_, i) => i !== index),
     current: queue.current > index ? queue.current - 1 : queue.current
@@ -158,7 +158,7 @@ export function sortRows(rows, key) {
 export function summarizeCriteria(crit, biomeName) {
   const anyCrit = /** @type {Record<string, unknown>} */ (crit);
   const ids = Array.isArray(anyCrit.mb) ? /** @type {number[]} */ (anyCrit.mb) : [];
-  const names = ids.map((b) => biomeName(b)).filter((n) => n);
+  const names = ids.map((b) => biomeName(b)).filter(Boolean);
   let clauses = 0;
   for (const k of ['ac', 'qc', 'hc', 'sc', 'pc']) {
     const list = anyCrit[k];
