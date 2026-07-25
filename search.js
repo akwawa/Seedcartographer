@@ -221,6 +221,22 @@ function isDuplicate(hits, wx, wz, merge2) {
   return false;
 }
 
+// biome-grid clauses only (main set, adjacency, percentages, shapes, sketch)
+/**
+ * @param {{g: GridCtx, adj: object[], adjAll: boolean, pcts: object[],
+ *          pctAll: boolean, shapes: object[], shapeAll: boolean,
+ *          sketch: any}} ctx
+ * @param {number} ci @param {number} cj @returns {boolean}
+ */
+function cellClausesPass(ctx, ci, cj) {
+  // an empty main set means "any biome": the spot's own biome never rejects
+  if (ctx.g.mainSet.size && !ctx.g.mainSet.has(ctx.g.grid[cj * ctx.g.cols + ci])) return false;
+  if (ctx.adj.length && !adjPass(ctx.adj, ctx.adjAll, ctx.g, ci, cj)) return false;
+  if (ctx.pcts.length && !pctPass(ctx.pcts, ctx.pctAll, ctx.g, ci, cj)) return false;
+  if (ctx.shapes.length && !shapesPass(ctx.shapes, ctx.shapeAll, ctx.g, ci, cj)) return false;
+  return !(ctx.sketch && !sketchPass(ctx.sketch, ctx.g, ci, cj));
+}
+
 // every per-cell criterion in one place: returns the structure count when
 // the cell passes, or null when any clause rejects it
 /**
@@ -233,12 +249,7 @@ function isDuplicate(hits, wx, wz, merge2) {
  * @returns {number|null}
  */
 function evalCell(ctx, ci, cj, wx, wz) {
-  // an empty main set means "any biome": the spot's own biome never rejects
-  if (ctx.g.mainSet.size && !ctx.g.mainSet.has(ctx.g.grid[cj * ctx.g.cols + ci])) return null;
-  if (ctx.adj.length && !adjPass(ctx.adj, ctx.adjAll, ctx.g, ci, cj)) return null;
-  if (ctx.pcts.length && !pctPass(ctx.pcts, ctx.pctAll, ctx.g, ci, cj)) return null;
-  if (ctx.shapes.length && !shapesPass(ctx.shapes, ctx.shapeAll, ctx.g, ci, cj)) return null;
-  if (ctx.sketch && !sketchPass(ctx.sketch, ctx.g, ci, cj)) return null;
+  if (!cellClausesPass(ctx, ci, cj)) return null;
   let count = 0;
   if (ctx.structs.length) {
     const total = structCount(ctx.structs, ctx.structAll, wx, wz);

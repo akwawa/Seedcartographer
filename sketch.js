@@ -91,7 +91,8 @@ export function sketchVariants(cells, rot, mir) {
     for (let k = 0; k < 3; k++) out.push(rotateSketch(out.at(-1)));
   }
   if (mir) {
-    for (const v of [...out]) out.push(mirrorSketch(v));
+    const n = out.length;
+    for (let i = 0; i < n; i++) out.push(mirrorSketch(out[i]));
   }
   return out;
 }

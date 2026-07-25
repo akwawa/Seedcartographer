@@ -271,6 +271,14 @@ let searchBusy = false;
 let searchCancelId = 0;
 const yieldToQueue = () => new Promise((r) => setTimeout(r, 0));
 
+// grid padding around the search box: the widest adjacency/percentage
+// distance, and a sketch samples 25 zones up to SKETCH_PAD_BLOCKS away
+function searchPad(d) {
+  const base = d.sketch ? SKETCH_PAD_BLOCKS : 0;
+  return [...(d.adjClauses || []), ...(d.pctClauses || [])]
+    .reduce((m, c) => Math.max(m, c.dist), base);
+}
+
 async function runSearchJob(d) {
   searchBusy = true;
   const t0 = performance.now();
@@ -285,9 +293,7 @@ async function runSearchJob(d) {
     const SC = 16;
     const adjClauses = (d.adjClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, negate: !!c.negate }));
     const pctClauses = (d.pctClauses || []).map((c) => ({ biomes: new Set(c.biomes), dist: c.dist, pct: c.pct }));
-    // a sketch samples 25 zones up to SKETCH_PAD_BLOCKS around each candidate
-    const pad = [...adjClauses, ...pctClauses]
-      .reduce((m, c) => Math.max(m, c.dist), d.sketch ? SKETCH_PAD_BLOCKS : 0);
+    const pad = searchPad(d);
     const gx0 = Math.floor((d.cx - d.range - pad) / SC);
     const gz0 = Math.floor((d.cz - d.range - pad) / SC);
     const cols = Math.ceil((d.cx + d.range + pad) / SC) - gx0 + 2;
@@ -444,8 +450,7 @@ function seedScanParams(d, cols, rows, gx0, gz0, SC) {
 async function runSeedSearchJob(d) {
   const cancelled = () => seedCancelId === d.reqId;
   const SC = 16;
-  const pad = [...(d.adjClauses || []), ...(d.pctClauses || [])]
-    .reduce((m, c) => Math.max(m, c.dist), d.sketch ? SKETCH_PAD_BLOCKS : 0);
+  const pad = searchPad(d);
   const gx0 = Math.floor((-d.range - pad) / SC);
   const gz0 = gx0;
   const cols = Math.ceil((d.range + pad) / SC) - gx0 + 2;
