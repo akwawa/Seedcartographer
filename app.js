@@ -46,6 +46,7 @@ import { sortHitsByDist } from './search.js';
 import { rectSurface } from './composition.js';
 import { keyAction } from './keys.js';
 import { RARE_BIOMES, RARE_MAX_RADIUS } from './rarebiomes.js';
+import { detectFormat, parseLevelData, matchVersion } from './levelload.js';
 import { SLIME_STRUCT_TYPE } from './slime.js';
 import { SPAWN_STRUCT_TYPE, STRONGHOLD_STRUCT_TYPE, QUADHUT_STRUCT_TYPE } from './markers.js';
 import { altRgb } from './palette.js';
@@ -2356,6 +2357,53 @@ function importLocationsCSV(file) {
     searchInfo.className = 'info err';
   });
 }
+// ---------- Java save import (#320) ----------
+// "Open a save": the user picks the level.dat of a Minecraft Java world and
+// the app loads its seed, generation version and spawn point. Everything
+// happens in the browser — the file is never sent anywhere: gunzip via the
+// native DecompressionStream, then the pure NBT reader (levelload.js).
+function levelDatInfo(key, params, cls) {
+  searchInfo.textContent = t(key, params);
+  searchInfo.className = `info ${cls}`;
+}
+async function levelDatBytes(file) {
+  const raw = new Uint8Array(await file.arrayBuffer());
+  const format = detectFormat(raw);
+  if (format === 'bedrock' || format === 'invalid') throw new Error(format);
+  if (format === 'nbt') return raw;   // uncompressed level.dat (edited by tools)
+  const inflated = new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(inflated).arrayBuffer());
+}
+function applyLevelDat(lvl) {
+  const seedStr = String(lvl.seed);
+  $('#seed').value = seedStr;
+  world.seed = seedStr;
+  // Unknown version (snapshot, pre-1.0, missing tag): the seed and spawn
+  // still load — more useful than refusing the whole file — but with the
+  // current generation version kept, and the status warns instead of
+  // confirming, so the user knows the map may differ from the save.
+  const match = matchVersion(lvl.versionName, MC_VERSIONS);
+  if (match) { world.mc = match.mc; $('#mcver').value = String(match.mc); }
+  const spawn = lvl.spawn || { x: 0, z: 0 };
+  view.cx = spawn.x; view.cz = spawn.z;
+  if (view.bpp > 4) view.bpp = 3;
+  if (match) levelDatInfo('levelDatLoaded', { seed: seedStr, x: spawn.x, z: spawn.z }, 'ok');
+  else levelDatInfo('levelDatVerUnknown', { seed: seedStr, v: lvl.versionName || '?' }, 'empty');
+  // curReset's hidePopup clears any previous temporary pin: place ours after
+  curReset();
+  rarePin = spawn;   // temporary spawn pin, lives with the popup like the rare-biome one
+  draw(); requestRender(0); syncHash(); showPopup(spawn);
+}
+async function importLevelDat(file) {
+  try {
+    const lvl = parseLevelData(await levelDatBytes(file));
+    if (lvl.seed === null) throw new Error('invalid');   // NBT but not a level.dat
+    applyLevelDat(lvl);
+  } catch (err) {
+    const key = err.message === 'bedrock' ? 'levelDatBedrock' : 'levelDatInvalid';
+    levelDatInfo(key, {}, 'err');
+  }
+}
 function selectPin(i) {
   selected = i;
   const p = pins[i]; if (!p) return;
@@ -3375,6 +3423,12 @@ async function init() {
     const size = $('#pngSizeSel').value;
     if (size === 'view') exportMapPNG();
     else startExportHD(Number.parseInt(size, 10));
+  };
+  const levelInput = $('#levelDatFile');
+  $('#openSaveBtn').onclick = () => levelInput.click();
+  levelInput.onchange = () => {
+    if (levelInput.files[0]) importLevelDat(levelInput.files[0]);
+    levelInput.value = '';   // allow re-opening the same file
   };
   const importInput = $('#importFile');
   $('#importCsv').onclick = () => importInput.click();
