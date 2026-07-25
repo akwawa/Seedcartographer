@@ -171,9 +171,25 @@
       <button id="seedSearchBtn" class="btn primary" data-i18n="seedSearchBtn">Find a seed</button>
       <button id="surpriseBtn" class="btn" data-i18n="surpriseBtn" title="Load a random seed matching the criteria (or a village near spawn)" data-i18n-title="surpriseTitle">🎲 Surprise me</button>
       <button id="seedResumeBtn" class="btn" hidden></button>
+      <button id="queueAddBtn" class="btn" data-i18n="queueAdd">Add to queue</button>
       <progress id="seedProgress" class="progress" max="100" value="0" data-i18n-aria="searching" hidden></progress>
       <output id="seedInfo" class="info"></output>
       <div id="seedResults" class="results"></div>
+      <ul id="queueList" class="queuelist" hidden></ul>
+      <button id="queueRunBtn" class="btn primary" data-i18n="queueRun" hidden>Run the queue</button>
+      <div id="queueTableWrap" class="tablewrap" hidden>
+        <table id="queueTable" class="qtable">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="none"><button type="button" class="qsort" data-key="entry" data-i18n="queueColCrit">Criteria set</button></th>
+              <th scope="col" aria-sort="none"><button type="button" class="qsort" data-key="seed" data-i18n="queueColSeed">Seed</button></th>
+              <th scope="col" aria-sort="descending"><button type="button" class="qsort" data-key="score" data-i18n="queueColScore">Score</button></th>
+              <th scope="col" aria-sort="none"><button type="button" class="qsort" data-key="dist" data-i18n="queueColDist">Distance</button></th>
+            </tr>
+          </thead>
+          <tbody id="queueRows"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="card">

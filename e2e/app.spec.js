@@ -780,6 +780,56 @@ test('multi-seed search finds candidate seeds and loads one', async ({ page }) =
   await expect(page.locator('#seed')).toHaveValue(seed);
 });
 
+// #324: two easy criteria sets queued and run sequentially; their findings
+// accumulate in the comparative table and a pending entry can be withdrawn.
+test('search queue runs several criteria sets into the comparative table', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/');
+  await waitForApp(page);
+  // easy criteria + tiny sequential seed budget to keep the run fast
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'plains').value;
+  });
+  await page.click('#adjClauses .row .rm');
+  await page.click('#structClauses .row .rm');
+  await page.selectOption('#seedMode', 'seq');
+  await page.fill('#seedCount', '5');
+  await page.fill('#seedRadius', '1500');
+  await page.click('#queueAddBtn');   // entry 1: plains
+  await page.$eval('#mainBiomes .row select', (s) => {
+    s.value = [...s.options].find((o) => o.dataset.biome === 'forest').value;
+  });
+  await page.click('#queueAddBtn');   // entry 2: forest
+  await page.click('#queueAddBtn');   // entry 3: added, then withdrawn
+  await expect(page.locator('#queueList .queueitem')).toHaveCount(3);
+  await page.click('#queueList .queueitem:nth-child(3) .qrm');
+  await expect(page.locator('#queueList .queueitem')).toHaveCount(2);
+  await page.click('#queueRunBtn');
+  await page.waitForFunction(() => {
+    const st = document.querySelectorAll('#queueList .qstatus');
+    return st.length === 2 && [...st].every((s) => s.classList.contains('done'));
+  }, { timeout: 90000 });
+  // the cumulative table holds rows from both queue entries
+  await expect(page.locator('#queueTable')).toBeVisible();
+  const entries = await page.$$eval('#queueRows td:first-child', (tds) =>
+    tds.map((td) => td.textContent.charAt(0)));
+  expect(entries).toContain('1');
+  expect(entries).toContain('2');
+  // default order: best score first (place count descending)
+  const scores = await page.$$eval('#queueRows td:nth-child(3)', (tds) =>
+    tds.map((td) => Number.parseInt(td.textContent, 10)));
+  expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  // sorting by queue entry groups the rows per criteria set
+  await page.click('#queueTable button[data-key="entry"]');
+  const byEntry = await page.$$eval('#queueRows td:first-child', (tds) =>
+    tds.map((td) => Number.parseInt(td.textContent, 10)));
+  expect(byEntry).toEqual([...byEntry].sort((a, b) => a - b));
+  // clicking a row loads its seed
+  const seed = await page.locator('#queueRows .qseed').first().textContent();
+  await page.locator('#queueRows tr').first().click();
+  await expect(page.locator('#seed')).toHaveValue(seed);
+});
+
 test('the minimap is painted across its whole surface', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);

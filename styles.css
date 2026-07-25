@@ -180,6 +180,24 @@ main{flex:1 1 auto;display:flex;min-height:0}
 .result .rc{font-size:11px;color:var(--muted)}
 .muted{color:var(--muted)} .small{font-size:12px}
 
+/* ---------- multi-seed search queue (#324) ---------- */
+.queuelist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.queueitem{display:flex;align-items:center;gap:8px;font-size:12px;
+  background:var(--raise);border:1px solid var(--line-soft);border-radius:7px;padding:6px 9px}
+.queueitem .qlabel{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.queueitem .qstatus{flex:0 0 auto;color:var(--muted);font-size:11px}
+.queueitem .qstatus.running{color:var(--amber)}
+.queueitem .qstatus.done{color:var(--grass)}
+.tablewrap{overflow-x:auto;margin-top:10px}
+.qtable{border-collapse:collapse;width:100%;font-size:12px}
+.qtable th,.qtable td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.qtable th button{background:none;border:0;padding:0;cursor:pointer;font-weight:600;color:var(--muted)}
+.qtable th[aria-sort="ascending"] button,.qtable th[aria-sort="descending"] button{color:var(--text)}
+.qtable tbody tr{cursor:pointer}
+.qtable tbody tr:hover{background:var(--hover)}
+.qtable .qseed{background:none;border:0;padding:0;cursor:pointer;
+  font-family:var(--mono);font-size:12px;text-decoration:underline}
+
 /* ---------- layers ---------- */
 .layers{display:flex;flex-direction:column;gap:3px}
 .layer{display:flex;align-items:center;gap:9px;font-size:13px;padding:5px 6px;border-radius:6px;cursor:pointer}
